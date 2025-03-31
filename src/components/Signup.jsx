@@ -12,6 +12,7 @@ import {
   Avatar,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import { primaryColorLight } from "../constants/palette";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -51,7 +52,7 @@ export default function Signup() {
           alignItems: "center",
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
+        <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">

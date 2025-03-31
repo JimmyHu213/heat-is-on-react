@@ -12,15 +12,36 @@ import ForgotPassword from "./components/ForgotPassword";
 import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import {
+  primaryColor,
+  primaryColorLight,
+  secondaryColor,
+} from "./constants/palette";
 
 // Create a Material UI theme
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#1976d2",
+      main: primaryColor,
+      light: primaryColorLight,
     },
     secondary: {
-      main: "#dc004e",
+      main: secondaryColor,
+    },
+  },
+  typography: {
+    fontFamily: "Roboto, sans-serif",
+    fontSize: 14,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          backgroundColor: primaryColor,
+          textTransform: "none",
+          borderRadius: 8,
+        },
+      },
     },
   },
 });

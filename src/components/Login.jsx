@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
@@ -11,9 +10,10 @@ import {
   Container,
   Box,
   Alert,
+  Avatar,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import Avatar from "@mui/material/Avatar";
+import { primaryColorLight } from "../constants/palette";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -48,7 +48,7 @@ export default function Login() {
           alignItems: "center",
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
+        <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
@@ -93,7 +93,7 @@ export default function Login() {
           >
             {loading ? "Signing in..." : "Sign In"}
           </Button>
-          <Grid container>
+          <Grid container spacing={2}>
             <Grid item xs>
               <Link to="/forgot-password" style={{ textDecoration: "none" }}>
                 <Typography variant="body2" color="primary">
@@ -104,7 +104,7 @@ export default function Login() {
             <Grid item>
               <Link to="/signup" style={{ textDecoration: "none" }}>
                 <Typography variant="body2" color="primary">
-                  {"Don't have an account? Sign Up"}
+                  {" " + "Don't have an account? Sign Up"}
                 </Typography>
               </Link>
             </Grid>
