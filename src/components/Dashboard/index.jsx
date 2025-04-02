@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -98,12 +98,11 @@ export default function Dashboard() {
               }}
             >
               <Typography variant="h5" gutterBottom>
-                Dashboard
+                Game Sessions
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body1">
-                Welcome to your dashboard! This is where your main application
-                content will go.
+                Welcome to your Game Sessions! This is where you start your game
               </Typography>
               <Box sx={{ flexGrow: 1, mt: 3 }}>
                 <Grid container spacing={3}>
@@ -111,7 +110,7 @@ export default function Dashboard() {
                     <Card>
                       <CardContent>
                         <Typography variant="h6" gutterBottom>
-                          Card Title 1
+                          {}
                         </Typography>
                         <Typography variant="body2">
                           This is a sample card where you can display

@@ -17,6 +17,7 @@ import {
   primaryColorLight,
   secondaryColor,
 } from "./constants/palette";
+import Contexts from "./contexts";
 
 // Create a Material UI theme
 const theme = createTheme({
@@ -27,6 +28,10 @@ const theme = createTheme({
     },
     secondary: {
       main: secondaryColor,
+    },
+    background: {
+      default: secondaryColor,
+      paper: "#ffffff",
     },
   },
   typography: {
@@ -57,7 +62,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <AuthProvider>
+        <Contexts>
           <Routes>
             <Route
               path="/"
@@ -71,7 +76,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Routes>
-        </AuthProvider>
+        </Contexts>
       </Router>
     </ThemeProvider>
   );
