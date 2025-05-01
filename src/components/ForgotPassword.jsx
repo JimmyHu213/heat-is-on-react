@@ -11,7 +11,8 @@ import {
   Alert,
   Avatar,
 } from "@mui/material";
-import LockResetIcon from "@mui/icons-material/LockReset";
+
+import { primaryColorLight } from "../constants/palette";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -46,7 +47,7 @@ export default function ForgotPassword() {
           alignItems: "center",
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
+        <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
           <LockResetIcon />
         </Avatar>
         <Typography component="h1" variant="h5">

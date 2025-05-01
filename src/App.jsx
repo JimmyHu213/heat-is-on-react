@@ -1,4 +1,3 @@
-import { AuthProvider } from "./contexts/AuthContext";
 import {
   BrowserRouter as Router,
   Routes,
@@ -12,15 +11,43 @@ import ForgotPassword from "./components/ForgotPassword";
 import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import {
+  primaryColor,
+  primaryColorLight,
+  secondaryColor,
+} from "./constants/palette";
+import Contexts from "./contexts";
+import Game from "./components/Game";
+import LayoutTemplate from "./components/Template";
 
 // Create a Material UI theme
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#1976d2",
+      main: primaryColor,
+      light: primaryColorLight,
     },
     secondary: {
-      main: "#dc004e",
+      main: secondaryColor,
+    },
+    background: {
+      default: secondaryColor,
+      paper: "#ffffff",
+    },
+  },
+  typography: {
+    fontFamily: "Roboto, sans-serif",
+    fontSize: 14,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          backgroundColor: primaryColor,
+          textTransform: "none",
+          borderRadius: 8,
+        },
+      },
     },
   },
 });
@@ -36,7 +63,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <AuthProvider>
+        <Contexts>
           <Routes>
             <Route
               path="/"
@@ -46,11 +73,21 @@ function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/game"
+              element={
+                <PrivateRoute>
+                  <LayoutTemplate>
+                    <Game />
+                  </LayoutTemplate>
+                </PrivateRoute>
+              }
+            />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Routes>
-        </AuthProvider>
+        </Contexts>
       </Router>
     </ThemeProvider>
   );
