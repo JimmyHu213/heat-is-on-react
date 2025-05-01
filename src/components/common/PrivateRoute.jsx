@@ -1,16 +1,16 @@
+// src/components/common/PrivateRoute.jsx
+import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { CircularProgress, Box } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 
 /**
- * PrivateRoute component
- * Protects routes that require authentication
- * Redirects to login if not authenticated
+ * PrivateRoute component to protect routes that require authentication
  */
-export default function PrivateRoute({ children }) {
+const PrivateRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
 
-  // Show loading spinner while checking authentication
+  // Show loading while checking authentication
   if (loading) {
     return (
       <Box
@@ -26,11 +26,13 @@ export default function PrivateRoute({ children }) {
     );
   }
 
-  // Redirect to login if not authenticated
+  // If not authenticated, redirect to login
   if (!currentUser) {
     return <Navigate to="/login" />;
   }
 
-  // Render the protected route if authenticated
+  // If authenticated, render the protected route
   return children;
-}
+};
+
+export default PrivateRoute;

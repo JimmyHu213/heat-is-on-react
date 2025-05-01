@@ -1,21 +1,7 @@
+// src/contexts/GameContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import {
-  createGameSession,
-  getGameSession,
-  getUserActiveSessions,
-  getUserCompletedSessions,
-  deleteGameSession,
-  advanceGameRound,
-  createTownsForSession,
-  getSessionTowns,
-  applyCardToTown,
-  applyHazardToSession,
-  saveRoundStats,
-  getSessionRoundEvents,
-  getTownCardPlays,
-} from "../services/gameSessionService";
-import { defaultTowns } from "../constants/towns";
+import gameSessionService from "../services/gameSessionService";
 
 const GameContext = createContext();
 
@@ -33,31 +19,37 @@ export function GameProvider({ children }) {
   const [completedSessions, setCompletedSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [currentRound, setCurrentRound] = useState(0);
-
-  // Towns and events
   const [towns, setTowns] = useState([]);
   const [roundEvents, setRoundEvents] = useState({});
   const [townCardPlays, setTownCardPlays] = useState({});
 
-  // Load user's active game sessions
+  // Fetch user's sessions when user changes
   useEffect(() => {
     if (currentUser) {
       fetchUserSessions();
     } else {
+      // Clear data when user logs out
       setActiveSessions([]);
       setCompletedSessions([]);
       setCurrentSession(null);
+      setTowns([]);
+      setRoundEvents({});
+      setTownCardPlays({});
     }
   }, [currentUser]);
 
-  // Fetch user sessions
+  // Fetch user's active and completed sessions
   const fetchUserSessions = async () => {
     if (!currentUser) return;
 
     setLoading(true);
     try {
-      const active = await getUserActiveSessions(currentUser.uid);
-      const completed = await getUserCompletedSessions(currentUser.uid);
+      const active = await gameSessionService.getUserActiveSessions(
+        currentUser.uid
+      );
+      const completed = await gameSessionService.getUserCompletedSessions(
+        currentUser.uid
+      );
 
       setActiveSessions(active);
       setCompletedSessions(completed);
@@ -76,14 +68,9 @@ export function GameProvider({ children }) {
 
     setLoading(true);
     try {
-      // Create the game session
-      const session = await createGameSession(currentUser.uid);
+      const session = await gameSessionService.createSession(currentUser.uid);
 
-      // Create towns for the session (use first 5 town templates)
-      const townTemplateIds = defaultTowns.slice(0, 5).map((town) => town.id);
-      await createTownsForSession(session.sessionId, townTemplateIds);
-
-      // Refresh the session list
+      // Refresh session list
       await fetchUserSessions();
 
       setError(null);
@@ -101,27 +88,24 @@ export function GameProvider({ children }) {
   const loadSession = async (sessionId) => {
     setLoading(true);
     try {
-      const session = await getGameSession(sessionId);
+      const session = await gameSessionService.getSession(sessionId);
       if (!session) {
         throw new Error("Session not found");
       }
 
       setCurrentSession(session);
       setCurrentRound(session.currentRound);
+      setTowns(session.towns || []);
 
-      // Load towns for this session
-      const sessionTowns = await getSessionTowns(sessionId);
-      setTowns(sessionTowns);
-
-      // Load round events and card plays
-      const events = await getSessionRoundEvents(sessionId);
+      // Load round events
+      const events = await gameSessionService.getSessionRoundEvents(sessionId);
       setRoundEvents(events);
 
       // Load card plays for each town
       const cardPlays = {};
-      for (const town of sessionTowns) {
-        const townCards = await getTownCardPlays(town.townId);
-        cardPlays[town.townId] = townCards;
+      for (const town of session.towns || []) {
+        const townCards = await gameSessionService.getTownCardPlays(town.id);
+        cardPlays[town.id] = townCards;
       }
       setTownCardPlays(cardPlays);
 
@@ -140,13 +124,13 @@ export function GameProvider({ children }) {
   const deleteSession = async (sessionId) => {
     setLoading(true);
     try {
-      await deleteGameSession(sessionId);
+      await gameSessionService.deleteSession(sessionId);
 
-      // Refresh the session list
+      // Refresh session list
       await fetchUserSessions();
 
       // If this was the current session, clear it
-      if (currentSession && currentSession.sessionId === sessionId) {
+      if (currentSession && currentSession.id === sessionId) {
         setCurrentSession(null);
         setTowns([]);
         setRoundEvents({});
@@ -164,25 +148,19 @@ export function GameProvider({ children }) {
     }
   };
 
-  // Start the game or advance to the next round
+  // Advance to the next round
   const advanceRound = async () => {
     if (!currentSession) return null;
 
     setLoading(true);
     try {
-      // Save current round stats
-      if (currentRound > 0) {
-        await saveRoundStats(currentSession.sessionId, currentRound);
-      }
+      const updatedSession = await gameSessionService.advanceRound(
+        currentSession.id
+      );
 
-      // Advance to next round
-      const updatedSession = await advanceGameRound(currentSession.sessionId);
       setCurrentSession(updatedSession);
       setCurrentRound(updatedSession.currentRound);
-
-      // Refresh towns data
-      const sessionTowns = await getSessionTowns(currentSession.sessionId);
-      setTowns(sessionTowns);
+      setTowns(updatedSession.towns || []);
 
       setError(null);
       return updatedSession;
@@ -201,22 +179,19 @@ export function GameProvider({ children }) {
 
     setLoading(true);
     try {
-      const result = await applyCardToTown(
+      const result = await gameSessionService.applyCardToTown(
         townId,
         cardId,
-        currentSession.sessionId,
         currentRound
       );
 
-      // Update the town in the state
+      // Update town in state
       setTowns((prevTowns) =>
-        prevTowns.map((t) =>
-          t.townId === result.town.townId ? result.town : t
-        )
+        prevTowns.map((t) => (t.id === result.town.id ? result.town : t))
       );
 
-      // Update the card plays
-      const townCards = await getTownCardPlays(townId);
+      // Update card plays
+      const townCards = await gameSessionService.getTownCardPlays(townId);
       setTownCardPlays((prev) => ({
         ...prev,
         [townId]: townCards,
@@ -239,17 +214,19 @@ export function GameProvider({ children }) {
 
     setLoading(true);
     try {
-      const result = await applyHazardToSession(
-        currentSession.sessionId,
+      const result = await gameSessionService.applyHazardToSession(
+        currentSession.id,
         hazardId,
         currentRound
       );
 
-      // Update towns in the state
+      // Update towns
       setTowns(result.towns);
 
       // Update round events
-      const events = await getSessionRoundEvents(currentSession.sessionId);
+      const events = await gameSessionService.getSessionRoundEvents(
+        currentSession.id
+      );
       setRoundEvents(events);
 
       setError(null);
@@ -269,27 +246,7 @@ export function GameProvider({ children }) {
 
     setLoading(true);
     try {
-      // Reload the session
-      const session = await getGameSession(currentSession.sessionId);
-      setCurrentSession(session);
-      setCurrentRound(session.currentRound);
-
-      // Reload towns
-      const sessionTowns = await getSessionTowns(session.sessionId);
-      setTowns(sessionTowns);
-
-      // Reload events
-      const events = await getSessionRoundEvents(session.sessionId);
-      setRoundEvents(events);
-
-      // Reload card plays
-      const cardPlays = {};
-      for (const town of sessionTowns) {
-        const townCards = await getTownCardPlays(town.townId);
-        cardPlays[town.townId] = townCards;
-      }
-      setTownCardPlays(cardPlays);
-
+      await loadSession(currentSession.id);
       setError(null);
     } catch (err) {
       console.error("Error refreshing session data:", err);
@@ -299,6 +256,79 @@ export function GameProvider({ children }) {
     }
   };
 
+  // Get town by ID
+  const getTownById = (townId) => {
+    return towns.find((town) => town.id === townId) || null;
+  };
+
+  // State for undo functionality
+  const [stateHistory, setStateHistory] = useState([]);
+
+  // Save current state to history before making changes
+  const saveStateSnapshot = () => {
+    setStateHistory((prevHistory) => [
+      ...prevHistory,
+      {
+        towns: JSON.parse(JSON.stringify(towns)),
+        roundEvents: JSON.parse(JSON.stringify(roundEvents)),
+        townCardPlays: JSON.parse(JSON.stringify(townCardPlays)),
+      },
+    ]);
+  };
+
+  // Revert to previous state
+  const revertToPreviousState = async () => {
+    if (stateHistory.length === 0) {
+      setError("Nothing to revert");
+      return null;
+    }
+
+    setLoading(true);
+    try {
+      // Get the last state from history
+      const previousState = stateHistory[stateHistory.length - 1];
+
+      // Update towns in database
+      for (const town of previousState.towns) {
+        await gameSessionService.updateTown(town.id, town);
+      }
+
+      // Update UI state
+      setTowns(previousState.towns);
+      setRoundEvents(previousState.roundEvents);
+      setTownCardPlays(previousState.townCardPlays);
+
+      // Remove the used state from history
+      setStateHistory((prevHistory) => prevHistory.slice(0, -1));
+
+      setError(null);
+      return true;
+    } catch (err) {
+      console.error("Error reverting to previous state:", err);
+      setError("Failed to revert changes. Please try again.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Wrap functions that modify state to save snapshots
+  const wrappedApplyHazard = async (hazardId) => {
+    saveStateSnapshot();
+    return applyHazard(hazardId);
+  };
+
+  const wrappedPlayCard = async (townId, cardId) => {
+    saveStateSnapshot();
+    return playCard(townId, cardId);
+  };
+
+  const wrappedAdvanceRound = async () => {
+    saveStateSnapshot();
+    return advanceRound();
+  };
+
+  // Context value
   const value = {
     // State
     loading,
@@ -310,16 +340,22 @@ export function GameProvider({ children }) {
     towns,
     roundEvents,
     townCardPlays,
+    canRevert: stateHistory.length > 0,
 
     // Actions
     fetchUserSessions,
     createNewSession,
     loadSession,
     deleteSession,
-    advanceRound,
-    playCard,
-    applyHazard,
+    advanceRound: wrappedAdvanceRound,
+    playCard: wrappedPlayCard,
+    applyHazard: wrappedApplyHazard,
     refreshSessionData,
+    getTownById,
+    revertToPreviousState,
+
+    // Clear error
+    clearError: () => setError(null),
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
