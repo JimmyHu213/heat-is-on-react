@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -10,33 +10,30 @@ import {
   Box,
   Alert,
   Avatar,
+  Paper,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { primaryColorLight } from "../constants/palette";
+import { primaryColorLight } from "../../constants/palette";
 
-export default function Signup() {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (password !== passwordConfirm) {
-      return setError("Passwords do not match");
-    }
-
     try {
       setError("");
       setLoading(true);
-      await signup(email, password);
+      await login(email, password);
       navigate("/");
     } catch (error) {
-      setError("Failed to create an account. " + error.message);
+      setError("Failed to log in. Please check your credentials.");
+      console.error("Login error:", error);
     } finally {
       setLoading(false);
     }
@@ -44,27 +41,34 @@ export default function Signup() {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
+      <Paper
+        elevation={3}
         sx={{
-          marginTop: 8,
+          mt: 8,
+          p: 4,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          // backgroundColor: primaryColorLight,
+          borderRadius: 2,
         }}
       >
         <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          Sign up
+          Sign in
         </Typography>
         {error && (
           <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
             {error}
           </Alert>
         )}
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{ mt: 1, width: "100%" }}
+        >
           <TextField
             margin="normal"
             required
@@ -85,21 +89,9 @@ export default function Signup() {
             label="Password"
             type="password"
             id="password"
-            autoComplete="new-password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password-confirm"
-            label="Confirm Password"
-            type="password"
-            id="password-confirm"
-            autoComplete="new-password"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
           />
           <Button
             type="submit"
@@ -108,19 +100,26 @@ export default function Signup() {
             sx={{ mt: 3, mb: 2 }}
             disabled={loading}
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
-          <Grid container justifyContent="flex-end">
-            <Grid item>
-              <Link to="/login" style={{ textDecoration: "none" }}>
+          <Grid container spacing={2}>
+            <Grid item xs>
+              <Link to="/forgot-password" style={{ textDecoration: "none" }}>
                 <Typography variant="body2" color="primary">
-                  Already have an account? Sign in
+                  Forgot password?
+                </Typography>
+              </Link>
+            </Grid>
+            <Grid item>
+              <Link to="/signup" style={{ textDecoration: "none" }}>
+                <Typography variant="body2" color="primary">
+                  Don't have an account? Sign Up
                 </Typography>
               </Link>
             </Grid>
           </Grid>
         </Box>
-      </Box>
+      </Paper>
     </Container>
   );
 }
