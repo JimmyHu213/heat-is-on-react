@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import {
   TextField,
   Button,
   Grid,
-  Paper,
   Typography,
   Container,
   Box,
   Alert,
   Avatar,
+  Paper,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { primaryColorLight } from "../constants/palette";
+import { primaryColorLight } from "../../constants/palette";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -32,7 +32,8 @@ export default function Login() {
       await login(email, password);
       navigate("/");
     } catch (error) {
-      setError("Failed to login. Invalid email or password.");
+      setError("Failed to log in. Please check your credentials.");
+      console.error("Login error:", error);
     } finally {
       setLoading(false);
     }
@@ -40,12 +41,15 @@ export default function Login() {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
+      <Paper
+        elevation={3}
         sx={{
-          marginTop: 8,
+          mt: 8,
+          p: 4,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          borderRadius: 2,
         }}
       >
         <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
@@ -59,7 +63,12 @@ export default function Login() {
             {error}
           </Alert>
         )}
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{ mt: 1, width: "100%" }}
+        >
           <TextField
             margin="normal"
             required
@@ -104,13 +113,13 @@ export default function Login() {
             <Grid item>
               <Link to="/signup" style={{ textDecoration: "none" }}>
                 <Typography variant="body2" color="primary">
-                  {" " + "Don't have an account? Sign Up"}
+                  Don't have an account? Sign Up
                 </Typography>
               </Link>
             </Grid>
           </Grid>
         </Box>
-      </Box>
+      </Paper>
     </Container>
   );
 }
