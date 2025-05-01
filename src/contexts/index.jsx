@@ -1,10 +1,17 @@
 import { AuthProvider } from "./AuthContext";
-import { SettingProvider } from "./SettingsContext";
+import { SettingsProvider } from "./SettingsContext";
+import { GameProvider } from "./GameContext";
 
-export default function Contexts(props) {
+/**
+ * Combined context providers for the application
+ * Properly nested to ensure dependencies are available
+ */
+export default function AppContextProvider({ children }) {
   return (
     <AuthProvider>
-      <SettingProvider>{props.children}</SettingProvider>
+      <SettingsProvider>
+        <GameProvider>{children}</GameProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
