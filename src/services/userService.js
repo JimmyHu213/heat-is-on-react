@@ -1,5 +1,5 @@
 import { db } from "../firebase/config";
-import { User } from "../models";
+import { User } from "../model";
 import {
   doc,
   setDoc,
