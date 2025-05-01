@@ -1,4 +1,3 @@
-import { AuthProvider } from "./contexts/AuthContext";
 import {
   BrowserRouter as Router,
   Routes,
@@ -18,6 +17,8 @@ import {
   secondaryColor,
 } from "./constants/palette";
 import Contexts from "./contexts";
+import Game from "./components/Game";
+import LayoutTemplate from "./components/Template";
 
 // Create a Material UI theme
 const theme = createTheme({
@@ -69,6 +70,16 @@ function App() {
               element={
                 <PrivateRoute>
                   <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/game"
+              element={
+                <PrivateRoute>
+                  <LayoutTemplate>
+                    <Game />
+                  </LayoutTemplate>
                 </PrivateRoute>
               }
             />

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   initializeGameSettings,
   getGameSettings,
-} from "../services/gameSettingSerivce";
+} from "../services/gameSettingSerivice";
 
 const SettingContext = createContext();
 
@@ -25,6 +25,7 @@ export function SettingProvider({ children }) {
         setLoading(false);
       }
     };
+    console.log("Fetching settings...");
 
     fetchSettings();
   }, []);
@@ -32,10 +33,11 @@ export function SettingProvider({ children }) {
   const value = {
     settings,
   };
-  console.log("settings", settings);
 
   return (
-    <SettingContext.Provider value={value}>{children}</SettingContext.Provider>
+    <SettingContext.Provider value={value}>
+      {!loading && children}
+    </SettingContext.Provider>
   );
 }
 

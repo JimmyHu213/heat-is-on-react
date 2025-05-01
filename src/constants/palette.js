@@ -3,7 +3,6 @@
 export const primaryColorLight = "#428E7A";
 export const secondaryColor = "#E6E6E6";
 export const primaryColor = "#4D8E8B";
-
 // Charts Colors
 export const natureColor = "#527334";
 export const economyColor = "#C8D2BE";

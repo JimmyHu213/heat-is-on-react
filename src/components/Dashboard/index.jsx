@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,11 +14,22 @@ import {
   CardContent,
   Divider,
   Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import StandardButton from "../ui/StandardButton";
+import { primaryColor } from "../../constants/palette";
+import StandardIconButton from "../ui/IconButton";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function Dashboard() {
   const [error, setError] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false); // State for dialog visibility
+  const [selectedSession, setSelectedSession] = useState(null); // State for the selected session
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -31,6 +42,38 @@ export default function Dashboard() {
     } catch {
       setError("Failed to log out");
     }
+  }
+
+  async function handleStartGame() {
+    setError("");
+
+    try {
+      navigate("/game");
+      console.log("Game session initialized successfully.");
+    } catch (error) {
+      setError("Failed to initialize game session");
+    }
+  }
+
+  async function handleDeleteGameSession() {
+    setError("");
+
+    try {
+      // Call your game session deletion function here
+      console.log(`Game session ${selectedSession} deleted successfully.`);
+      setIsDialogOpen(false); // Close the dialog after deletion
+    } catch (error) {
+      setError("Failed to delete game session");
+    }
+  }
+
+  function openDeleteDialog(sessionId) {
+    setSelectedSession(sessionId); // Set the session to be deleted
+    setIsDialogOpen(true); // Open the dialog
+  }
+
+  function closeDeleteDialog() {
+    setIsDialogOpen(false); // Close the dialog
   }
 
   return (
@@ -101,45 +144,94 @@ export default function Dashboard() {
                 Game Sessions
               </Typography>
               <Divider sx={{ mb: 2 }} />
-              <Typography variant="body1">
-                Welcome to your Game Sessions! This is where you start your game
-              </Typography>
-              <Box sx={{ flexGrow: 1, mt: 3 }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <Card>
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          {}
-                        </Typography>
-                        <Typography variant="body2">
-                          This is a sample card where you can display
-                          information from your application. Replace this with
-                          actual content from your Firebase data.
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Card>
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          Card Title 2
-                        </Typography>
-                        <Typography variant="body2">
-                          This is another sample card where you can display
-                          information from your application. Replace this with
-                          actual content from your Firebase data.
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Card>
+                    <CardContent>
+                      <Grid
+                        container
+                        spacing={2}
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Typography variant="body2">Game Session 1</Typography>
+                        <StandardButton
+                          color={primaryColor}
+                          text="Start Game"
+                          size="large"
+                          onClick={handleStartGame}
+                        >
+                          Start
+                        </StandardButton>
+                        <StandardIconButton
+                          onClick={() => openDeleteDialog("Game Session 1")}
+                          icon={<DeleteIcon />}
+                          color={"#FF3B53"}
+                          size="large"
+                        />
+                      </Grid>
+                    </CardContent>
+                  </Card>
                 </Grid>
-              </Box>
+                <Grid item xs={12} sm={6}>
+                  <Card>
+                    <CardContent>
+                      <Grid
+                        container
+                        spacing={2}
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Typography variant="body2">Game Session 2</Typography>
+                        <StandardButton
+                          color={primaryColor}
+                          text="Start Game"
+                          size="large"
+                          onClick={handleStartGame}
+                        >
+                          Start
+                        </StandardButton>
+                        <StandardIconButton
+                          onClick={() => openDeleteDialog("Game Session 2")}
+                          icon={<DeleteIcon />}
+                          color={"#FF3B53"}
+                          size="large"
+                        />
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
             </Paper>
           </Grid>
         </Grid>
       </Container>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={isDialogOpen} onClose={closeDeleteDialog}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete {selectedSession}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <StandardButton
+            onClick={closeDeleteDialog}
+            color="primary"
+            size={"small"}
+          >
+            Cancel
+          </StandardButton>
+          <StandardButton
+            onClick={handleDeleteGameSession}
+            color="error"
+            size={"small"}
+          >
+            Delete
+          </StandardButton>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
