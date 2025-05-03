@@ -247,6 +247,11 @@ class GameSessionService {
         await this.updateTown(town.id, { currentRound: newRound });
       }
 
+      // Apply ongoing card effects for the new round
+      if (!isComplete) {
+        await this.applyOngoingCardEffects(sessionId, newRound);
+      }
+
       return {
         ...updatedSession,
         towns: await this.getSessionTowns(sessionId),
@@ -289,7 +294,8 @@ class GameSessionService {
 
       // Create card play record
       const effectiveRounds = [];
-      for (let i = 0; i < 1; i++) {
+      const duration = card.durationRounds || 1;
+      for (let i = 0; i < duration; i++) {
         // Most cards last 1 round
         effectiveRounds.push(round + i);
       }
@@ -303,6 +309,7 @@ class GameSessionService {
           playedAtRound: round,
           effectiveRounds,
           isActive: true,
+          playedAt: new Date(),
         }
       );
 
@@ -312,6 +319,71 @@ class GameSessionService {
       };
     } catch (error) {
       console.error(`Error applying card ${cardId} to town ${townId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apply ongoing card effects for all towns in a session
+   * @param {string} sessionId - Session ID
+   * @param {number} round - Current round
+   * @returns {Promise<void>} No return value
+   * @throws {Error} If an error occurs during the process
+   * */
+  async applyOngoingCardEffects(sessionId, round) {
+    try {
+      // Get all towns for this session
+      const towns = await this.getSessionTowns(sessionId);
+
+      // For each town, find active cards that affect the current round
+      for (const town of towns) {
+        // Get all active card plays for this town
+        const cardPlays = await firestoreService.getDocuments(
+          this.CARD_PLAYS_COLLECTION,
+          [
+            ["townId", "==", town.id],
+            ["isActive", "==", true],
+          ]
+        );
+
+        // Filter card plays that affect the current round
+        const activeCardPlays = cardPlays.filter((play) =>
+          play.effectiveRounds.includes(round)
+        );
+
+        // If there are active cards, apply their effects
+        if (activeCardPlays.length > 0) {
+          let updatedTown = { ...town };
+
+          for (const play of activeCardPlays) {
+            // Get card details
+            const card = allCards.find((c) => c.id === play.cardId);
+            if (card) {
+              // Apply card effects
+              updatedTown = this.applyCardEffects(updatedTown, card);
+
+              // Check if this is the last effective round for this card
+              const maxRound = Math.max(...play.effectiveRounds);
+              if (round >= maxRound) {
+                // Deactivate the card after its final round
+                await firestoreService.updateDocument(
+                  this.CARD_PLAYS_COLLECTION,
+                  play.id,
+                  { isActive: false }
+                );
+              }
+            }
+          }
+
+          // Save the updated town with all card effects applied
+          await this.updateTown(town.id, updatedTown);
+        }
+      }
+    } catch (error) {
+      console.error(
+        `Error applying ongoing card effects for session ${sessionId}, round ${round}:`,
+        error
+      );
       throw error;
     }
   }
@@ -636,6 +708,7 @@ class GameSessionService {
    * @param {string} townId - Town ID
    * @returns {Promise<Object>} Map of round number to card names
    */
+  // In gameSessionService.js - getTownCardPlays method
   async getTownCardPlays(townId) {
     try {
       const cardPlays = await firestoreService.getDocuments(
@@ -654,7 +727,19 @@ class GameSessionService {
             if (!cardsByRound[round]) {
               cardsByRound[round] = [];
             }
-            cardsByRound[round].push(card.name);
+
+            // Just add the card name as a string, as in the original implementation
+            let displayName = card.name;
+
+            // If this card has multi-round duration, indicate it
+            if (card.durationRounds > 1) {
+              const lastRound = Math.max(...play.effectiveRounds);
+              if (round < lastRound) {
+                displayName = `${card.name} (→R${lastRound})`;
+              }
+            }
+
+            cardsByRound[round].push(displayName);
           }
         }
       }

@@ -1,4 +1,5 @@
 // src/components/Game/components/CardControls.jsx
+
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -21,7 +22,7 @@ import {
   Tab,
   FormHelperText,
 } from "@mui/material";
-import { allCards, cardsByType, cardsByRound } from "../../../constants/cards";
+import { cards, allAbilityCards } from "../../../constants/cards";
 
 /**
  * Component for adaptation card controls
@@ -34,37 +35,22 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [availableCards, setAvailableCards] = useState([]);
 
-  // Filter cards based on current round
+  // Set initial available cards
   useEffect(() => {
-    // For the first tab (hazard specific cards)
-    const roundCards = cardsByRound[currentRound] || [];
-    // Only use hazard specific cards for the first tab
-    const hazardCards = roundCards.filter((card) =>
-      ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"].includes(
-        card.type
-      )
-    );
-    setAvailableCards(hazardCards);
-  }, [currentRound, cardCategory]);
+    // Start with hazard cards by default
+    setAvailableCards(cards);
+  }, []);
 
   // Handle card category change
   const handleCategoryChange = (event, newValue) => {
     setCardCategory(newValue);
     setSelectedCard("");
 
+    // Simply switch between the two card lists
     if (newValue === 0) {
-      // Hazard specific cards for current round
-      const roundCards = cardsByRound[currentRound] || [];
-      const hazardCards = roundCards.filter((card) =>
-        ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"].includes(
-          card.type
-        )
-      );
-      setAvailableCards(hazardCards);
+      setAvailableCards(cards);
     } else {
-      // All-aspect cards
-      const allAspectCards = cardsByType.all || [];
-      setAvailableCards(allAspectCards);
+      setAvailableCards(allAbilityCards);
     }
   };
 
@@ -100,6 +86,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   // Find card by ID
   const findCard = (cardId) => {
+    const allCards = [...cards, ...allAbilityCards];
     return allCards.find((card) => card.id === cardId);
   };
 
@@ -228,6 +215,10 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Type: {findCard(selectedCard)?.type}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Duration: {findCard(selectedCard)?.durationRounds || 1}{" "}
+                  round(s)
                 </Typography>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle2" gutterBottom>

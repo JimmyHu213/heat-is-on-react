@@ -80,18 +80,21 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
 
   // Get chip color based on card name
   const getCardChipProps = (cardName) => {
+    // Make sure cardName is a string
+    cardName = String(cardName || "");
+
     // Based on card name, determine type/color
     if (cardName.includes("BUSHFIRE") || cardName.includes("FIRE-RESILIENT")) {
       return {
         bgcolor: `${bushfireColor1}15`,
         borderColor: bushfireColor1,
-        color: theme.palette.getContrastText(`${bushfireColor1}15`),
+        color: "#000000", // Black text
       };
     } else if (cardName.includes("FLOOD") || cardName.includes("STORMWATER")) {
       return {
         bgcolor: `${floodColor1}15`,
         borderColor: floodColor1,
-        color: theme.palette.getContrastText(`${floodColor1}15`),
+        color: "#000000", // Black text
       };
     } else if (
       cardName.includes("STORM") ||
@@ -101,7 +104,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${stormSurgeColor1}15`,
         borderColor: stormSurgeColor1,
-        color: theme.palette.getContrastText(`${stormSurgeColor1}15`),
+        color: "#000000", // Black text
       };
     } else if (
       cardName.includes("HEAT") ||
@@ -111,7 +114,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${heatwaveColor1}15`,
         borderColor: heatwaveColor1,
-        color: theme.palette.getContrastText(`${heatwaveColor1}15`),
+        color: "#000000", // Black text
       };
     } else if (
       cardName.includes("BIO") ||
@@ -121,14 +124,14 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${biohazardColor1}15`,
         borderColor: biohazardColor1,
-        color: theme.palette.getContrastText(`${biohazardColor1}15`),
+        color: "#000000", // Black text
       };
     } else {
       // Default/aspect cards
       return {
         bgcolor: "rgba(0, 0, 0, 0.05)",
         borderColor: "rgba(0, 0, 0, 0.2)",
-        color: theme.palette.text.primary,
+        color: "#000000", // Black text
       };
     }
   };
