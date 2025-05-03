@@ -122,7 +122,7 @@ class GameSessionService {
   }
 
   /**
-   * Create towns for a game session based on templates
+   * Create towns for a game session with sequential IDs
    * @param {string} sessionId - Session ID
    * @returns {Promise<Array>} Array of created towns
    */
@@ -130,13 +130,16 @@ class GameSessionService {
     try {
       const towns = [];
 
-      // Use first 5 default towns (or fewer if not enough)
+      // Use first 5 default towns
       const townTemplates = defaultTowns.slice(0, 5);
 
-      for (const template of townTemplates) {
+      for (let i = 0; i < townTemplates.length; i++) {
+        const template = townTemplates[i];
+        const townId = String(i + 1); // Ensure sequential IDs (1, 2, 3, 4, 5)
+
         const townData = {
           sessionId,
-          name: template.name,
+          name: `Town ${i + 1}`, // Ensure name matches ID
           townTemplateId: template.id,
           effortPoints: 100,
           currentRound: 0,
@@ -148,9 +151,11 @@ class GameSessionService {
           currentStats: {}, // Will be populated when round starts
         };
 
+        // Use explicit ID for the document
         const town = await firestoreService.createDocument(
           this.TOWNS_COLLECTION,
-          townData
+          townData,
+          townId // Pass the explicit ID as the third parameter
         );
 
         towns.push(town);
@@ -164,15 +169,18 @@ class GameSessionService {
   }
 
   /**
-   * Get towns for a game session
+   * Get towns for a game session ordered by ID
    * @param {string} sessionId - Session ID
-   * @returns {Promise<Array>} Array of towns
+   * @returns {Promise<Array>} Array of towns ordered by ID
    */
   async getSessionTowns(sessionId) {
     try {
-      return await firestoreService.getDocuments(this.TOWNS_COLLECTION, [
+      // Get towns from Firestore
+      const towns = await firestoreService.getDocuments(this.TOWNS_COLLECTION, [
         ["sessionId", "==", sessionId],
       ]);
+
+      return towns.sort((a, b) => a.id - b.id); // Sort by ID
     } catch (error) {
       console.error(`Error getting towns for session ${sessionId}:`, error);
       throw error;

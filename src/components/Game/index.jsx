@@ -81,6 +81,7 @@ const Game = () => {
     playCard,
     refreshSessionData,
     clearError,
+    updateTown,
     revertToPreviousState,
     canRevert,
   } = useGame();
@@ -121,6 +122,39 @@ const Game = () => {
         : `Advanced to Round ${currentRound + 1}`,
       "success"
     );
+  };
+
+  // Handle updating town name
+  const handleUpdateTownName = async (townId, newName) => {
+    try {
+      // Find the town to update
+      const town = towns.find((t) => t.id === townId);
+      if (!town) {
+        throw new Error(`Town with ID ${townId} not found`);
+      }
+
+      // Create updated town object
+      const updatedTown = {
+        ...town,
+        name: newName,
+      };
+
+      // Call the update function from context/service
+      // This should handle loading state internally
+      const result = await updateTown(updatedTown);
+
+      if (result) {
+        // Refresh session data to reflect changes
+        await refreshSessionData();
+        showNotification("Town name updated successfully", "success");
+      }
+    } catch (err) {
+      console.error("Failed to update town name:", err);
+      showNotification({
+        message: "Failed to update town name",
+        severity: "error",
+      });
+    }
   };
 
   // Handle revert
@@ -379,7 +413,10 @@ const Game = () => {
           <Typography variant="h6" fontWeight="bold" gutterBottom>
             Town Details
           </Typography>
-          <TownDetailsView towns={towns} />
+          <TownDetailsView
+            towns={towns}
+            onUpdateTownName={handleUpdateTownName}
+          />
         </TabPanel>
         <TabPanel value={activeTab} index={2}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
