@@ -276,6 +276,33 @@ export function GameProvider({ children }) {
     ]);
   };
 
+  const updateTown = async (updatedTown) => {
+    if (!currentSession) return null;
+
+    setLoading(true);
+    try {
+      // Call the service to update the town
+      const result = await gameSessionService.updateTown(
+        updatedTown.id,
+        updatedTown
+      );
+
+      // Update towns in state
+      setTowns((prevTowns) =>
+        prevTowns.map((town) => (town.id === updatedTown.id ? result : town))
+      );
+
+      setError(null);
+      return result;
+    } catch (err) {
+      console.error("Error updating town:", err);
+      setError("Failed to update town. Please try again.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Revert to previous state
   const revertToPreviousState = async () => {
     if (stateHistory.length === 0) {
@@ -352,6 +379,8 @@ export function GameProvider({ children }) {
     applyHazard: wrappedApplyHazard,
     refreshSessionData,
     getTownById,
+    updateTown,
+    saveStateSnapshot,
     revertToPreviousState,
 
     // Clear error

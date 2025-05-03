@@ -1,5 +1,5 @@
 // src/components/Game/components/TownDetailsView.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   Grid,
   Card,
@@ -9,6 +9,9 @@ import {
   Box,
   LinearProgress,
   useTheme,
+  TextField,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   bushfireColor1,
@@ -24,12 +27,16 @@ import FloodIcon from "@mui/icons-material/Flood"; // Flood
 import ThunderstormIcon from "@mui/icons-material/Thunderstorm"; // Storm Surge
 import WbSunnyIcon from "@mui/icons-material/WbSunny"; // Heatwave
 import BugReportIcon from "@mui/icons-material/BugReport"; // Biohazard
+import EditIcon from "@mui/icons-material/Edit"; // For editing town name
+import SaveIcon from "@mui/icons-material/Save"; // For saving town name
+import CancelIcon from "@mui/icons-material/Cancel"; // For canceling town name edit
 
 /**
- * Component to display detailed town information
+ * Component to display detailed town information with name editing capability
  */
-const TownDetailsView = ({ towns }) => {
+const TownDetailsView = ({ towns, onUpdateTownName }) => {
   const theme = useTheme();
+  const [editState, setEditState] = useState({});
 
   // Define hazard types and their properties
   const hazardTypes = [
@@ -68,6 +75,53 @@ const TownDetailsView = ({ towns }) => {
     { id: "health", name: "Health" },
   ];
 
+  // Start editing a town name
+  const handleStartEdit = (townId, currentName) => {
+    setEditState({
+      ...editState,
+      [townId]: {
+        isEditing: true,
+        name: currentName,
+      },
+    });
+  };
+
+  // Handle town name change
+  const handleNameChange = (townId, newName) => {
+    setEditState({
+      ...editState,
+      [townId]: {
+        ...editState[townId],
+        name: newName,
+      },
+    });
+  };
+
+  // Save updated town name
+  const handleSaveName = (townId) => {
+    if (onUpdateTownName && editState[townId]) {
+      onUpdateTownName(townId, editState[townId].name);
+    }
+
+    // Clear edit state
+    setEditState({
+      ...editState,
+      [townId]: {
+        isEditing: false,
+      },
+    });
+  };
+
+  // Cancel editing
+  const handleCancelEdit = (townId) => {
+    setEditState({
+      ...editState,
+      [townId]: {
+        isEditing: false,
+      },
+    });
+  };
+
   // If no towns, return a message
   if (!towns || towns.length === 0) {
     return (
@@ -97,11 +151,78 @@ const TownDetailsView = ({ towns }) => {
                 py: 1.5,
                 px: 2,
                 color: "white",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              <Typography variant="h6" fontWeight="bold">
-                {town.name}
-              </Typography>
+              {editState[town.id]?.isEditing ? (
+                // Edit mode
+                <Box
+                  sx={{ display: "flex", alignItems: "center", width: "100%" }}
+                >
+                  <TextField
+                    value={editState[town.id].name}
+                    onChange={(e) => handleNameChange(town.id, e.target.value)}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      flexGrow: 1,
+                      mr: 1,
+                      "& .MuiOutlinedInput-root": {
+                        color: "white",
+                        "& fieldset": {
+                          borderColor: "rgba(255, 255, 255, 0.5)",
+                        },
+                        "&:hover fieldset": {
+                          borderColor: "white",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "white",
+                        },
+                      },
+                      "& .MuiInputBase-input": {
+                        color: "white",
+                      },
+                    }}
+                    autoFocus
+                  />
+                  <Tooltip title="Save">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleSaveName(town.id)}
+                      sx={{ color: "white" }}
+                    >
+                      <SaveIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Cancel">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleCancelEdit(town.id)}
+                      sx={{ color: "white" }}
+                    >
+                      <CancelIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ) : (
+                // Display mode
+                <>
+                  <Typography variant="h6" fontWeight="bold">
+                    {town.name}
+                  </Typography>
+                  <Tooltip title="Edit Town Name">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleStartEdit(town.id, town.name)}
+                      sx={{ color: "white" }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
             </Box>
 
             <CardContent>
