@@ -223,8 +223,8 @@ const Game = () => {
           zIndex: theme.zIndex.drawer + 1,
           background: "#4D8E8B",
           boxShadow: 3,
-          width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
+          // width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["width", "margin"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -290,7 +290,7 @@ const Game = () => {
 
       {/* Side Drawer */}
       <Drawer
-        variant={isMobile ? "temporary" : "persistent"}
+        variant={"temporary"}
         open={drawerOpen}
         onClose={handleDrawerToggle}
         sx={{
@@ -347,8 +347,8 @@ const Game = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          maxWidth: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
+          // maxWidth: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["margin", "width"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
