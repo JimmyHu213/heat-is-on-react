@@ -21,8 +21,17 @@ class GameSessionService {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Created game session
    */
+  // In src/services/gameSessionService.js
+  // Add this check to the createSession method
+
   async createSession(userId) {
     try {
+      // Check if user already has 3 active sessions
+      const activeSessions = await this.getUserActiveSessions(userId);
+      if (activeSessions.length >= 3) {
+        throw new Error("Maximum session limit reached (3)");
+      }
+
       // Create new session
       const session = await firestoreService.createDocument(
         this.SESSIONS_COLLECTION,

@@ -183,6 +183,7 @@ export default function Dashboard() {
                 display: "flex",
                 flexDirection: "column",
                 minHeight: 240,
+                minWidth: 300,
               }}
             >
               <Box
@@ -194,18 +195,30 @@ export default function Dashboard() {
                 }}
               >
                 <Typography variant="h5">Game Sessions</Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={handleCreateGame}
-                  disabled={isCreating}
-                >
-                  {isCreating ? "Creating..." : "New Game"}
-                </Button>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mr: 2, ml: 2 }}
+                  >
+                    {activeSessions.length}/3 active games
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleCreateGame}
+                    disabled={isCreating || activeSessions.length >= 3}
+                  >
+                    {isCreating
+                      ? "Creating..."
+                      : activeSessions.length >= 3
+                      ? "Limit Reached"
+                      : "New Game"}
+                  </Button>
+                </Box>
               </Box>
               <Divider sx={{ mb: 2 }} />
-
               {loading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
                   <CircularProgress />

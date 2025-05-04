@@ -62,12 +62,22 @@ export function GameProvider({ children }) {
     }
   };
 
-  // Create a new game session
+  // In src/contexts/GameContext.jsx
+  // Modify the createNewSession function
+
   const createNewSession = async () => {
     if (!currentUser) return null;
 
     setLoading(true);
     try {
+      // Check if user already has 3 active sessions
+      if (activeSessions.length >= 3) {
+        setError(
+          "You can only have a maximum of 3 active game sessions. Please complete or delete an existing session."
+        );
+        return null;
+      }
+
       const session = await gameSessionService.createSession(currentUser.uid);
 
       // Refresh session list
