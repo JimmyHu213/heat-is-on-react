@@ -55,7 +55,19 @@ const Login = () => {
       navigate("/");
     } catch (error) {
       console.error("Login error:", error);
-      setError("Failed to log in. Please check your credentials.");
+
+      // More specific error messages based on error code
+      if (error.code === "auth/invalid-credential") {
+        setError("Invalid email or password. Please check your credentials.");
+      } else if (error.code === "auth/user-disabled") {
+        setError("This account has been disabled. Please contact support.");
+      } else if (error.code === "auth/user-not-found") {
+        setError(
+          "No account found with this email. Please check your email or sign up."
+        );
+      } else {
+        setError("Failed to log in. Please check your credentials.");
+      }
     } finally {
       setLoading(false);
     }

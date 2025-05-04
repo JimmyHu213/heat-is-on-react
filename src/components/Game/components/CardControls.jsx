@@ -88,7 +88,6 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
   // Find card by ID
   const findCard = (cardId) => {
     const allCards = [...cards, ...allAbilityCards];
-    console.log(allCards.find((card) => card.id === cardId));
     return allCards.find((card) => card.id === cardId);
   };
 

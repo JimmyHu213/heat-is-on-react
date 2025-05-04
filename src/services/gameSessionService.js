@@ -28,7 +28,8 @@ class GameSessionService {
     try {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
-      if (activeSessions.length >= 3) {
+      //TODO - Change this to 3 after implementation
+      if (activeSessions.length >= 1) {
         throw new Error("Maximum session limit reached (3)");
       }
 
