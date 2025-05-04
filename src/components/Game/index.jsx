@@ -440,18 +440,12 @@ const Game = () => {
           )}
         </TabPanel>
         <TabPanel value={activeTab} index={1}>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            Town Details
-          </Typography>
           <TownDetailsView
             towns={towns}
             onUpdateTownName={handleUpdateTownName}
           />
         </TabPanel>
         <TabPanel value={activeTab} index={2}>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            Game History
-          </Typography>
           <GameTable
             towns={towns}
             roundEvents={roundEvents}

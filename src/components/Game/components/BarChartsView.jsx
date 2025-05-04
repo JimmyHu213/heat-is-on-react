@@ -18,6 +18,7 @@ import {
   healthColor,
   primaryColorLight,
 } from "../../../constants/palette";
+import TownPieChart from "../../Charts/TownPieChart";
 
 const BarChartsView = ({ towns }) => {
   const theme = useTheme();
@@ -30,6 +31,12 @@ const BarChartsView = ({ towns }) => {
     );
   }
 
+  // Find the comparison town
+  const comparisonTown = towns.find((town) => town.isComparisonTown);
+
+  // Filter out the comparison town for the regular town data
+  const regularTowns = towns.filter((town) => !town.isComparisonTown);
+
   // Prepare aspect summary data
   const prepareAspectData = () => {
     const aspects = ["nature", "economy", "society", "health"];
@@ -38,7 +45,7 @@ const BarChartsView = ({ towns }) => {
     return aspects.map((aspect, index) => {
       // Sum all towns' values for this aspect across all hazards
       let sum = 0;
-      towns.forEach((town) => {
+      regularTowns.forEach((town) => {
         sum += town.bushfire[aspect] || 0;
         sum += town.flood[aspect] || 0;
         sum += town.stormSurge[aspect] || 0;
@@ -60,7 +67,7 @@ const BarChartsView = ({ towns }) => {
 
   // Prepare town summary data
   const prepareTownData = () => {
-    return towns.map((town) => {
+    return regularTowns.map((town) => {
       // Calculate total points for each aspect
       const nature =
         (town.bushfire?.nature || 0) +
@@ -193,7 +200,7 @@ const BarChartsView = ({ towns }) => {
   };
 
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={3} justifyContent={"space-between"} sx={{ m: 4 }}>
       {/* Aspects Summary Chart */}
       <Grid item xs={12} md={6}>
         <Paper
@@ -361,6 +368,13 @@ const BarChartsView = ({ towns }) => {
           </Box>
         </Paper>
       </Grid>
+
+      {/* Comparison Town Chart */}
+      {comparisonTown && (
+        <Grid item xs={12} md={4}>
+          <TownPieChart town={comparisonTown} isComparisonTown={true} />
+        </Grid>
+      )}
     </Grid>
   );
 };

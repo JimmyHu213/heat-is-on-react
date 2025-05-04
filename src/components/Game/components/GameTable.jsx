@@ -220,57 +220,59 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
           </TableRow>
 
           {/* Town Rows */}
-          {towns.map((town) => (
-            <TableRow
-              key={town.id}
-              sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
-            >
-              <TableCell>
-                <Typography variant="subtitle2">{town.name}</Typography>
-              </TableCell>
-              {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
-                const cards = townCardPlays[town.id]?.[round] || [];
+          {towns
+            .filter((town) => !town.isComparisonTown)
+            .map((town) => (
+              <TableRow
+                key={town.id}
+                sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
+              >
+                <TableCell>
+                  <Typography variant="subtitle2">{town.name}</Typography>
+                </TableCell>
+                {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
+                  const cards = townCardPlays[town.id]?.[round] || [];
 
-                return (
-                  <TableCell key={round} align="center" sx={{ p: 1 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.5,
-                      }}
-                    >
-                      {cards.map((cardName, index) => {
-                        const chipProps = getCardChipProps(cardName);
+                  return (
+                    <TableCell key={round} align="center" sx={{ p: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.5,
+                        }}
+                      >
+                        {cards.map((cardName, index) => {
+                          const chipProps = getCardChipProps(cardName);
 
-                        return (
-                          <Chip
-                            key={index}
-                            label={cardName}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              fontSize: "0.7rem",
-                              height: "auto",
-                              py: 0.5,
-                              bgcolor: chipProps.bgcolor,
-                              borderColor: chipProps.borderColor,
-                              color: chipProps.color,
-                            }}
-                          />
-                        );
-                      })}
-                    </Box>
-                  </TableCell>
-                );
-              })}
-              <TableCell align="center">
-                <Typography variant="body2" fontWeight="bold">
-                  {town.effortPoints}
-                </Typography>
-              </TableCell>
-            </TableRow>
-          ))}
+                          return (
+                            <Chip
+                              key={index}
+                              label={cardName}
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                fontSize: "0.7rem",
+                                height: "auto",
+                                py: 0.5,
+                                bgcolor: chipProps.bgcolor,
+                                borderColor: chipProps.borderColor,
+                                color: chipProps.color,
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    </TableCell>
+                  );
+                })}
+                <TableCell align="center">
+                  <Typography variant="body2" fontWeight="bold">
+                    {town.effortPoints}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ))}
         </TableBody>
       </Table>
     </Paper>

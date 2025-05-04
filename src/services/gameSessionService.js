@@ -141,15 +141,17 @@ class GameSessionService {
       const towns = [];
 
       // Use first 5 default towns
-      const townTemplates = defaultTowns.slice(0, 5);
+      const townTemplates = defaultTowns;
 
       for (let i = 0; i < townTemplates.length; i++) {
         const template = townTemplates[i];
         const townId = String(i + 1); // Ensure sequential IDs (1, 2, 3, 4, 5)
 
+        const isComparisonTown = template.name === "Bludgeton";
+
         const townData = {
           sessionId,
-          name: `Town ${i + 1}`, // Ensure name matches ID
+          name: template.name, // Ensure name matches ID
           townTemplateId: template.id,
           effortPoints: 100,
           currentRound: 0,
@@ -159,6 +161,7 @@ class GameSessionService {
           heatwave: template.baseStats.heatwave,
           biohazard: template.baseStats.biohazard,
           currentStats: {}, // Will be populated when round starts
+          isComparisonTown: isComparisonTown,
         };
 
         // Use explicit ID for the document

@@ -137,11 +137,13 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           onChange={handleTownChange}
           disabled={disabled}
         >
-          {towns.map((town) => (
-            <MenuItem key={town.id} value={town.id}>
-              {town.name}
-            </MenuItem>
-          ))}
+          {towns
+            .filter((town) => !town.isComparisonTown)
+            .map((town) => (
+              <MenuItem key={town.id} value={town.id}>
+                {town.name}
+              </MenuItem>
+            ))}
         </Select>
       </FormControl>
 

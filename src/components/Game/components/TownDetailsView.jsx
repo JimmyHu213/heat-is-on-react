@@ -132,149 +132,164 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
   }
 
   return (
-    <Grid container spacing={3}>
-      {towns.map((town) => (
-        <Grid item xs={12} md={6} key={town.id}>
-          <Card
-            sx={{
-              borderRadius: 2,
-              boxShadow: 3,
-              overflow: "hidden",
-              "&:hover": {
-                boxShadow: 6,
-              },
-            }}
-          >
-            <Box
+    <Grid container spacing={2} flex={1} justifyContent={"center"}>
+      {towns
+        .filter((town) => !town.isComparisonTown)
+        .map((town) => (
+          <Grid item xs={12} md={6} key={town.id}>
+            <Card
               sx={{
-                bgcolor: theme.palette.primary.main,
-                py: 1.5,
-                px: 2,
-                color: "white",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+                borderRadius: 2,
+                boxShadow: 3,
+                width: "350px",
+                overflow: "hidden",
+                "&:hover": {
+                  boxShadow: 6,
+                },
               }}
             >
-              {editState[town.id]?.isEditing ? (
-                // Edit mode
-                <Box
-                  sx={{ display: "flex", alignItems: "center", width: "100%" }}
-                >
-                  <TextField
-                    value={editState[town.id].name}
-                    onChange={(e) => handleNameChange(town.id, e.target.value)}
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      flexGrow: 1,
-                      mr: 1,
-                      "& .MuiOutlinedInput-root": {
-                        color: "white",
-                        "& fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "white",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "white",
-                        },
-                      },
-                      "& .MuiInputBase-input": {
-                        color: "white",
-                      },
-                    }}
-                    autoFocus
-                  />
-                  <Tooltip title="Save">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleSaveName(town.id)}
-                      sx={{ color: "white" }}
-                    >
-                      <SaveIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Cancel">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleCancelEdit(town.id)}
-                      sx={{ color: "white" }}
-                    >
-                      <CancelIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              ) : (
-                // Display mode
-                <>
-                  <Typography variant="h6" fontWeight="bold">
-                    {town.name}
-                  </Typography>
-                  <Tooltip title="Edit Town Name">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleStartEdit(town.id, town.name)}
-                      sx={{ color: "white" }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
-            </Box>
-
-            <CardContent>
               <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}
+                sx={{
+                  bgcolor: theme.palette.primary.dark,
+                  py: 1.5,
+                  px: 2,
+                  color: "white",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
-                <Typography variant="body2">
-                  <strong>ID:</strong> {town.id}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Budget Points:</strong> {town.effortPoints}
-                </Typography>
+                {editState[town.id]?.isEditing ? (
+                  // Edit mode
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                    }}
+                  >
+                    <TextField
+                      value={editState[town.id].name}
+                      onChange={(e) =>
+                        handleNameChange(town.id, e.target.value)
+                      }
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                        flexGrow: 1,
+                        mr: 1,
+                        "& .MuiOutlinedInput-root": {
+                          color: "white",
+                          "& fieldset": {
+                            borderColor: "rgba(255, 255, 255, 0.5)",
+                          },
+                          "&:hover fieldset": {
+                            borderColor: "white",
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: "white",
+                          },
+                        },
+                        "& .MuiInputBase-input": {
+                          color: "white",
+                        },
+                      }}
+                      autoFocus
+                    />
+                    <Tooltip title="Save">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleSaveName(town.id)}
+                        sx={{ color: "white" }}
+                      >
+                        <SaveIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Cancel">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCancelEdit(town.id)}
+                        sx={{ color: "white" }}
+                      >
+                        <CancelIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ) : (
+                  // Display mode
+                  <>
+                    <Typography variant="h6" fontWeight="bold">
+                      {town.name}
+                    </Typography>
+                    <Tooltip title="Edit Town Name">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleStartEdit(town.id, town.name)}
+                        sx={{ color: "white" }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
               </Box>
 
-              <Divider sx={{ mb: 2 }} />
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="body2">
+                    <strong>ID:</strong> {town.id}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Budget Points:</strong> {town.effortPoints}
+                  </Typography>
+                </Box>
 
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                Hazard Resilience Levels
-              </Typography>
+                <Divider sx={{ mb: 2 }} />
 
-              {hazardTypes.map((hazard) => (
-                <Box key={hazard.id} sx={{ mb: 3 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <Box sx={{ mr: 1, color: hazard.color }}>{hazard.icon}</Box>
-                    <Typography variant="subtitle2" fontWeight="bold">
-                      {hazard.name}
-                    </Typography>
-                  </Box>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  Hazard Resilience Levels
+                </Typography>
 
-                  <Grid container spacing={2}>
-                    {aspects.map((aspect) => (
-                      <Grid item xs={6} key={aspect.id}>
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body2" gutterBottom>
-                            {aspect.name}: {town[hazard.id][aspect.id]}
-                          </Typography>
-                          <LinearProgress
-                            variant="determinate"
-                            value={town[hazard.id][aspect.id]}
-                            sx={{
-                              height: 8,
-                              borderRadius: 4,
-                              bgcolor: "rgba(0,0,0,0.1)",
-                              "& .MuiLinearProgress-bar": {
-                                bgcolor: hazard.color,
+                {hazardTypes.map((hazard) => (
+                  <Box key={hazard.id} sx={{ mb: 3 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <Box sx={{ mr: 1, color: hazard.color }}>
+                        {hazard.icon}
+                      </Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {hazard.name}
+                      </Typography>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      {aspects.map((aspect) => (
+                        <Grid item xs={6} key={aspect.id}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" gutterBottom>
+                              {aspect.name}: {town[hazard.id][aspect.id]}
+                            </Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={town[hazard.id][aspect.id]}
+                              sx={{
+                                height: 8,
                                 borderRadius: 4,
-                              },
-                            }}
-                          />
+                                bgcolor: "rgba(0,0,0,0.1)",
+                                "& .MuiLinearProgress-bar": {
+                                  bgcolor: hazard.color,
+                                  borderRadius: 4,
+                                },
+                              }}
+                            />
 
-                          {/* Warning indicator if value is below threshold */}
-                          {/* {town[hazard.id][aspect.id] <= 20 && (
+                            {/* Warning indicator if value is below threshold */}
+                            {/* {town[hazard.id][aspect.id] <= 20 && (
                             <Typography
                               variant="caption"
                               color="error"
@@ -283,16 +298,16 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                               Critical level! (-10 penalty to all)
                             </Typography>
                           )} */}
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Box>
-              ))}
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
     </Grid>
   );
 };
