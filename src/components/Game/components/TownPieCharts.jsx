@@ -106,11 +106,11 @@ const TownPieCharts = ({ towns }) => {
     return (
       <Box
         sx={{
-          bgcolor: "background.paper",
+          bgcolor: "grey.200",
           borderRadius: 2,
           boxShadow: 1,
           p: 2,
-          height: "100%",
+          height: "400px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -303,10 +303,21 @@ const TownPieCharts = ({ towns }) => {
 
   return (
     <>
-      {aspectLegend}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      {/* {aspectLegend} */}
+      <Grid
+        container
+        spacing={3}
+        sx={{ mb: 3, display: "flex", justifyContent: "space-evenly" }}
+      >
         {towns.map((town) => (
-          <Grid item xs={12} sm={6} md={4} key={town.id}>
+          <Grid
+            item
+            xs={12}
+            sm={6}
+            md={4}
+            key={town.id}
+            sx={{ display: "flex", justifyContent: "top" }}
+          >
             {renderTownChart(town)}
           </Grid>
         ))}

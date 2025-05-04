@@ -16,6 +16,7 @@ import {
   economyColor,
   societyColor,
   healthColor,
+  primaryColorLight,
 } from "../../../constants/palette";
 
 const BarChartsView = ({ towns }) => {
@@ -48,6 +49,11 @@ const BarChartsView = ({ towns }) => {
       return {
         name: aspectLabels[index],
         value: sum,
+        // Add individual values for each aspect type
+        natureValue: aspect === "nature" ? sum : 0,
+        economyValue: aspect === "economy" ? sum : 0,
+        societyValue: aspect === "society" ? sum : 0,
+        healthValue: aspect === "health" ? sum : 0,
       };
     });
   };
@@ -122,7 +128,7 @@ const BarChartsView = ({ towns }) => {
 
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 1, boxShadow: 2 }}>
+        <Paper sx={{ p: 1, boxShadow: 2, bgcolor: primaryColorLight }}>
           <Typography variant="subtitle2">{label}</Typography>
           {payload.map((entry, index) => (
             <Typography
@@ -140,6 +146,52 @@ const BarChartsView = ({ towns }) => {
     return null;
   };
 
+  // Custom label renderer for bar values
+  const renderCustomBarLabel = (props) => {
+    const { x, y, width, height, value } = props;
+
+    // Only render if value is greater than 0
+    if (!value || value <= 0) return null;
+
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 10}
+        fill="#fff"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontWeight="bold"
+        fontSize="12"
+        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.5)" }}
+      >
+        {value}
+      </text>
+    );
+  };
+
+  // Custom label renderer for the total at the top of stacked bars
+  const renderTotalLabel = (props) => {
+    const { x, y, width, index } = props;
+
+    // Get the total for this town
+    const total = townData[index].total;
+
+    return (
+      <text
+        x={x - width / 2 - 5}
+        y={y - 10} // Fixed position at the top of the chart
+        fill="#fff"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontWeight="bold"
+        fontSize="14"
+        style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}
+      >
+        {total}
+      </text>
+    );
+  };
+
   return (
     <Grid container spacing={3}>
       {/* Aspects Summary Chart */}
@@ -150,7 +202,8 @@ const BarChartsView = ({ towns }) => {
             borderRadius: 2,
             boxShadow: 2,
             height: 400,
-            bgcolor: theme.palette.background.paper,
+            width: "500px",
+            bgcolor: "#2c4260", // Changed from theme.palette.background.paper to the specified color
           }}
         >
           <Typography
@@ -158,6 +211,7 @@ const BarChartsView = ({ towns }) => {
             align="center"
             fontWeight="bold"
             gutterBottom
+            sx={{ color: "#fff" }} // Adding white text color for better contrast
           >
             Aspects Summary
           </Typography>
@@ -166,29 +220,54 @@ const BarChartsView = ({ towns }) => {
               <BarChart
                 data={aspectData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                barSize={30}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  axisLine={{ strokeWidth: 1 }}
-                  tickLine={{ strokeWidth: 1 }}
+                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  //axisLine={{ strokeWidth: 1, stroke: "#fff" }}
+                  //tickLine={{ strokeWidth: 1, stroke: "#fff" }}
                 />
                 <YAxis
                   domain={[0, maxY]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
                   tickCount={6}
-                  axisLine={{ strokeWidth: 1 }}
-                  tickLine={{ strokeWidth: 1 }}
+                  //axisLine={{ strokeWidth: 1, stroke: "#fff" }}
+                  //tickLine={{ strokeWidth: 1, stroke: "#fff" }}
                 />
                 <Tooltip content={renderTooltip} />
                 <Bar
-                  dataKey="value"
-                  name="Points"
+                  dataKey="natureValue"
+                  name="Nature"
                   fill={natureColor}
-                  radius={[4, 4, 0, 0]}
+                  radius={[4, 4, 4, 4]}
+                  animationDuration={500}
+                  label={renderCustomBarLabel}
+                />
+                <Bar
+                  dataKey="economyValue"
+                  name="Economy"
+                  fill={economyColor}
+                  radius={[4, 4, 4, 4]}
+                  animationDuration={600}
+                  label={renderCustomBarLabel}
+                />
+                <Bar
+                  dataKey="societyValue"
+                  name="Society"
+                  fill={societyColor}
+                  radius={[4, 4, 4, 4]}
+                  animationDuration={700}
+                  label={renderCustomBarLabel}
+                />
+                <Bar
+                  dataKey="healthValue"
+                  name="Health"
+                  fill={healthColor}
+                  radius={[4, 4, 4, 4]}
                   animationDuration={800}
-                  label={{ position: "top", fill: "#666", fontSize: 12 }}
+                  label={renderCustomBarLabel}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -204,7 +283,8 @@ const BarChartsView = ({ towns }) => {
             borderRadius: 2,
             boxShadow: 2,
             height: 400,
-            bgcolor: theme.palette.background.paper,
+            width: "600px",
+            bgcolor: "#2c4260", // Changed from theme.palette.background.paper to the specified color
           }}
         >
           <Typography
@@ -212,6 +292,7 @@ const BarChartsView = ({ towns }) => {
             align="center"
             fontWeight="bold"
             gutterBottom
+            sx={{ color: "#fff" }} // Adding white text color for better contrast
           >
             Towns Summary
           </Typography>
@@ -220,27 +301,29 @@ const BarChartsView = ({ towns }) => {
               <BarChart
                 data={townData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                barSize={30}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  axisLine={{ strokeWidth: 1 }}
-                  tickLine={{ strokeWidth: 1 }}
+                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  //axisLine={{ strokeWidth: 1, stroke: "#fff" }}
+                  //tickLine={{ strokeWidth: 1, stroke: "#fff" }}
                 />
                 <YAxis
                   domain={[0, maxY]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
                   tickCount={6}
-                  axisLine={{ strokeWidth: 1 }}
-                  tickLine={{ strokeWidth: 1 }}
+                  //axisLine={{ strokeWidth: 1, stroke: "#fff" }}
+                  //tickLine={{ strokeWidth: 1, stroke: "#fff" }}
                 />
                 <Tooltip content={renderTooltip} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12, color: "#fff" }} />
                 <Bar
                   dataKey="nature"
                   name="Nature"
                   stackId="a"
+                  radius={[0, 0, 4, 4]}
                   fill={natureColor}
                   animationDuration={500}
                 />
@@ -262,8 +345,16 @@ const BarChartsView = ({ towns }) => {
                   dataKey="health"
                   name="Health"
                   stackId="a"
+                  radius={[4, 4, 0, 0]}
                   fill={healthColor}
                   animationDuration={800}
+                />
+                {/* Additional bar to show total at the top */}
+                <Bar
+                  dataKey="total"
+                  stackId="b"
+                  fill="transparent"
+                  label={renderTotalLabel}
                 />
               </BarChart>
             </ResponsiveContainer>
