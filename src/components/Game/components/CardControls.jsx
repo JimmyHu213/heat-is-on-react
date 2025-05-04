@@ -61,6 +61,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   // Handle card selection
   const handleCardChange = (event) => {
+    console.log("Selected card:", event.target.value);
     setSelectedCard(event.target.value);
   };
 
@@ -87,6 +88,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
   // Find card by ID
   const findCard = (cardId) => {
     const allCards = [...cards, ...allAbilityCards];
+    console.log(allCards.find((card) => card.id === cardId));
     return allCards.find((card) => card.id === cardId);
   };
 
@@ -170,7 +172,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
         >
           {availableCards.map((card) => (
             <MenuItem key={card.id} value={card.id}>
-              {card.name}
+              {card.name + " (" + card.type + ")"}
             </MenuItem>
           ))}
         </Select>
@@ -207,6 +209,8 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
               sx={{
                 mt: 2,
                 borderColor: getCardColor(findCard(selectedCard)?.type || ""),
+                borderWidth: 5,
+                borderRadius: 2,
               }}
             >
               <CardContent>
@@ -217,8 +221,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
                   Type: {findCard(selectedCard)?.type}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Duration: {findCard(selectedCard)?.durationRounds || 1}{" "}
-                  round(s)
+                  Duration: {findCard(selectedCard)?.round || 1} round(s)
                 </Typography>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle2" gutterBottom>

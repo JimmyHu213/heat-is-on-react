@@ -18,6 +18,7 @@ import {
   Snackbar,
   useTheme,
   useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 
 // Icons
@@ -28,6 +29,8 @@ import UndoIcon from "@mui/icons-material/Undo";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LocationCityIcon from "@mui/icons-material/LocationCity";
 import HistoryIcon from "@mui/icons-material/History";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 // Components
 import TownPieCharts from "./components/TownPieCharts";
@@ -36,9 +39,11 @@ import GameTable from "./components/GameTable";
 import TownDetailsView from "./components/TownDetailsView";
 import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
+import { primaryColor } from "../../constants/palette";
+import { SpaceBar } from "@mui/icons-material";
 
 // Drawer width
-const drawerWidth = 280;
+const drawerWidth = 500;
 
 // TabPanel component
 function TabPanel(props) {
@@ -87,7 +92,7 @@ const Game = () => {
   } = useGame();
 
   // Local state
-  const [drawerOpen, setDrawerOpen] = useState(!isMobile);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -218,8 +223,8 @@ const Game = () => {
           zIndex: theme.zIndex.drawer + 1,
           background: "#4D8E8B",
           boxShadow: 3,
-          width: { md: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { md: drawerOpen ? `${drawerWidth}px` : 0 },
+          width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["width", "margin"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -227,14 +232,17 @@ const Game = () => {
         }}
       >
         <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: "none" } }}
-          >
-            <MenuIcon />
-          </IconButton>
+          {/* Drawer toggle button (visible on all screen sizes) */}
+          <Tooltip title={drawerOpen ? "Hide Controls" : "Show Controls"}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2 }}
+            >
+              {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+            </IconButton>
+          </Tooltip>
 
           <IconButton
             color="inherit"
@@ -286,7 +294,7 @@ const Game = () => {
         open={drawerOpen}
         onClose={handleDrawerToggle}
         sx={{
-          width: drawerWidth,
+          //width: drawerWidth,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
             width: drawerWidth,
@@ -295,7 +303,26 @@ const Game = () => {
           },
         }}
       >
-        <Toolbar /> {/* Spacer for AppBar */}
+        <Toolbar>
+          {/* Add drawer header with a close button */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              width: "100%",
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight="bold">
+              Game Controls
+            </Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            {/* <IconButton onClick={handleDrawerToggle}>
+              <ChevronLeftIcon />
+            </IconButton> */}
+          </Box>
+        </Toolbar>
+        <Divider />
         <Box sx={{ overflow: "auto", p: 2 }}>
           <HazardControls
             onApplyHazard={handleApplyHazard}
@@ -320,13 +347,15 @@ const Game = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { md: drawerOpen ? `${drawerWidth}px` : 0 },
+          maxWidth: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["margin", "width"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
-          bgcolor: "#f5f5f5",
+          bgcolor: primaryColor,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <Toolbar /> {/* Spacer for AppBar */}
@@ -361,6 +390,7 @@ const Game = () => {
             />
           </Tabs>
         </Paper>
+        {/* Rest of the component remains the same */}
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
           {currentRound === 0 ? (
@@ -392,11 +422,11 @@ const Game = () => {
             </Paper>
           ) : (
             <>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+              {/* <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Town Hazard Overview
-              </Typography>
+              </Typography> */}
               <TownPieCharts towns={towns} />
-
+              {/* 
               <Typography
                 variant="h6"
                 fontWeight="bold"
@@ -404,7 +434,7 @@ const Game = () => {
                 sx={{ mt: 4 }}
               >
                 Town Statistics
-              </Typography>
+              </Typography> */}
               <BarChartsView towns={towns} />
             </>
           )}
