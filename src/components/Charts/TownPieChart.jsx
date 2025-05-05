@@ -6,6 +6,9 @@ import {
   stormSurgeColor1,
   heatwaveColor1,
   biohazardColor1,
+  primaryColor,
+  primaryColorLight,
+  secondaryColor,
 } from "../../constants/palette";
 
 // Icons
@@ -59,14 +62,14 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
   const aspects = ["nature", "economy", "society", "health"];
   const centerX = 140; // Center X coordinate
   const centerY = 140; // Center Y coordinate
-  const innerRadius = 30; // Inner circle radius
+  const innerRadius = 5; // Inner circle radius
 
   return (
     <Box
       sx={{
         bgcolor: "grey.200",
         borderRadius: 2,
-        boxShadow: 1,
+        boxShadow: 2,
         p: 2,
         height: "400px",
         display: "flex",
@@ -74,17 +77,13 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
         alignItems: "center",
       }}
     >
-      <Typography
-        variant="subtitle1"
-        fontWeight="bold"
-        align="center"
-        gutterBottom
-        sx={{ color: "fff" }}
+      <Box
+        sx={{
+          position: "relative",
+          width: 280,
+          height: 280,
+        }}
       >
-        {town.name}
-      </Typography>
-
-      <Box sx={{ position: "relative", width: 280, height: 280 }}>
         <svg width="280" height="280" viewBox="0 0 280 280">
           {/* Render hazard wedges */}
           {hazards.map((hazard) => {
@@ -131,10 +130,15 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
               // Label position - middle of wedge
               const midAngle =
                 (((startAngle + endAngle) / 2) * Math.PI) / 180 - Math.PI / 2;
-              const labelRadius =
-                innerRadius + (outerRadius - innerRadius) * 0.5;
+              const labelRadius = innerRadius * 2 + (outerRadius - innerRadius);
               const labelX = centerX + labelRadius * Math.cos(midAngle);
               const labelY = centerY + labelRadius * Math.sin(midAngle);
+
+              // Badge position - similar to your badgePositionPercentageOffset: 0.8
+              const badgeRadius =
+                innerRadius + (outerRadius - innerRadius) * 0.8;
+              const badgeX = centerX + badgeRadius * Math.cos(midAngle);
+              const badgeY = centerY + badgeRadius * Math.sin(midAngle);
 
               return (
                 <g key={`${hazard.id}-${aspect}`}>
@@ -150,12 +154,34 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
                     y={labelY}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="#000"
+                    fill="grey"
                     fontSize="10"
                     fontWeight="bold"
                   >
                     {value}
                   </text>
+                  {value >= 20 && (
+                    <g>
+                      <circle
+                        cx={badgeX}
+                        cy={badgeY}
+                        fill={hazard.color}
+                        stroke="#fff"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={badgeX}
+                        y={badgeY}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#fff"
+                        fontSize="7"
+                        fontWeight="bold"
+                      >
+                        {aspect[0].toUpperCase()}
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             });
@@ -177,81 +203,71 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
             r={innerRadius + 20}
             fill="none"
             stroke="rgba(255,0,0,0.6)"
-            strokeWidth="2"
+            strokeWidth="1.5"
             strokeDasharray="5,2"
           />
 
           {/* Hazard icons */}
           <g>
             {/* Bushfire - top */}
-            <foreignObject x={centerX - 15} y={40} width={30} height={30}>
+            <foreignObject x={220} y={20} width={30} height={30}>
               <LocalFireDepartmentIcon
                 style={{ color: bushfireColor1, fontSize: 24 }}
               />
             </foreignObject>
-            <text
-              x={centerX}
-              y={30}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="bold"
-            >
-              Bushfire
-            </text>
 
             {/* Flood - right */}
-            <foreignObject x={210} y={centerY - 15} width={30} height={30}>
+            <foreignObject x={250} y={centerY} width={30} height={30}>
               <FloodIcon style={{ color: floodColor1, fontSize: 24 }} />
             </foreignObject>
-            <text
-              x={225}
-              y={centerY - 25}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="bold"
-            >
-              Flood
-            </text>
 
             {/* Storm Surge - bottom right */}
-            <foreignObject x={190} y={200} width={30} height={30}>
+            <foreignObject
+              x={centerX - 15}
+              y={centerY + 110}
+              width={30}
+              height={30}
+            >
               <ThunderstormIcon
                 style={{ color: stormSurgeColor1, fontSize: 24 }}
               />
             </foreignObject>
-            <text x={190} y={240} fontSize="10" fontWeight="bold">
-              Storm Surge
-            </text>
 
             {/* Heatwave - bottom left */}
-            <foreignObject x={60} y={200} width={30} height={30}>
+            <foreignObject x={10} y={centerY} width={30} height={30}>
               <WbSunnyIcon style={{ color: heatwaveColor1, fontSize: 24 }} />
             </foreignObject>
-            <text
-              x={75}
-              y={240}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="bold"
-            >
-              Heatwave
-            </text>
 
             {/* Biohazard - left */}
-            <foreignObject x={40} y={centerY - 15} width={30} height={30}>
+            <foreignObject x={40} y={20} width={30} height={30}>
               <BugReportIcon style={{ color: biohazardColor1, fontSize: 24 }} />
             </foreignObject>
-            <text
-              x={55}
-              y={centerY - 25}
-              textAnchor="middle"
-              fontSize="10"
-              fontWeight="bold"
-            >
-              Biohazard
-            </text>
           </g>
         </svg>
+        <Box
+          sx={{
+            position: "inherit",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            bgcolor: primaryColorLight,
+            borderRadius: 10,
+            justifySelf: "center",
+            marginTop: 2,
+            boxShadow: 2,
+            width: "80%",
+            padding: 1,
+          }}
+        >
+          <Typography
+            variant="subtitle1"
+            fontWeight="bold"
+            gutterBottom
+            sx={{ color: secondaryColor, textAlign: "center", my: "auto" }}
+          >
+            {town.name}
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
