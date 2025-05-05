@@ -80,17 +80,26 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
 
   // Get chip color based on card name
   const getCardChipProps = (cardName) => {
+    //TODO Map the card through the cards array to get the color
     // Make sure cardName is a string
     cardName = String(cardName || "");
 
     // Based on card name, determine type/color
-    if (cardName.includes("BUSHFIRE") || cardName.includes("FIRE-RESILIENT")) {
+    if (
+      cardName.includes("LANDSCAPING") ||
+      cardName.includes("FIRE-RESILIENT") ||
+      cardName.includes("BURNING")
+    ) {
       return {
         bgcolor: `${bushfireColor1}15`,
         borderColor: bushfireColor1,
         color: "#000000", // Black text
       };
-    } else if (cardName.includes("FLOOD") || cardName.includes("STORMWATER")) {
+    } else if (
+      cardName.includes("FLOOD") ||
+      cardName.includes("STORMWATER") ||
+      cardName.includes("SPONGES")
+    ) {
       return {
         bgcolor: `${floodColor1}15`,
         borderColor: floodColor1,
@@ -99,7 +108,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
     } else if (
       cardName.includes("STORM") ||
       cardName.includes("SEA DEFENSES") ||
-      cardName.includes("BARRIER")
+      cardName.includes("STILTS")
     ) {
       return {
         bgcolor: `${stormSurgeColor1}15`,
@@ -107,7 +116,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
         color: "#000000", // Black text
       };
     } else if (
-      cardName.includes("HEAT") ||
+      cardName.includes("GREE") ||
       cardName.includes("COOL") ||
       cardName.includes("WHITE ROOFS")
     ) {
@@ -232,6 +241,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 </TableCell>
                 {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
                   const cards = townCardPlays[town.id]?.[round] || [];
+                  console.log(cards);
 
                   return (
                     <TableCell key={round} align="center" sx={{ p: 1 }}>
