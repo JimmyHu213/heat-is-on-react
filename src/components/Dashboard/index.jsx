@@ -29,6 +29,7 @@ import AddIcon from "@mui/icons-material/Add";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { primaryColor } from "../../constants/palette";
+import backgroundImage from "../../assets/images/web-banner.png";
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -119,20 +120,16 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            The Heat Is On
-          </Typography>
-          <Button
-            color="inherit"
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-          >
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <AppBar
+        position="relative"
+        sx={{
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          height: "300px", // Adjust height to match your banner's proportions
+          display: "flex",
+        }}
+      ></AppBar>
 
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {error && (
@@ -149,7 +146,7 @@ export default function Dashboard() {
                 p: 2,
                 display: "flex",
                 flexDirection: "column",
-                height: 240,
+                height: "100%",
               }}
             >
               <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
@@ -172,6 +169,15 @@ export default function Dashboard() {
               <Typography variant="body2" gutterBottom>
                 <strong>User ID:</strong> {currentUser.uid}
               </Typography>
+              <Button
+                color="primary"
+                variant="contained"
+                onClick={handleLogout}
+                startIcon={<LogoutIcon />}
+                sx={{ textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
+              >
+                Logout
+              </Button>
             </Paper>
           </Grid>
 
@@ -201,7 +207,7 @@ export default function Dashboard() {
                     color="text.secondary"
                     sx={{ mr: 2, ml: 2 }}
                   >
-                    {activeSessions.length}/3 active games
+                    {activeSessions.length}/1 active games
                   </Typography>
                   <Button
                     variant="contained"
@@ -212,7 +218,7 @@ export default function Dashboard() {
                   >
                     {isCreating
                       ? "Creating..."
-                      : activeSessions.length >= 3
+                      : activeSessions.length >= 1
                       ? "Limit Reached"
                       : "New Game"}
                   </Button>
@@ -263,6 +269,7 @@ export default function Dashboard() {
                               variant="contained"
                               color="primary"
                               startIcon={<PlayArrowIcon />}
+                              sx={{ mr: 1 }}
                               onClick={() => handleStartGame(session.id)}
                             >
                               Continue

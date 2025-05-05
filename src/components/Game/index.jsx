@@ -41,6 +41,7 @@ import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
 import { primaryColor } from "../../constants/palette";
 import { SpaceBar } from "@mui/icons-material";
+import DotTabs from "./components/DotTabs";
 
 // Drawer width
 const drawerWidth = 500;
@@ -218,10 +219,10 @@ const Game = () => {
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       {/* App Bar */}
       <AppBar
-        position="fixed"
+        position="absolute"
         sx={{
           zIndex: theme.zIndex.drawer + 1,
-          background: "#4D8E8B",
+          backgroundColor: "#E38A6C",
           boxShadow: 3,
           // width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
           // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
@@ -254,7 +255,7 @@ const Game = () => {
           </IconButton>
 
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Game Round: {currentRound}/5
+            Current Year: {2050 + currentRound}
           </Typography>
 
           {/* Revert button */}
@@ -283,7 +284,7 @@ const Game = () => {
             onClick={handleAdvanceRound}
             disabled={loading || currentRound >= 5}
           >
-            {currentRound === 0 ? "Start Game" : "Next Round"}
+            {currentRound === 0 ? "Start Game" : "Next Year"}
           </Button>
         </Toolbar>
       </AppBar>
@@ -422,19 +423,8 @@ const Game = () => {
             </Paper>
           ) : (
             <>
-              {/* <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Town Hazard Overview
-              </Typography> */}
               <TownPieCharts towns={towns} />
-              {/* 
-              <Typography
-                variant="h6"
-                fontWeight="bold"
-                gutterBottom
-                sx={{ mt: 4 }}
-              >
-                Town Statistics
-              </Typography> */}
+
               <BarChartsView towns={towns} />
             </>
           )}
