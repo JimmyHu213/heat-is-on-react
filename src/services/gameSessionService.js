@@ -288,6 +288,7 @@ class GameSessionService {
   // In src/services/gameSessionService.js
   // Update the applyCardToTown method to handle effort points
 
+  // Update in src/services/gameSessionService.js
   async applyCardToTown(townId, cardId, round) {
     try {
       // Get town
@@ -315,20 +316,20 @@ class GameSessionService {
       // Deduct card cost from town's effort points
       const updatedEffortPoints = town.effortPoints - card.cost;
 
-      // Apply card effects to town (simulate town.applyCard from Dart code)
+      // Apply card effects to town ONLY FOR THE CURRENT ROUND
       const updatedTown = {
         ...this.applyCardEffects(town, card),
-        effortPoints: updatedEffortPoints, // Add updated effort points
+        effortPoints: updatedEffortPoints,
       };
 
       // Update town
       const savedTown = await this.updateTown(townId, updatedTown);
 
-      // Create card play record
+      // Create card play record with effective rounds
+      // If card.duration is 3, and current round is 2, then effective rounds are [2, 3, 4]
       const effectiveRounds = [];
-      const duration = card.durationRounds || 1;
+      const duration = card.duration || 1; // Rename to duration for clarity in future
       for (let i = 0; i < duration; i++) {
-        // Most cards last 1 round
         effectiveRounds.push(round + i);
       }
 
@@ -764,10 +765,17 @@ class GameSessionService {
             let displayName = card.name;
 
             // If this card has multi-round duration, indicate it
-            if (card.durationRounds > 1) {
-              const lastRound = Math.max(...play.effectiveRounds);
-              if (round < lastRound) {
-                displayName = `${card.name} (→R${lastRound})`;
+            if (card.duration > 1) {
+              const playedAt = play.playedAtRound;
+              const duration = card.duration;
+
+              // If this is the first round the card is active
+              if (round === playedAt) {
+                displayName = `${card.name} (${duration} rounds)`;
+              } else {
+                // Show which round of effect this is
+                const currentEffect = round - playedAt + 1;
+                displayName = `${card.name} (${currentEffect}/${duration})`;
               }
             }
 

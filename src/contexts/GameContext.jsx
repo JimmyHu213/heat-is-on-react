@@ -361,7 +361,7 @@ export function GameProvider({ children }) {
   };
 
   const wrappedAdvanceRound = async () => {
-    saveStateSnapshot();
+    setStateHistory([]);
     return advanceRound();
   };
 

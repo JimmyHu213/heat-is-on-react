@@ -246,7 +246,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
                     color="text.secondary"
                     gutterBottom
                   >
-                    Duration: {findCard(selectedCard)?.round || 1} round(s)
+                    Duration: {findCard(selectedCard)?.duration || 1} round(s)
                   </Typography>
                   <Divider sx={{ my: 1 }} />
                   <Typography variant="subtitle2" gutterBottom>

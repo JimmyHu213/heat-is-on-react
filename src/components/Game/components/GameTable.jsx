@@ -98,7 +98,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
     } else if (
       cardName.includes("FLOOD") ||
       cardName.includes("STORMWATER") ||
-      cardName.includes("SPONGES")
+      cardName.includes("COMMUNITY EDUCATION")
     ) {
       return {
         bgcolor: `${floodColor1}15`,
@@ -165,9 +165,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 }}
               >
                 <Typography variant="subtitle2">
-                  {round <= currentRound
-                    ? `Round ${round}`
-                    : `Future Round ${round}`}
+                  {`Year ${round + 2050}`}
                 </Typography>
               </TableCell>
             ))}
