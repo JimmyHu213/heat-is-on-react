@@ -200,61 +200,98 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>Apply Adaptation Card</DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText component="div">
             Are you sure you want to apply this card to the selected town?
           </DialogContentText>
 
           {selectedTown && selectedCard && (
-            <Card
-              variant="outlined"
-              sx={{
-                mt: 2,
-                borderColor: getCardColor(findCard(selectedCard)?.type || ""),
-                borderWidth: 5,
-                borderRadius: 2,
-              }}
-            >
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {findCard(selectedCard)?.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Type: {findCard(selectedCard)?.type}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Duration: {findCard(selectedCard)?.round || 1} round(s)
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="subtitle2" gutterBottom>
-                  Card Effects:
-                </Typography>
-                <Grid container spacing={1}>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Nature: +{findCard(selectedCard)?.nature}
-                    </Typography>
+            <>
+              <Typography
+                variant="body2"
+                color={
+                  towns.find((t) => t.id === selectedTown)?.effortPoints <
+                  findCard(selectedCard)?.cost
+                    ? "error.main"
+                    : "text.secondary"
+                }
+                sx={{ mt: 1, mb: 2 }}
+              >
+                Cost: {findCard(selectedCard)?.cost} points
+                {towns.find((t) => t.id === selectedTown)?.effortPoints <
+                  findCard(selectedCard)?.cost &&
+                  " - Not enough effort points!"}
+              </Typography>
+
+              <Card
+                variant="outlined"
+                sx={{
+                  borderColor: getCardColor(findCard(selectedCard)?.type || ""),
+                  borderWidth: 5,
+                  borderRadius: 2,
+                }}
+              >
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {findCard(selectedCard)?.name}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Type: {findCard(selectedCard)?.type}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Duration: {findCard(selectedCard)?.round || 1} round(s)
+                  </Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" gutterBottom>
+                    Card Effects:
+                  </Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={3}>
+                      <Typography variant="body2">
+                        Nature: +{findCard(selectedCard)?.nature}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="body2">
+                        Economy: +{findCard(selectedCard)?.economy}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="body2">
+                        Society: +{findCard(selectedCard)?.society}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={3}>
+                      <Typography variant="body2">
+                        Health: +{findCard(selectedCard)?.health}
+                      </Typography>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Economy: +{findCard(selectedCard)?.economy}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Society: +{findCard(selectedCard)?.society}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Health: +{findCard(selectedCard)?.health}
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Cost: {findCard(selectedCard)?.cost} points
-                </Typography>
-              </CardContent>
-            </Card>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1,
+                      fontWeight: "bold",
+                      color:
+                        towns.find((t) => t.id === selectedTown)?.effortPoints <
+                        findCard(selectedCard)?.cost
+                          ? "error.main"
+                          : "success.main",
+                    }}
+                  >
+                    Cost: {findCard(selectedCard)?.cost} points (Available:{" "}
+                    {towns.find((t) => t.id === selectedTown)?.effortPoints})
+                  </Typography>
+                </CardContent>
+              </Card>
+            </>
           )}
         </DialogContent>
         <DialogActions>

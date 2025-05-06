@@ -282,6 +282,12 @@ class GameSessionService {
    * @param {number} round - Current round
    * @returns {Promise<Object>} Updated town and card play
    */
+  // In src/services/gameSessionService.js
+  // Update the applyCardToTown method to handle effort points
+
+  // In src/services/gameSessionService.js
+  // Update the applyCardToTown method to handle effort points
+
   async applyCardToTown(townId, cardId, round) {
     try {
       // Get town
@@ -299,8 +305,21 @@ class GameSessionService {
         throw new Error(`Card not found: ${cardId}`);
       }
 
+      // Check if town has enough effort points
+      if (town.effortPoints < card.cost) {
+        throw new Error(
+          `Not enough effort points: ${town.effortPoints} < ${card.cost}`
+        );
+      }
+
+      // Deduct card cost from town's effort points
+      const updatedEffortPoints = town.effortPoints - card.cost;
+
       // Apply card effects to town (simulate town.applyCard from Dart code)
-      const updatedTown = this.applyCardEffects(town, card);
+      const updatedTown = {
+        ...this.applyCardEffects(town, card),
+        effortPoints: updatedEffortPoints, // Add updated effort points
+      };
 
       // Update town
       const savedTown = await this.updateTown(townId, updatedTown);

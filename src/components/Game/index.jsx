@@ -41,6 +41,7 @@ import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
 import { primaryColor } from "../../constants/palette";
 import { SpaceBar } from "@mui/icons-material";
+import { allCards } from "../../constants/cards";
 
 // Drawer width
 const drawerWidth = 500;
@@ -178,12 +179,31 @@ const Game = () => {
 
   // Handle playing card
   const handlePlayCard = async (townId, cardId) => {
-    await playCard(townId, cardId);
-    const town = towns.find((t) => t.id === townId);
-    showNotification(
-      `Applied adaptation card to ${town?.name || "town"}`,
-      "info"
-    );
+    try {
+      const town = towns.find((t) => t.id === townId);
+      const card = allCards.find((c) => c.id === cardId);
+
+      // Check if town has enough effort points
+      if (town.effortPoints < card.cost) {
+        showNotification(
+          `Not enough effort points! ${town.name} has ${town.effortPoints} points, but needs ${card.cost}.`,
+          "error"
+        );
+        return;
+      }
+
+      await playCard(townId, cardId);
+
+      showNotification(
+        `Applied adaptation card to ${town?.name || "town"} (-${
+          card.cost
+        } effort points)`,
+        "info"
+      );
+    } catch (error) {
+      console.error("Error playing card:", error);
+      showNotification(error.message || "Failed to play card", "error");
+    }
   };
 
   // Show notification

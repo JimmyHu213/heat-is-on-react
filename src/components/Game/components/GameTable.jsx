@@ -225,7 +225,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 </TableCell>
               );
             })}
-            <TableCell /> {/* Empty cell for budget column */}
+            <TableCell />
           </TableRow>
 
           {/* Town Rows */}
@@ -241,7 +241,6 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 </TableCell>
                 {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
                   const cards = townCardPlays[town.id]?.[round] || [];
-                  console.log(cards);
 
                   return (
                     <TableCell key={round} align="center" sx={{ p: 1 }}>
