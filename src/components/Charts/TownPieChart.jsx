@@ -75,6 +75,7 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        width: "280px",
       }}
     >
       <Box

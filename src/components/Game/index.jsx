@@ -41,7 +41,6 @@ import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
 import { primaryColor } from "../../constants/palette";
 import { SpaceBar } from "@mui/icons-material";
-import DotTabs from "./components/DotTabs";
 
 // Drawer width
 const drawerWidth = 500;

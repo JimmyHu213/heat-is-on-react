@@ -55,7 +55,7 @@ const TownPieCharts = ({ towns }) => {
         spacing={3}
         sx={{ mb: 3, display: "flex", justifyContent: "space-evenly" }}
       >
-        {regularTowns.map((town) => (
+        {towns.map((town) => (
           <Grid
             item
             xs={12}

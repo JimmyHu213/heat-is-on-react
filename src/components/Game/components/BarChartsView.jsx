@@ -67,7 +67,7 @@ const BarChartsView = ({ towns }) => {
 
   // Prepare town summary data
   const prepareTownData = () => {
-    return regularTowns.map((town) => {
+    return towns.map((town) => {
       // Calculate total points for each aspect
       const nature =
         (town.bushfire?.nature || 0) +
@@ -136,7 +136,9 @@ const BarChartsView = ({ towns }) => {
     if (active && payload && payload.length) {
       return (
         <Paper sx={{ p: 1, boxShadow: 2, bgcolor: primaryColorLight }}>
-          <Typography variant="subtitle2">{label}</Typography>
+          <Typography variant="subtitle2" fontWeight="bold">
+            {label}
+          </Typography>
           {payload.map((entry, index) => (
             <Typography
               key={index}
@@ -200,7 +202,7 @@ const BarChartsView = ({ towns }) => {
   };
 
   return (
-    <Grid container spacing={3} justifyContent={"space-between"} sx={{ m: 4 }}>
+    <Grid container spacing={3} justifyContent={"space-around"} sx={{ m: 4 }}>
       {/* Aspects Summary Chart */}
       <Grid item xs={12} md={6}>
         <Paper
@@ -209,7 +211,7 @@ const BarChartsView = ({ towns }) => {
             borderRadius: 2,
             boxShadow: 2,
             height: 400,
-            width: "500px",
+            width: "600px",
             bgcolor: "#2c4260", // Changed from theme.palette.background.paper to the specified color
           }}
         >
@@ -368,13 +370,6 @@ const BarChartsView = ({ towns }) => {
           </Box>
         </Paper>
       </Grid>
-
-      {/* Comparison Town Chart */}
-      {comparisonTown && (
-        <Grid item xs={12} md={4}>
-          <TownPieChart town={comparisonTown} isComparisonTown={true} />
-        </Grid>
-      )}
     </Grid>
   );
 };
