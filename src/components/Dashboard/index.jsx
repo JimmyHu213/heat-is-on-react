@@ -240,7 +240,7 @@ export default function Dashboard() {
                       <Card>
                         <CardContent>
                           <Typography variant="h6" gutterBottom>
-                            Game Session
+                            {session.name || "Untitled Game"}
                           </Typography>
                           <Typography
                             variant="body2"

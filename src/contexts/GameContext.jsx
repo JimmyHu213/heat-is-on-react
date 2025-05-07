@@ -94,6 +94,39 @@ export function GameProvider({ children }) {
     }
   };
 
+  // In src/contexts/GameContext.jsx
+
+  // Add a new function to the GameProvider component
+  const updateSessionName = async (sessionId, newName) => {
+    setLoading(true);
+    try {
+      const updatedSession = await gameSessionService.updateSessionName(
+        sessionId,
+        newName
+      );
+
+      // Update current session if it's the active one
+      if (currentSession && currentSession.id === sessionId) {
+        setCurrentSession({
+          ...currentSession,
+          name: newName,
+        });
+      }
+
+      // Refresh session lists to reflect the change
+      await fetchUserSessions();
+
+      setError(null);
+      return updatedSession;
+    } catch (err) {
+      console.error("Error updating session name:", err);
+      setError("Failed to update session name. Please try again.");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load a specific game session
   const loadSession = async (sessionId) => {
     setLoading(true);
@@ -382,6 +415,7 @@ export function GameProvider({ children }) {
     // Actions
     fetchUserSessions,
     createNewSession,
+    updateSessionName,
     loadSession,
     deleteSession,
     advanceRound: wrappedAdvanceRound,

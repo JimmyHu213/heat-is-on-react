@@ -24,7 +24,7 @@ class GameSessionService {
   // In src/services/gameSessionService.js
   // Add this check to the createSession method
 
-  async createSession(userId) {
+  async createSession(userId, name = "New Game") {
     try {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
@@ -38,6 +38,7 @@ class GameSessionService {
         this.SESSIONS_COLLECTION,
         {
           userId,
+          name,
           currentRound: 0,
           isActive: true,
           completedAt: null,
@@ -53,6 +54,29 @@ class GameSessionService {
       };
     } catch (error) {
       console.error("Error creating game session:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update the name of a game session
+   * @param {string} sessionId - Session ID
+   * @param {string} newName - New session name
+   * @returns {Promise<Object>} Updated game session
+   * */
+  async updateSessionName(sessionId, newName) {
+    try {
+      if (!newName || newName.trim() === "") {
+        throw new Error("Session name cannot be empty");
+      }
+
+      return await firestoreService.updateDocument(
+        this.SESSIONS_COLLECTION,
+        sessionId,
+        { name: newName.trim() }
+      );
+    } catch (error) {
+      console.error(`Error updating session name for ${sessionId}:`, error);
       throw error;
     }
   }

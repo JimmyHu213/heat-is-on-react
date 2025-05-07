@@ -6,6 +6,7 @@ export class GameSession {
   constructor(data = {}) {
     this.sessionId = data.sessionId || "";
     this.userId = data.userId || "";
+    this.name = data.name || "";
     this.createdAt = data.createdAt || null;
     this.currentRound = data.currentRound || 0;
     this.isActive = data.isActive !== undefined ? data.isActive : true;
@@ -16,6 +17,7 @@ export class GameSession {
   toFirestore() {
     return {
       userId: this.userId,
+      name: this.name,
       createdAt: this.createdAt,
       currentRound: this.currentRound,
       isActive: this.isActive,
@@ -29,6 +31,7 @@ export class GameSession {
     return new GameSession({
       sessionId: doc.id,
       userId: data.userId,
+      name: data.name,
       createdAt: data.createdAt?.toDate(),
       currentRound: data.currentRound,
       isActive: data.isActive,
