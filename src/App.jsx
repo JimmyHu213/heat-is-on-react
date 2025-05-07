@@ -13,7 +13,6 @@ import {
   primaryColorLight,
   secondaryColor,
 } from "./constants/palette";
-
 // Context Providers
 import AppProviders from "./contexts";
 
@@ -24,6 +23,8 @@ import Signup from "./components/auth/Signup";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import Game from "./components/Game";
 import PrivateRoute from "./components/common/PrivateRoute";
+import Footer from "./components/common/Footer";
+import { Box } from "@mui/material";
 
 // Create a Material UI theme
 const theme = createTheme({
@@ -69,34 +70,40 @@ function App() {
       <CssBaseline />
       <Router>
         <AppProviders>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "100vh", // This ensures the footer sticks to the bottom
+            }}
+          >
+            <Routes>
+              {/* Your existing routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/game/:sessionId"
+                element={
+                  <PrivateRoute>
+                    <Game />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
 
-            {/* Protected routes */}
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-
-            <Route
-              path="/game/:sessionId"
-              element={
-                <PrivateRoute>
-                  <Game />
-                </PrivateRoute>
-              }
-            />
-
-            {/* Redirect any unknown routes to the dashboard */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+            {/* Add Footer here */}
+            <Footer />
+          </Box>
         </AppProviders>
       </Router>
     </ThemeProvider>
