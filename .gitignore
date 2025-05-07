@@ -163,9 +163,9 @@ sketch
 
 #firebase
 firebase-debug.log
-firetore.rules
+firestore.rules
 .firebaserc
 firebase.json
 .firebase/
-firebstore.indexes.json
+firestore.indexes.json
 
