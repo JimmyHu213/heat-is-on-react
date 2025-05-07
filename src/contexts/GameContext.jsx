@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import gameSessionService from "../services/gameSessionService";
+import produce from "immer";
 
 const GameContext = createContext();
 
@@ -309,14 +310,15 @@ export function GameProvider({ children }) {
 
   // Save current state to history before making changes
   const saveStateSnapshot = () => {
-    setStateHistory((prevHistory) => [
-      ...prevHistory,
-      {
-        towns: JSON.parse(JSON.stringify(towns)),
-        roundEvents: JSON.parse(JSON.stringify(roundEvents)),
-        townCardPlays: JSON.parse(JSON.stringify(townCardPlays)),
-      },
-    ]);
+    setStateHistory(
+      produce((draft) => {
+        draft.push({
+          towns: towns,
+          roundEvents: roundEvents,
+          townCardPlays: townCardPlays,
+        });
+      })
+    );
   };
 
   const updateTown = async (updatedTown) => {
@@ -361,6 +363,43 @@ export function GameProvider({ children }) {
       // Update towns in database
       for (const town of previousState.towns) {
         await gameSessionService.updateTown(town.id, town);
+      }
+
+      // NEW CODE: Handle round events reversion
+      // Get the latest round event for the current round
+      const currentRoundEventId = `${currentSession.id}_${currentRound}`;
+
+      // We need to determine if we should update or delete the round event
+      const previousRoundEvents = previousState.roundEvents[currentRound] || [];
+
+      if (previousRoundEvents.length === 0) {
+        // If there were no hazards in the previous state, delete the current round event
+        await gameSessionService.deleteRoundEvent(currentRoundEventId);
+      } else {
+        // Otherwise update it with the previous hazards
+        await gameSessionService.updateRoundEvent(currentRoundEventId, {
+          hazardIds: previousRoundEvents,
+        });
+      }
+
+      // NEW CODE: Handle card plays reversion
+      // For each town, we need to restore its card plays to the previous state
+      for (const townId in previousState.townCardPlays) {
+        const previousPlays =
+          previousState.townCardPlays[townId][currentRound] || [];
+
+        // Get current card plays for this town in this round
+        const currentPlays = await gameSessionService.getTownCardPlaysForRound(
+          townId,
+          currentRound
+        );
+
+        // Delete card plays that don't exist in the previous state
+        for (const play of currentPlays) {
+          if (!previousPlays.includes(play.cardName)) {
+            await gameSessionService.deleteCardPlay(play.id);
+          }
+        }
       }
 
       // Update UI state

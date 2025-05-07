@@ -885,6 +885,84 @@ class GameSessionService {
       throw error;
     }
   }
+  /**
+   * Delete a round event
+   * @param {string} eventId - Round event ID
+   * @returns {Promise<boolean>} True if successful
+   */
+  async deleteRoundEvent(eventId) {
+    try {
+      return await firestoreService.deleteDocument(
+        this.ROUND_EVENTS_COLLECTION,
+        eventId
+      );
+    } catch (error) {
+      console.error(`Error deleting round event ${eventId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a round event
+   * @param {string} eventId - Round event ID
+   * @param {Object} data - Data to update
+   * @returns {Promise<Object>} Updated round event
+   */
+  async updateRoundEvent(eventId, data) {
+    try {
+      return await firestoreService.updateDocument(
+        this.ROUND_EVENTS_COLLECTION,
+        eventId,
+        data
+      );
+    } catch (error) {
+      console.error(`Error updating round event ${eventId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get card plays for a town in a specific round
+   * @param {string} townId - Town ID
+   * @param {number} round - Round number
+   * @returns {Promise<Array>} Array of card plays
+   */
+  async getTownCardPlaysForRound(townId, round) {
+    try {
+      const cardPlays = await firestoreService.getDocuments(
+        this.CARD_PLAYS_COLLECTION,
+        [
+          ["townId", "==", townId],
+          ["playedAtRound", "==", round],
+        ]
+      );
+
+      return cardPlays;
+    } catch (error) {
+      console.error(
+        `Error getting card plays for town ${townId} in round ${round}:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a card play
+   * @param {string} playId - Card play ID
+   * @returns {Promise<boolean>} True if successful
+   */
+  async deleteCardPlay(playId) {
+    try {
+      return await firestoreService.deleteDocument(
+        this.CARD_PLAYS_COLLECTION,
+        playId
+      );
+    } catch (error) {
+      console.error(`Error deleting card play ${playId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new GameSessionService();
