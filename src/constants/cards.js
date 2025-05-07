@@ -204,9 +204,9 @@ export const allNature = {
   duration: 1,
   cost: 15,
   nature: 15,
-  economy: 15,
-  society: 15,
-  health: 15,
+  economy: 0,
+  society: 0,
+  health: 0,
 };
 
 export const allEconomy = {
@@ -215,10 +215,10 @@ export const allEconomy = {
   name: "GREEN INDUSTRY",
   duration: 1,
   cost: 15,
-  nature: 15,
+  nature: 0,
   economy: 15,
-  society: 15,
-  health: 15,
+  society: 0,
+  health: 0,
 };
 
 export const allSociety = {
@@ -227,10 +227,10 @@ export const allSociety = {
   name: "COMMUNITY EVENTS",
   duration: 1,
   cost: 15,
-  nature: 15,
-  economy: 15,
+  nature: 0,
+  economy: 0,
   society: 15,
-  health: 15,
+  health: 0,
 };
 
 export const allHealth = {
@@ -239,9 +239,9 @@ export const allHealth = {
   name: "HEALTH SERVICES",
   duration: 1,
   cost: 15,
-  nature: 15,
-  economy: 15,
-  society: 15,
+  nature: 0,
+  economy: 0,
+  society: 0,
   health: 15,
 };
 

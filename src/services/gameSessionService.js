@@ -309,13 +309,6 @@ class GameSessionService {
    * @param {number} round - Current round
    * @returns {Promise<Object>} Updated town and card play
    */
-  // In src/services/gameSessionService.js
-  // Update the applyCardToTown method to handle effort points
-
-  // In src/services/gameSessionService.js
-  // Update the applyCardToTown method to handle effort points
-
-  // Update in src/services/gameSessionService.js
   async applyCardToTown(townId, cardId, round) {
     try {
       // Get town
