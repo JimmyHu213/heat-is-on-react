@@ -1,14 +1,11 @@
+// src/App.jsx
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import Dashboard from "./components/Dashboard";
-import Login from "./components/Login";
-import Signup from "./components/Signup";
-import ForgotPassword from "./components/ForgotPassword";
-import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import {
@@ -16,9 +13,17 @@ import {
   primaryColorLight,
   secondaryColor,
 } from "./constants/palette";
-import Contexts from "./contexts";
+
+// Context Providers
+import AppProviders from "./contexts";
+
+// Components
+import Dashboard from "./components/Dashboard";
+import Login from "./components/auth/Login";
+import Signup from "./components/auth/Signup";
+import ForgotPassword from "./components/auth/ForgotPassword";
 import Game from "./components/Game";
-import LayoutTemplate from "./components/Template";
+import PrivateRoute from "./components/common/PrivateRoute";
 
 // Create a Material UI theme
 const theme = createTheme({
@@ -31,40 +36,46 @@ const theme = createTheme({
       main: secondaryColor,
     },
     background: {
-      default: secondaryColor,
-      paper: "#ffffff",
+      default: primaryColor,
+      paper: "#fff",
     },
   },
   typography: {
-    fontFamily: "Roboto, sans-serif",
-    fontSize: 14,
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          backgroundColor: primaryColor,
+          borderRadius: 4,
           textTransform: "none",
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
           borderRadius: 8,
+          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
         },
       },
     },
   },
 });
 
-// Protected route component
-function PrivateRoute({ children }) {
-  const { currentUser } = useAuth();
-  return currentUser ? children : <Navigate to="/login" />;
-}
-
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <Contexts>
+        <AppProviders>
           <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Protected routes */}
             <Route
               path="/"
               element={
@@ -73,21 +84,20 @@ function App() {
                 </PrivateRoute>
               }
             />
+
             <Route
-              path="/game"
+              path="/game/:sessionId"
               element={
                 <PrivateRoute>
-                  <LayoutTemplate>
-                    <Game />
-                  </LayoutTemplate>
+                  <Game />
                 </PrivateRoute>
               }
             />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Redirect any unknown routes to the dashboard */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Contexts>
+        </AppProviders>
       </Router>
     </ThemeProvider>
   );

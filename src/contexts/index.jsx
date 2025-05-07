@@ -1,10 +1,16 @@
+// src/contexts/index.jsx
+import React from "react";
 import { AuthProvider } from "./AuthContext";
-import { SettingProvider } from "./SettingsContext";
+import { GameProvider } from "./GameContext";
 
-export default function Contexts(props) {
+/**
+ * Combined context providers for the application
+ * Wraps all providers in the correct order
+ */
+export default function AppProviders({ children }) {
   return (
     <AuthProvider>
-      <SettingProvider>{props.children}</SettingProvider>
+      <GameProvider>{children}</GameProvider>
     </AuthProvider>
   );
 }

@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -70,17 +76,23 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function logout() {
+  // Memoize the logout function
+  const logout = useCallback(async () => {
     setUserProfile(null);
+    setCurrentUser(null);
+
+    // Add a browser storage clear
+    localStorage.removeItem("lastUserId");
+    sessionStorage.clear();
     return signOut(auth);
-  }
+  }, []);
 
   function resetPassword(email) {
     return sendPasswordResetEmail(auth, email);
   }
 
   // Fetch the user's profile from Firestore
-  async function fetchUserProfile(user) {
+  const fetchUserProfile = useCallback(async (user) => {
     if (user) {
       try {
         const userDoc = await getUserDocument(user.uid);
@@ -94,23 +106,30 @@ export function AuthProvider({ children }) {
       setUserProfile(null);
       return null;
     }
-  }
+  }, []);
 
-  // Update user profile in Firestore
-  async function updateProfile(data) {
-    if (!currentUser) return null;
+  // Memoize the updateProfile function to avoid unnecessary re-creations
+  const updateProfile = useCallback(
+    async (data) => {
+      if (!currentUser) return null;
 
-    try {
-      const updated = await updateUserDocument(currentUser.uid, data);
-      setUserProfile(updated);
-      return updated;
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      throw error;
-    }
-  }
+      try {
+        const updated = await updateUserDocument(currentUser.uid, data);
+        setUserProfile(updated);
+        return updated;
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
+    },
+    [currentUser]
+  );
 
+  // Add loading state initialization on mount
   useEffect(() => {
+    // This ensures loading is initially true until auth state is determined
+    setLoading(true);
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
 
@@ -123,7 +142,7 @@ export function AuthProvider({ children }) {
     });
 
     return unsubscribe;
-  }, []);
+  }, [fetchUserProfile]);
 
   const value = {
     currentUser,

@@ -1,209 +1,486 @@
-// import React from "react";
-// import { Grid, Box, Container, Typography } from "@mui/material";
-// import RadialHazardChart from "../Charts/PieChart";
+// src/components/Game/index.jsx
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useGame } from "../../contexts/GameContext";
+import {
+  Box,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Alert,
+  Drawer,
+  Divider,
+  Tabs,
+  Tab,
+  Paper,
+  Snackbar,
+  useTheme,
+  useMediaQuery,
+  Tooltip,
+} from "@mui/material";
 
-// const TownHazardView = () => {
-//   // Sample data for two towns matching your screenshot
-//   const mershamData = [
-//     // Biohazard section (purple, top left)
-//     { name: "N", hazardType: "biohazard", value: 100 },
-//     { name: "E", hazardType: "biohazard", value: 75 },
-//     { name: "S", hazardType: "biohazard", value: 75 },
-//     { name: "H", hazardType: "biohazard", value: 90 },
+// Icons
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import MenuIcon from "@mui/icons-material/Menu";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import UndoIcon from "@mui/icons-material/Undo";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import LocationCityIcon from "@mui/icons-material/LocationCity";
+import HistoryIcon from "@mui/icons-material/History";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
-//     // Bushfire section (orange, top right)
-//     { name: "N", hazardType: "bushfire", value: 100 },
-//     { name: "E", hazardType: "bushfire", value: 80 },
-//     { name: "S", hazardType: "bushfire", value: 80 },
-//     { name: "H", hazardType: "bushfire", value: 95 },
+// Components
+import TownPieCharts from "./components/TownPieCharts";
+import BarChartsView from "./components/BarChartsView";
+import GameTable from "./components/GameTable";
+import TownDetailsView from "./components/TownDetailsView";
+import HazardControls from "./components/HazardControls";
+import CardControls from "./components/CardControls";
+import { primaryColor } from "../../constants/palette";
+import { SpaceBar } from "@mui/icons-material";
+import { allCards } from "../../constants/cards";
 
-//     // Storm section (blue, right)
-//     { name: "N", hazardType: "storm", value: 55 },
-//     { name: "E", hazardType: "storm", value: 70 },
-//     { name: "S", hazardType: "storm", value: 80 },
-//     { name: "H", hazardType: "storm", value: 85 },
+// Drawer width
+const drawerWidth = 500;
 
-//     // Flood section (teal, bottom)
-//     { name: "N", hazardType: "flood", value: 95 },
-//     { name: "E", hazardType: "flood", value: 80 },
-//     { name: "S", hazardType: "flood", value: 80 },
-//     { name: "H", hazardType: "flood", value: 95 },
-
-//     // Heatwave section (red, left)
-//     { name: "N", hazardType: "heatwave", value: 75 },
-//     { name: "E", hazardType: "heatwave", value: 75 },
-//     { name: "S", hazardType: "heatwave", value: 75 },
-//     { name: "H", hazardType: "heatwave", value: 85 },
-//   ];
-
-//   const yinglunaData = [
-//     // Biohazard section (purple, top left)
-//     { name: "N", hazardType: "biohazard", value: 75 },
-//     { name: "E", hazardType: "biohazard", value: 90 },
-//     { name: "S", hazardType: "biohazard", value: 75 },
-//     { name: "H", hazardType: "biohazard", value: 90 },
-
-//     // Bushfire section (orange, top right)
-//     { name: "N", hazardType: "bushfire", value: 80 },
-//     { name: "E", hazardType: "bushfire", value: 95 },
-//     { name: "S", hazardType: "bushfire", value: 80 },
-//     { name: "H", hazardType: "bushfire", value: 95 },
-
-//     // Storm section (blue, right)
-//     { name: "N", hazardType: "storm", value: 60 },
-//     { name: "E", hazardType: "storm", value: 65 },
-//     { name: "S", hazardType: "storm", value: 65 },
-//     { name: "H", hazardType: "storm", value: 80 },
-
-//     // Flood section (teal, bottom)
-//     { name: "N", hazardType: "flood", value: 100 },
-//     { name: "E", hazardType: "flood", value: 100 },
-//     { name: "S", hazardType: "flood", value: 80 },
-//     { name: "H", hazardType: "flood", value: 95 },
-
-//     // Heatwave section (red, left)
-//     { name: "N", hazardType: "heatwave", value: 90 },
-//     { name: "E", hazardType: "heatwave", value: 70 },
-//     { name: "S", hazardType: "heatwave", value: 75 },
-//     { name: "H", hazardType: "heatwave", value: 85 },
-//   ];
-
-//   return (
-//     <Container>
-//       <Box sx={{ my: 4 }}>
-//         <Typography variant="h4" gutterBottom>
-//           Town Hazard Overview
-//         </Typography>
-//         <Typography variant="body1" paragraph>
-//           Each town's hazard profile is displayed with the following categories:
-//         </Typography>
-//         <Grid container spacing={2} mb={2}>
-//           <Grid item>
-//             <Typography variant="body2">
-//               <strong>N</strong> - Natural Features
-//             </Typography>
-//           </Grid>
-//           <Grid item>
-//             <Typography variant="body2">
-//               <strong>E</strong> - Environment
-//             </Typography>
-//           </Grid>
-//           <Grid item>
-//             <Typography variant="body2">
-//               <strong>S</strong> - Services
-//             </Typography>
-//           </Grid>
-//           <Grid item>
-//             <Typography variant="body2">
-//               <strong>H</strong> - Housing
-//             </Typography>
-//           </Grid>
-//         </Grid>
-//       </Box>
-
-//       <Grid container spacing={3} justifyContent="center">
-//         <Grid item>
-//           <RadialHazardChart
-//             data={mershamData}
-//             townName="Mersham"
-//             townColor="#3E7D4F"
-//           />
-//         </Grid>
-//         <Grid item>
-//           <RadialHazardChart
-//             data={yinglunaData}
-//             townName="Yingluna"
-//             townColor="#3E7D4F"
-//           />
-//         </Grid>
-//       </Grid>
-//     </Container>
-//   );
-// };
-
-// export default TownHazardView;
-
-import React from "react";
-import { Grid, Box, Container, Typography } from "@mui/material";
-import CustomBarChart from "../Charts/BarChart";
-
-const BarChartExample = () => {
-  // Sample data
-  const townScores = [
-    { name: "Mersham", value: 85 },
-    { name: "Yingluna", value: 92 },
-    { name: "Riverdale", value: 78 },
-    { name: "Westfield", value: 65 },
-  ];
-
-  const hazardData = [
-    { name: "Bushfire", value: 95 },
-    { name: "Flood", value: 80 },
-    { name: "Storm", value: 75 },
-    { name: "Heatwave", value: 85 },
-    { name: "Biohazard", value: 65 },
-  ];
-
-  // Sample data without names (using xAxisLabels instead)
-  const monthlyData = [
-    { value: 42 },
-    { value: 63 },
-    { value: 28 },
-    { value: 35 },
-    { value: 50 },
-    { value: 75 },
-  ];
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+// TabPanel component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Performance Metrics
-        </Typography>
-        <Typography variant="body1" paragraph>
-          These charts show various performance metrics for our towns and hazard
-          types.
-        </Typography>
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`game-tabpanel-${index}`}
+      aria-labelledby={`game-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+/**
+ * Main Game component
+ */
+const Game = () => {
+  const { sessionId } = useParams();
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Game Context
+  const {
+    loading,
+    error,
+    currentSession,
+    currentRound,
+    towns,
+    roundEvents,
+    townCardPlays,
+    loadSession,
+    advanceRound,
+    applyHazard,
+    playCard,
+    refreshSessionData,
+    clearError,
+    updateTown,
+    revertToPreviousState,
+    canRevert,
+  } = useGame();
+
+  // Local state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+
+  // Load session data
+  useEffect(() => {
+    loadSession(sessionId);
+  }, [sessionId]);
+
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Handle drawer toggle
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  // Navigate back to dashboard
+  const navigateToDashboard = () => {
+    navigate("/");
+  };
+
+  // Handle advance round
+  const handleAdvanceRound = async () => {
+    await advanceRound();
+    showNotification(
+      currentRound === 0
+        ? "Game started! Round 1 begins."
+        : `Advanced to Round ${currentRound + 1}`,
+      "success"
+    );
+  };
+
+  // Handle updating town name
+  const handleUpdateTownName = async (townId, newName) => {
+    try {
+      // Find the town to update
+      const town = towns.find((t) => t.id === townId);
+      if (!town) {
+        throw new Error(`Town with ID ${townId} not found`);
+      }
+
+      // Create updated town object
+      const updatedTown = {
+        ...town,
+        name: newName,
+      };
+
+      // Call the update function from context/service
+      // This should handle loading state internally
+      const result = await updateTown(updatedTown);
+
+      if (result) {
+        // Refresh session data to reflect changes
+        await refreshSessionData();
+        showNotification("Town name updated successfully", "success");
+      }
+    } catch (err) {
+      console.error("Failed to update town name:", err);
+      showNotification({
+        message: "Failed to update town name",
+        severity: "error",
+      });
+    }
+  };
+
+  // Handle revert
+  const handleRevert = async () => {
+    const result = await revertToPreviousState();
+    if (result) {
+      showNotification("Successfully reverted to previous state", "success");
+    }
+  };
+
+  // Handle applying hazard
+  const handleApplyHazard = async (hazardId) => {
+    await applyHazard(hazardId);
+    showNotification("Applied hazard to all towns", "warning");
+  };
+
+  // Handle playing card
+  const handlePlayCard = async (townId, cardId) => {
+    try {
+      const town = towns.find((t) => t.id === townId);
+      const card = allCards.find((c) => c.id === cardId);
+
+      // Check if town has enough effort points
+      if (town.effortPoints < card.cost) {
+        showNotification(
+          `Not enough effort points! ${town.name} has ${town.effortPoints} points, but needs ${card.cost}.`,
+          "error"
+        );
+        return;
+      }
+
+      await playCard(townId, cardId);
+
+      showNotification(
+        `Applied adaptation card to ${town?.name || "town"} (-${
+          card.cost
+        } effort points)`,
+        "info"
+      );
+    } catch (error) {
+      console.error("Error playing card:", error);
+      showNotification(error.message || "Failed to play card", "error");
+    }
+  };
+
+  // Show notification
+  const showNotification = (message, severity = "success") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  // Handle notification close
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
+
+  // Loading indicator
+  if (loading && !currentSession) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Typography>Loading game data...</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      {/* App Bar */}
+      <AppBar
+        position="absolute"
+        sx={{
+          zIndex: theme.zIndex.drawer + 1,
+          backgroundColor: "#E38A6C",
+          boxShadow: 3,
+          // width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
+          transition: theme.transitions.create(["width", "margin"], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
+        }}
+      >
+        <Toolbar>
+          {/* Drawer toggle button (visible on all screen sizes) */}
+          <Tooltip title={drawerOpen ? "Hide Controls" : "Show Controls"}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2 }}
+            >
+              {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+            </IconButton>
+          </Tooltip>
+
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={navigateToDashboard}
+            sx={{ mr: 2 }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Current Year: {2050 + currentRound}
+          </Typography>
+
+          {/* Revert button */}
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={handleRevert}
+            disabled={loading || !canRevert}
+            startIcon={<UndoIcon />}
+            sx={{
+              mr: 2,
+              borderColor: "white",
+              "&:hover": {
+                borderColor: "white",
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Undo
+          </Button>
+
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<PlayArrowIcon />}
+            onClick={handleAdvanceRound}
+            disabled={loading || currentRound >= 5}
+          >
+            {currentRound === 0 ? "Start Game" : "Next Year"}
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      {/* Side Drawer */}
+      <Drawer
+        variant={"temporary"}
+        open={drawerOpen}
+        onClose={handleDrawerToggle}
+        sx={{
+          //width: drawerWidth,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+            bgcolor: "#f8f8f8",
+          },
+        }}
+      >
+        <Toolbar>
+          {/* Add drawer header with a close button */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              width: "100%",
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight="bold">
+              Game Controls
+            </Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            {/* <IconButton onClick={handleDrawerToggle}>
+              <ChevronLeftIcon />
+            </IconButton> */}
+          </Box>
+        </Toolbar>
+        <Divider />
+        <Box sx={{ overflow: "auto", p: 2 }}>
+          <HazardControls
+            onApplyHazard={handleApplyHazard}
+            disabled={loading || currentRound === 0}
+            currentRound={currentRound}
+          />
+
+          <Divider sx={{ my: 2 }} />
+
+          <CardControls
+            towns={towns}
+            onPlayCard={handlePlayCard}
+            disabled={loading || currentRound === 0}
+            currentRound={currentRound}
+          />
+        </Box>
+      </Drawer>
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          // maxWidth: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
+          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
+          transition: theme.transitions.create(["margin", "width"], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
+          bgcolor: primaryColor,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Toolbar /> {/* Spacer for AppBar */}
+        {/* Error message */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
+            {error}
+          </Alert>
+        )}
+        {/* Tabs */}
+        <Paper sx={{ borderRadius: 1, mb: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="fullWidth"
+            sx={{ borderBottom: 1, borderColor: "divider" }}
+          >
+            <Tab
+              icon={<DashboardIcon />}
+              label="Dashboard"
+              iconPosition="start"
+            />
+            <Tab
+              icon={<LocationCityIcon />}
+              label="Town Details"
+              iconPosition="start"
+            />
+            <Tab
+              icon={<HistoryIcon />}
+              label="Game History"
+              iconPosition="start"
+            />
+          </Tabs>
+        </Paper>
+        {/* Rest of the component remains the same */}
+        {/* Tab Panels */}
+        <TabPanel value={activeTab} index={0}>
+          {currentRound === 0 ? (
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Welcome to The Heat Is On!
+              </Typography>
+              <Typography variant="body1" paragraph>
+                In this game, you'll manage 5 towns facing climate hazards over
+                5 rounds. Each town has different vulnerability levels to
+                hazards: bushfires, floods, storms, heatwaves, and biohazards.
+              </Typography>
+              <Typography variant="body1">
+                Click "Start Game" to begin the first round. During each round,
+                you can:
+              </Typography>
+              <ul>
+                <li>Apply hazard events to test town resilience</li>
+                <li>Play adaptation cards to improve town resilience</li>
+                <li>Track progress through charts and tables</li>
+              </ul>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="body2" color="text.secondary">
+                <strong>Tip:</strong> If any town's resilience score drops below
+                20 in any category, all other categories will receive a -10
+                point penalty. Use adaptation cards strategically to maintain
+                resilience across all towns.
+              </Typography>
+            </Paper>
+          ) : (
+            <>
+              <TownPieCharts towns={towns} />
+
+              <BarChartsView towns={towns} />
+            </>
+          )}
+        </TabPanel>
+        <TabPanel value={activeTab} index={1}>
+          <TownDetailsView
+            towns={towns}
+            onUpdateTownName={handleUpdateTownName}
+          />
+        </TabPanel>
+        <TabPanel value={activeTab} index={2}>
+          <GameTable
+            towns={towns}
+            roundEvents={roundEvents}
+            townCardPlays={townCardPlays}
+            currentRound={currentRound}
+          />
+        </TabPanel>
       </Box>
 
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
-          <Box sx={{ height: 400 }}>
-            <CustomBarChart
-              data={townScores}
-              maxY={100}
-              title="Town Preparedness Scores"
-              barColor="#3F51B5"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Box sx={{ height: 400 }}>
-            <CustomBarChart
-              data={hazardData}
-              maxY={100}
-              title="Hazard Impact Levels"
-              barColor="#FF5722"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Box sx={{ height: 400 }}>
-            <CustomBarChart
-              data={monthlyData}
-              xAxisLabels={monthLabels}
-              maxY={80}
-              title="Monthly Incident Reports"
-              barColor="#4CAF50"
-            />
-          </Box>
-        </Grid>
-      </Grid>
-    </Container>
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 
-export default BarChartExample;
+export default Game;

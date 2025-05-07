@@ -44,7 +44,7 @@ export const floodColor2 = "#B2A7D6";
 export const floodColor3 = "#818FC8";
 export const floodColor4 = "#A6AFD8";
 export const floodColor5 = "#D7DCEC";
-export const floodColor6 = "#DEداEC";
+export const floodColor6 = "#DEDAEC";
 
 export const stormSurgeColor1 = "#34908B";
 export const stormSurgeColor2 = "#88BBB7";

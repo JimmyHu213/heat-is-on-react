@@ -159,3 +159,13 @@ sketch
 .env.development.local
 .env.test.local
 .env.production.local
+
+
+#firebase
+firebase-debug.log
+firetore.rules
+.firebaserc
+firebase.json
+.firebase/
+firebstore.indexes.json
+
