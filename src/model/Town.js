@@ -57,6 +57,7 @@ export class Town {
   constructor(data = {}) {
     this.townId = data.townId || "";
     this.sessionId = data.sessionId || "";
+    this.townNumber = data.townNumber || 0;
     this.townTemplateId = data.townTemplateId || "";
     this.name = data.name || "";
     this.effortPoints = data.effortPoints || 100;
@@ -77,6 +78,7 @@ export class Town {
   toFirestore() {
     return {
       sessionId: this.sessionId,
+      townNumber: this.townNumber,
       townTemplateId: this.townTemplateId,
       name: this.name,
       effortPoints: this.effortPoints,
@@ -96,6 +98,7 @@ export class Town {
     return new Town({
       townId: doc.id,
       sessionId: data.sessionId,
+      townNumber: data.townNumber,
       townTemplateId: data.townTemplateId,
       name: data.name,
       effortPoints: data.effortPoints,

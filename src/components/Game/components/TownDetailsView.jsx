@@ -243,9 +243,6 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                   }}
                 >
                   <Typography variant="body2">
-                    <strong>ID:</strong> {town.id}
-                  </Typography>
-                  <Typography variant="body2">
                     <strong>Budget Points:</strong> {town.effortPoints}
                   </Typography>
                 </Box>

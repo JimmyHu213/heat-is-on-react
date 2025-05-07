@@ -207,7 +207,7 @@ export default function Dashboard() {
                     color="text.secondary"
                     sx={{ mr: 2, ml: 2 }}
                   >
-                    {activeSessions.length}/1 active games
+                    {activeSessions.length}/3 active games
                   </Typography>
                   <Button
                     variant="contained"
@@ -218,7 +218,7 @@ export default function Dashboard() {
                   >
                     {isCreating
                       ? "Creating..."
-                      : activeSessions.length >= 1
+                      : activeSessions.length >= 3
                       ? "Limit Reached"
                       : "New Game"}
                   </Button>

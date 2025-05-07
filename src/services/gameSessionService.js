@@ -29,7 +29,7 @@ class GameSessionService {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
       //TODO - Change this to 3 after implementation
-      if (activeSessions.length >= 1) {
+      if (activeSessions.length >= 3) {
         throw new Error("Maximum session limit reached (3)");
       }
 
@@ -60,6 +60,7 @@ class GameSessionService {
   /**
    * Get a game session by ID
    * @param {string} sessionId - Session ID
+   * @param {string} userId - User ID
    * @returns {Promise<Object|null>} Game session or null if not found
    */
   async getSession(sessionId) {
@@ -145,12 +146,14 @@ class GameSessionService {
 
       for (let i = 0; i < townTemplates.length; i++) {
         const template = townTemplates[i];
-        const townId = String(i + 1); // Ensure sequential IDs (1, 2, 3, 4, 5)
+        const townNumber = i + 1; // Ensure sequential IDs (1, 2, 3, 4, 5)
+        const townId = `${sessionId}_town_${townNumber}`; // Unique ID for each town
 
         const isComparisonTown = template.name === "Bludgeton";
 
         const townData = {
           sessionId,
+          townNumber,
           name: template.name, // Ensure name matches ID
           townTemplateId: template.id,
           effortPoints: 100,
@@ -193,7 +196,7 @@ class GameSessionService {
         ["sessionId", "==", sessionId],
       ]);
 
-      return towns.sort((a, b) => a.id - b.id); // Sort by ID
+      return towns.sort((a, b) => a.townNumber - b.townNumber); // Sort by ID
     } catch (error) {
       console.error(`Error getting towns for session ${sessionId}:`, error);
       throw error;
