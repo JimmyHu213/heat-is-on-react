@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import gameSessionService from "../services/gameSessionService";
-import produce from "immer";
+import { produce } from "immer";
 
 const GameContext = createContext();
 
