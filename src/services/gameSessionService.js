@@ -610,16 +610,10 @@ class GameSessionService {
     // Clone the town to avoid mutations
     const updatedTown = { ...town };
 
-    // Apply hazard to the corresponding ability
     const hazardType = hazard.id;
-    updatedTown[hazardType] = this.subtractPoints(
-      updatedTown[hazardType],
-      hazard
-    );
-
-    // Check if any aspect of any ability is below threshold
     const THRESHOLD = 20;
-    const PENALTY = 10;
+
+    // Get all hazard types
     const hazardTypes = [
       "bushfire",
       "flood",
@@ -628,37 +622,52 @@ class GameSessionService {
       "biohazard",
     ];
 
-    let shouldApplyPenalty = false;
+    // First, check which aspects are ALREADY below threshold before applying new hazard
+    for (const aspect of ["nature", "economy", "society", "health"]) {
+      // Check if this aspect is already below threshold in any hazard type
+      const isAspectVulnerable = hazardTypes.some(
+        (type) => updatedTown[type][aspect] <= THRESHOLD
+      );
 
-    // Check each hazard type and aspect for values below threshold
-    for (const hazardType of hazardTypes) {
-      const ability = updatedTown[hazardType];
-      if (
-        ability.nature <= THRESHOLD ||
-        ability.economy <= THRESHOLD ||
-        ability.society <= THRESHOLD ||
-        ability.health <= THRESHOLD
-      ) {
-        shouldApplyPenalty = true;
-        break;
+      //TODO Check the pentalty amount
+      if (isAspectVulnerable) {
+        // Apply this hazard's corresponding aspect penalty to ALL hazard types
+        let penaltyAmount;
+        switch (aspect) {
+          case "nature":
+            penaltyAmount = hazard.nature;
+            break;
+          case "economy":
+            penaltyAmount = hazard.economy;
+            break;
+          case "society":
+            penaltyAmount = hazard.society;
+            break;
+          case "health":
+            penaltyAmount = hazard.health;
+            break;
+          default:
+            penaltyAmount = 0;
+        }
+
+        // Apply the penalty to ALL hazard types for this aspect
+        for (const type of hazardTypes) {
+          updatedTown[type][aspect] = this.clampValue(
+            updatedTown[type][aspect] - penaltyAmount
+          );
+        }
       }
     }
 
-    // Apply penalty to all hazards if needed
-    if (shouldApplyPenalty) {
-      for (const hazardType of hazardTypes) {
-        updatedTown[hazardType] = {
-          nature: this.clampValue(updatedTown[hazardType].nature - PENALTY),
-          economy: this.clampValue(updatedTown[hazardType].economy - PENALTY),
-          society: this.clampValue(updatedTown[hazardType].society - PENALTY),
-          health: this.clampValue(updatedTown[hazardType].health - PENALTY),
-        };
-      }
-    }
+    // Then apply the hazard's direct effect to its corresponding hazard type
+    // (This happens after penalty check but before returning the updated town)
+    updatedTown[hazardType] = this.subtractPoints(
+      updatedTown[hazardType],
+      hazard
+    );
 
     return updatedTown;
   }
-
   /**
    * Subtract hazard points from ability points
    * @param {Object} ability - Hazard ability points
