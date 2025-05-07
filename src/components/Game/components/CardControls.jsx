@@ -173,7 +173,9 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
         >
           {availableCards.map((card) => (
             <MenuItem key={card.id} value={card.id}>
-              {card.name + " (" + card.type + ")"}
+              {card.type === "stormSurge"
+                ? card.name + " (storm surge)"
+                : card.name + " (" + card.type + ")"}
             </MenuItem>
           ))}
         </Select>
