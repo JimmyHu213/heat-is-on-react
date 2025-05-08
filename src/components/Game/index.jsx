@@ -130,8 +130,12 @@ const Game = () => {
     );
   };
 
-  // Handle updating town name
-  const handleUpdateTownName = async (townId, newName) => {
+  // Handle updating town name and other properties
+  const handleUpdateTownName = async (
+    townId,
+    newName,
+    fullTownUpdate = null
+  ) => {
     try {
       // Find the town to update
       const town = towns.find((t) => t.id === townId);
@@ -140,10 +144,18 @@ const Game = () => {
       }
 
       // Create updated town object
-      const updatedTown = {
-        ...town,
-        name: newName,
-      };
+      let updatedTown;
+
+      if (fullTownUpdate) {
+        // If a full town update is provided, use it
+        updatedTown = fullTownUpdate;
+      } else {
+        // Otherwise just update the name
+        updatedTown = {
+          ...town,
+          name: newName,
+        };
+      }
 
       // Call the update function from context/service
       // This should handle loading state internally
@@ -152,12 +164,24 @@ const Game = () => {
       if (result) {
         // Refresh session data to reflect changes
         await refreshSessionData();
-        showNotification("Town name updated successfully", "success");
+
+        // Show appropriate notification
+        if (
+          fullTownUpdate &&
+          fullTownUpdate.effortPoints !== town.effortPoints
+        ) {
+          showNotification(
+            `Budget points updated to ${fullTownUpdate.effortPoints}`,
+            "success"
+          );
+        } else {
+          showNotification("Town name updated successfully", "success");
+        }
       }
     } catch (err) {
-      console.error("Failed to update town name:", err);
+      console.error("Failed to update town:", err);
       showNotification({
-        message: "Failed to update town name",
+        message: "Failed to update town information",
         severity: "error",
       });
     }
