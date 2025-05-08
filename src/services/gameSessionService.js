@@ -612,6 +612,7 @@ class GameSessionService {
 
     const hazardType = hazard.id;
     const THRESHOLD = 20;
+    const penaltyAmount = 10; // Amount to subtract from each aspect
 
     // Get all hazard types
     const hazardTypes = [
@@ -631,25 +632,6 @@ class GameSessionService {
 
       //TODO Check the pentalty amount
       if (isAspectVulnerable) {
-        // Apply this hazard's corresponding aspect penalty to ALL hazard types
-        let penaltyAmount;
-        switch (aspect) {
-          case "nature":
-            penaltyAmount = hazard.nature;
-            break;
-          case "economy":
-            penaltyAmount = hazard.economy;
-            break;
-          case "society":
-            penaltyAmount = hazard.society;
-            break;
-          case "health":
-            penaltyAmount = hazard.health;
-            break;
-          default:
-            penaltyAmount = 0;
-        }
-
         // Apply the penalty to ALL hazard types for this aspect
         for (const type of hazardTypes) {
           updatedTown[type][aspect] = this.clampValue(
