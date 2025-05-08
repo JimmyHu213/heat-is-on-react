@@ -30,6 +30,7 @@ import BugReportIcon from "@mui/icons-material/BugReport"; // Biohazard
 import EditIcon from "@mui/icons-material/Edit"; // For editing town name
 import SaveIcon from "@mui/icons-material/Save"; // For saving town name
 import CancelIcon from "@mui/icons-material/Cancel"; // For canceling town name edit
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet"; // For budget
 
 /**
  * Component to display detailed town information with name editing capability
@@ -80,6 +81,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
     setEditState({
       ...editState,
       [townId]: {
+        ...editState[townId],
         isEditing: true,
         name: currentName,
       },
@@ -107,6 +109,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
     setEditState({
       ...editState,
       [townId]: {
+        ...editState[townId],
         isEditing: false,
       },
     });
@@ -117,7 +120,72 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
     setEditState({
       ...editState,
       [townId]: {
+        ...editState[townId],
         isEditing: false,
+      },
+    });
+  };
+
+  // Start editing budget points
+  const handleStartEditBudget = (townId, currentPoints) => {
+    setEditState({
+      ...editState,
+      [townId]: {
+        ...editState[townId],
+        isEditingBudget: true,
+        budgetPoints: currentPoints,
+      },
+    });
+  };
+
+  // Handle budget points change
+  const handleBudgetChange = (townId, newPoints) => {
+    // Ensure input is numeric and within reasonable range
+    const points = Math.max(0, Math.min(1000, parseInt(newPoints) || 0));
+
+    setEditState({
+      ...editState,
+      [townId]: {
+        ...editState[townId],
+        budgetPoints: points,
+      },
+    });
+  };
+
+  // Save updated budget points
+  const handleSaveBudget = (townId) => {
+    if (onUpdateTownName && editState[townId]) {
+      // Find the town to update
+      const town = towns.find((t) => t.id === townId);
+      if (town) {
+        // Create updated town object with new budget points
+        const updatedTown = {
+          ...town,
+          effortPoints: editState[townId].budgetPoints,
+        };
+
+        // Call the update function
+        onUpdateTownName(townId, updatedTown.name, updatedTown);
+      }
+    }
+
+    // Clear edit state
+    setEditState({
+      ...editState,
+      [townId]: {
+        ...editState[townId],
+        isEditingBudget: false,
+      },
+    });
+  };
+
+  // Cancel editing budget
+  const handleCancelEditBudget = (townId) => {
+    setEditState({
+      ...editState,
+      [townId]: {
+        ...editState[townId],
+        isEditingBudget: false,
       },
     });
   };
@@ -239,12 +307,83 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
+                    alignItems: "center",
                     mb: 2,
                   }}
                 >
-                  <Typography variant="body2">
-                    <strong>Budget Points:</strong> {town.effortPoints}
-                  </Typography>
+                  {editState[town.id]?.isEditingBudget ? (
+                    // Edit budget mode
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        width: "100%",
+                      }}
+                    >
+                      <AccountBalanceWalletIcon
+                        sx={{ mr: 1, color: theme.palette.primary.main }}
+                      />
+                      <TextField
+                        value={editState[town.id].budgetPoints}
+                        onChange={(e) =>
+                          handleBudgetChange(town.id, e.target.value)
+                        }
+                        variant="outlined"
+                        size="small"
+                        type="number"
+                        label="Budget Points"
+                        InputProps={{
+                          inputProps: { min: 0, max: 1000 },
+                        }}
+                        sx={{
+                          flexGrow: 1,
+                          mr: 1,
+                        }}
+                        autoFocus
+                      />
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSaveBudget(town.id)}
+                          color="primary"
+                        >
+                          <SaveIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Cancel">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleCancelEditBudget(town.id)}
+                          color="error"
+                        >
+                          <CancelIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  ) : (
+                    // Display budget mode
+                    <>
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <AccountBalanceWalletIcon
+                          sx={{ mr: 1, color: theme.palette.primary.main }}
+                        />
+                        <Typography variant="body2">
+                          <strong>Budget Points:</strong> {town.effortPoints}
+                        </Typography>
+                      </Box>
+                      <Tooltip title="Edit Budget Points">
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            handleStartEditBudget(town.id, town.effortPoints)
+                          }
+                          color="primary"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
                 </Box>
 
                 <Divider sx={{ mb: 2 }} />
@@ -286,15 +425,15 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                             />
 
                             {/* Warning indicator if value is below threshold */}
-                            {/* {town[hazard.id][aspect.id] <= 20 && (
-                            <Typography
-                              variant="caption"
-                              color="error"
-                              sx={{ display: "block", mt: 0.5 }}
-                            >
-                              Critical level! (-10 penalty to all)
-                            </Typography>
-                          )} */}
+                            {town[hazard.id][aspect.id] <= 20 && (
+                              <Typography
+                                variant="caption"
+                                color="error"
+                                sx={{ display: "block", mt: 0.5 }}
+                              >
+                                Critical level! (-10 penalty to all)
+                              </Typography>
+                            )}
                           </Box>
                         </Grid>
                       ))}
