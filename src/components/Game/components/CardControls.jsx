@@ -171,13 +171,15 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           onChange={handleCardChange}
           disabled={disabled || !selectedTown}
         >
-          {availableCards.map((card) => (
-            <MenuItem key={card.id} value={card.id}>
-              {card.type === "stormSurge"
-                ? card.name + " (storm surge)"
-                : card.name + " (" + card.type + ")"}
-            </MenuItem>
-          ))}
+          {availableCards
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((card) => (
+              <MenuItem key={card.id} value={card.id}>
+                {card.type === "stormSurge"
+                  ? card.name + " (storm surge)"
+                  : card.name + " (" + card.type + ")"}
+              </MenuItem>
+            ))}
         </Select>
         <FormHelperText>
           {cardCategory === 0
