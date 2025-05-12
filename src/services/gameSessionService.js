@@ -28,7 +28,6 @@ class GameSessionService {
     try {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
-      //TODO - Change this to 3 after implementation
       if (activeSessions.length >= 3) {
         throw new Error("Maximum session limit reached (3)");
       }
@@ -630,7 +629,6 @@ class GameSessionService {
         (type) => updatedTown[type][aspect] <= THRESHOLD
       );
 
-      //TODO Check the pentalty amount
       if (isAspectVulnerable) {
         // Apply the penalty to ALL hazard types for this aspect
         for (const type of hazardTypes) {
