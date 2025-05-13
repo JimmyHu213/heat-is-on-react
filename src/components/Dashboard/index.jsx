@@ -31,6 +31,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { primaryColor } from "../../constants/palette";
 import backgroundImage from "../../assets/images/web-banner.png";
 
+import DownloadIcon from "@mui/icons-material/Download";
+import exportService from "../../services/exportService";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const {
@@ -49,6 +54,12 @@ export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [downloadMenu, setDownloadMenu] = useState({
+    open: false,
+    anchorEl: null,
+    sessionId: null,
+  });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch sessions on component mount
   useEffect(() => {
@@ -117,6 +128,77 @@ export default function Dashboard() {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   }
+
+  const handleDownloadMenuOpen = (event, sessionId) => {
+    setDownloadMenu({ open: true, anchorEl: event.currentTarget, sessionId });
+  };
+
+  const handleDownloadMenuClose = () => {
+    setDownloadMenu({ open: false, anchorEl: null, sessionId: null });
+  };
+
+  // Add download functions
+  const handleDownloadJSON = async () => {
+    try {
+      const sessionId = downloadMenu.sessionId;
+      if (!sessionId) return;
+
+      // Show loading state
+      setIsExporting(true);
+
+      // Get data package
+      const data = await exportService.getSessionDataPackage(sessionId);
+
+      // Get session name for filename
+      const session = activeSessions.find((s) => s.id === sessionId);
+      const sessionName = (session?.name || "game-session")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      // Download as JSON
+      exportService.downloadAsJSON(data, `${sessionName}-data.json`);
+
+      // Close menu
+      handleDownloadMenuClose();
+    } catch (error) {
+      console.error("Error downloading JSON:", error);
+      // Use the existing error handling mechanism
+      clearError();
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      const sessionId = downloadMenu.sessionId;
+      if (!sessionId) return;
+
+      // Show loading state
+      setIsExporting(true);
+
+      // Get data package
+      const data = await exportService.getSessionDataPackage(sessionId);
+
+      // Get session name for filename
+      const session = activeSessions.find((s) => s.id === sessionId);
+      const sessionName = (session?.name || "game-session")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      // Download as Excel
+      await exportService.downloadAsExcel(data, `${sessionName}-data.xlsx`);
+
+      // Close menu
+      handleDownloadMenuClose();
+    } catch (error) {
+      console.error("Error downloading Excel:", error);
+      // Use the existing error handling mechanism
+      clearError();
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -276,6 +358,21 @@ export default function Dashboard() {
                             </Button>
                             <Button
                               variant="outlined"
+                              color="primary"
+                              startIcon={<DownloadIcon />}
+                              onClick={(e) =>
+                                handleDownloadMenuOpen(e, session.id)
+                              }
+                              sx={{ mr: 1 }}
+                              disabled={isExporting}
+                            >
+                              {isExporting &&
+                              downloadMenu.sessionId === session.id
+                                ? "Exporting..."
+                                : "Export"}
+                            </Button>
+                            <Button
+                              variant="outlined"
                               color="error"
                               startIcon={<DeleteIcon />}
                               onClick={() => openDeleteDialog(session)}
@@ -310,6 +407,19 @@ export default function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Menu
+        anchorEl={downloadMenu.anchorEl}
+        open={downloadMenu.open}
+        onClose={handleDownloadMenuClose}
+      >
+        <MenuItem onClick={handleDownloadJSON} disabled={isExporting}>
+          Download as JSON
+        </MenuItem>
+        <MenuItem onClick={handleDownloadExcel} disabled={isExporting}>
+          Download as Excel
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }
