@@ -361,14 +361,17 @@ export default function Dashboard() {
                             <strong>Created:</strong>{" "}
                             {formatDate(session.createdAt)}
                           </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            gutterBottom
-                          >
-                            <strong>Current Round:</strong>{" "}
-                            {session.currentRound}
-                          </Typography>
+                          {session.isActive && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              <strong>Current Round:</strong>{" "}
+                              {session.currentRound}
+                            </Typography>
+                          )}
+
                           {!session.isActive && session.completedAt && (
                             <Typography
                               variant="body2"

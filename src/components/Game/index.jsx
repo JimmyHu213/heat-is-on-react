@@ -473,10 +473,11 @@ const Game = () => {
               </ul>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" color="text.secondary">
-                <strong>Tip:</strong> If any town's resilience score drops below
-                20 in any category, all other categories will receive a -10
-                point penalty. Use adaptation cards strategically to maintain
-                resilience across all towns.
+                <strong>Warning - cascading impacts:</strong> If any town's
+                resilience is below 20% in any segment, all other segments for
+                that aspect of resilience will receive a -10% penalty. Use
+                adaptation cards strategically to maintain resilience across all
+                towns.
               </Typography>
             </Paper>
           ) : (
