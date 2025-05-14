@@ -26,6 +26,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import MenuIcon from "@mui/icons-material/Menu";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import UndoIcon from "@mui/icons-material/Undo";
+import DoneIcon from "@mui/icons-material/Done";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LocationCityIcon from "@mui/icons-material/LocationCity";
 import HistoryIcon from "@mui/icons-material/History";
@@ -122,12 +123,22 @@ const Game = () => {
   // Handle advance round
   const handleAdvanceRound = async () => {
     await advanceRound();
-    showNotification(
-      currentRound === 0
-        ? "Game started! Round 1 begins."
-        : `Advanced to Round ${currentRound + 1}`,
-      "success"
-    );
+
+    if (currentRound === 5) {
+      showNotification("Game completed successfully!", "success");
+
+      // Optional: Add a slight delay before redirecting to dashboard
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    } else {
+      showNotification(
+        currentRound === 0
+          ? "Game started! Round 1 begins."
+          : `Advanced to Round ${currentRound + 1}`,
+        "success"
+      );
+    }
   };
 
   // Handle updating town name and other properties
@@ -322,12 +333,16 @@ const Game = () => {
 
           <Button
             variant="contained"
-            color="secondary"
-            startIcon={<PlayArrowIcon />}
+            color={currentRound === 5 ? "success" : "secondary"}
+            startIcon={currentRound === 5 ? <DoneIcon /> : <PlayArrowIcon />}
             onClick={handleAdvanceRound}
-            disabled={loading || currentRound >= 5}
+            disabled={loading || currentRound > 5}
           >
-            {currentRound === 0 ? "Start Game" : "Next Year"}
+            {currentRound === 0
+              ? "Start Game"
+              : currentRound === 5
+              ? "Finish Game"
+              : "Next Year"}
           </Button>
         </Toolbar>
       </AppBar>
@@ -458,10 +473,11 @@ const Game = () => {
               </ul>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" color="text.secondary">
-                <strong>Tip:</strong> If any town's resilience score drops below
-                20 in any category, all other categories will receive a -10
-                point penalty. Use adaptation cards strategically to maintain
-                resilience across all towns.
+                <strong>Warning - cascading impacts:</strong> If any town's
+                resilience is below 20% in any segment, all other segments for
+                that aspect of resilience will receive a -10% penalty. Use
+                adaptation cards strategically to maintain resilience across all
+                towns.
               </Typography>
             </Paper>
           ) : (

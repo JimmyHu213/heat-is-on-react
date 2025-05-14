@@ -28,7 +28,6 @@ class GameSessionService {
     try {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
-      //TODO - Change this to 3 after implementation
       if (activeSessions.length >= 3) {
         throw new Error("Maximum session limit reached (3)");
       }
@@ -612,6 +611,7 @@ class GameSessionService {
 
     const hazardType = hazard.id;
     const THRESHOLD = 20;
+    const penaltyAmount = 10; // Amount to subtract from each aspect
 
     // Get all hazard types
     const hazardTypes = [
@@ -629,27 +629,7 @@ class GameSessionService {
         (type) => updatedTown[type][aspect] <= THRESHOLD
       );
 
-      //TODO Check the pentalty amount
       if (isAspectVulnerable) {
-        // Apply this hazard's corresponding aspect penalty to ALL hazard types
-        let penaltyAmount;
-        switch (aspect) {
-          case "nature":
-            penaltyAmount = hazard.nature;
-            break;
-          case "economy":
-            penaltyAmount = hazard.economy;
-            break;
-          case "society":
-            penaltyAmount = hazard.society;
-            break;
-          case "health":
-            penaltyAmount = hazard.health;
-            break;
-          default:
-            penaltyAmount = 0;
-        }
-
         // Apply the penalty to ALL hazard types for this aspect
         for (const type of hazardTypes) {
           updatedTown[type][aspect] = this.clampValue(

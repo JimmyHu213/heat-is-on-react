@@ -423,17 +423,6 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                                 },
                               }}
                             />
-
-                            {/* Warning indicator if value is below threshold */}
-                            {town[hazard.id][aspect.id] <= 20 && (
-                              <Typography
-                                variant="caption"
-                                color="error"
-                                sx={{ display: "block", mt: 0.5 }}
-                              >
-                                Critical level! (-10 penalty to all)
-                              </Typography>
-                            )}
                           </Box>
                         </Grid>
                       ))}

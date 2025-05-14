@@ -1,4 +1,6 @@
 // src/components/Dashboard/index.jsx
+// Modified Dashboard to include completed sessions without tabs
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../contexts/GameContext";
@@ -22,14 +24,21 @@ import {
   DialogTitle,
   CircularProgress,
   Button,
+  Chip,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AddIcon from "@mui/icons-material/Add";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { primaryColor } from "../../constants/palette";
 import backgroundImage from "../../assets/images/web-banner.png";
+
+import DownloadIcon from "@mui/icons-material/Download";
+import exportService from "../../services/exportService";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -37,6 +46,7 @@ export default function Dashboard() {
     loading,
     error,
     activeSessions,
+    completedSessions, // We'll use this now
     fetchUserSessions,
     createNewSession,
     deleteSession,
@@ -49,6 +59,12 @@ export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [downloadMenu, setDownloadMenu] = useState({
+    open: false,
+    anchorEl: null,
+    sessionId: null,
+  });
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch sessions on component mount
   useEffect(() => {
@@ -117,6 +133,84 @@ export default function Dashboard() {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   }
+
+  const handleDownloadMenuOpen = (event, sessionId) => {
+    setDownloadMenu({ open: true, anchorEl: event.currentTarget, sessionId });
+  };
+
+  const handleDownloadMenuClose = () => {
+    setDownloadMenu({ open: false, anchorEl: null, sessionId: null });
+  };
+
+  // Download functions
+  const handleDownloadJSON = async () => {
+    try {
+      const sessionId = downloadMenu.sessionId;
+      if (!sessionId) return;
+
+      // Show loading state
+      setIsExporting(true);
+
+      // Get data package
+      const data = await exportService.getSessionDataPackage(sessionId);
+
+      // Get session name for filename
+      const session = [...activeSessions, ...completedSessions].find(
+        (s) => s.id === sessionId
+      );
+      const sessionName = (session?.name || "game-session")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      // Download as JSON
+      exportService.downloadAsJSON(data, `${sessionName}-data.json`);
+
+      // Close menu
+      handleDownloadMenuClose();
+    } catch (error) {
+      console.error("Error downloading JSON:", error);
+      // Use the existing error handling mechanism
+      clearError();
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    try {
+      const sessionId = downloadMenu.sessionId;
+      if (!sessionId) return;
+
+      // Show loading state
+      setIsExporting(true);
+
+      // Get data package
+      const data = await exportService.getSessionDataPackage(sessionId);
+
+      // Get session name for filename
+      const session = [...activeSessions, ...completedSessions].find(
+        (s) => s.id === sessionId
+      );
+      const sessionName = (session?.name || "game-session")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      // Download as Excel
+      await exportService.downloadAsExcel(data, `${sessionName}-data.xlsx`);
+
+      // Close menu
+      handleDownloadMenuClose();
+    } catch (error) {
+      console.error("Error downloading Excel:", error);
+      // Use the existing error handling mechanism
+      clearError();
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Combine sessions for display
+  const allSessions = [...activeSessions, ...completedSessions];
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -229,19 +323,36 @@ export default function Dashboard() {
                 <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
                   <CircularProgress />
                 </Box>
-              ) : activeSessions.length === 0 ? (
+              ) : allSessions.length === 0 ? (
                 <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>
-                  No active game sessions. Create a new game to start!
+                  No game sessions found. Create a new game to start!
                 </Typography>
               ) : (
                 <Grid container spacing={2}>
-                  {activeSessions.map((session) => (
+                  {allSessions.map((session) => (
                     <Grid item xs={12} sm={6} key={session.id}>
                       <Card>
                         <CardContent>
-                          <Typography variant="h6" gutterBottom>
-                            {session.name || "Untitled Game"}
-                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              mb: 1,
+                            }}
+                          >
+                            <Typography variant="h6">
+                              {session.name || "Untitled Game"}
+                            </Typography>
+                            {!session.isActive && (
+                              <Chip
+                                label="Completed"
+                                color="success"
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </Box>
                           <Typography
                             variant="body2"
                             color="text.secondary"
@@ -250,14 +361,27 @@ export default function Dashboard() {
                             <strong>Created:</strong>{" "}
                             {formatDate(session.createdAt)}
                           </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            gutterBottom
-                          >
-                            <strong>Current Round:</strong>{" "}
-                            {session.currentRound}
-                          </Typography>
+                          {session.isActive && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              <strong>Current Round:</strong>{" "}
+                              {session.currentRound}
+                            </Typography>
+                          )}
+
+                          {!session.isActive && session.completedAt && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              <strong>Completed:</strong>{" "}
+                              {formatDate(session.completedAt)}
+                            </Typography>
+                          )}
                           <Box
                             sx={{
                               display: "flex",
@@ -268,11 +392,32 @@ export default function Dashboard() {
                             <Button
                               variant="contained"
                               color="primary"
-                              startIcon={<PlayArrowIcon />}
+                              startIcon={
+                                session.isActive ? (
+                                  <PlayArrowIcon />
+                                ) : (
+                                  <VisibilityIcon />
+                                )
+                              }
                               sx={{ mr: 1 }}
                               onClick={() => handleStartGame(session.id)}
                             >
-                              Continue
+                              {session.isActive ? "Continue" : "View"}
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<DownloadIcon />}
+                              onClick={(e) =>
+                                handleDownloadMenuOpen(e, session.id)
+                              }
+                              sx={{ mr: 1 }}
+                              disabled={isExporting}
+                            >
+                              {isExporting &&
+                              downloadMenu.sessionId === session.id
+                                ? "Exporting..."
+                                : "Export"}
                             </Button>
                             <Button
                               variant="outlined"
@@ -310,6 +455,19 @@ export default function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Menu
+        anchorEl={downloadMenu.anchorEl}
+        open={downloadMenu.open}
+        onClose={handleDownloadMenuClose}
+      >
+        <MenuItem onClick={handleDownloadJSON} disabled={isExporting}>
+          Download as JSON
+        </MenuItem>
+        <MenuItem onClick={handleDownloadExcel} disabled={isExporting}>
+          Download as Excel
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

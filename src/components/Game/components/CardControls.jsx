@@ -171,13 +171,15 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           onChange={handleCardChange}
           disabled={disabled || !selectedTown}
         >
-          {availableCards.map((card) => (
-            <MenuItem key={card.id} value={card.id}>
-              {card.type === "stormSurge"
-                ? card.name + " (storm surge)"
-                : card.name + " (" + card.type + ")"}
-            </MenuItem>
-          ))}
+          {availableCards
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((card) => (
+              <MenuItem key={card.id} value={card.id}>
+                {card.type === "stormSurge"
+                  ? card.name + " (storm surge)"
+                  : card.name + " (" + card.type + ")"}
+              </MenuItem>
+            ))}
         </Select>
         <FormHelperText>
           {cardCategory === 0
@@ -202,28 +204,12 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>Apply Adaptation Card</DialogTitle>
         <DialogContent>
-          <DialogContentText component="div">
+          <DialogContentText component="div" sx={{ mb: 3 }}>
             Are you sure you want to apply this card to the selected town?
           </DialogContentText>
 
           {selectedTown && selectedCard && (
             <>
-              <Typography
-                variant="body2"
-                color={
-                  towns.find((t) => t.id === selectedTown)?.effortPoints <
-                  findCard(selectedCard)?.cost
-                    ? "error.main"
-                    : "text.secondary"
-                }
-                sx={{ mt: 1, mb: 2 }}
-              >
-                Cost: {findCard(selectedCard)?.cost} points
-                {towns.find((t) => t.id === selectedTown)?.effortPoints <
-                  findCard(selectedCard)?.cost &&
-                  " - Not enough effort points!"}
-              </Typography>
-
               <Card
                 variant="outlined"
                 sx={{
