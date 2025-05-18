@@ -1,5 +1,5 @@
 // src/components/Dashboard/index.jsx
-// Modified Dashboard to include completed sessions without tabs
+// Modified to include editable session names
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -25,6 +25,9 @@ import {
   CircularProgress,
   Button,
   Chip,
+  TextField,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -32,6 +35,9 @@ import AddIcon from "@mui/icons-material/Add";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import { primaryColor } from "../../constants/palette";
 import backgroundImage from "../../assets/images/web-banner.png";
 
@@ -46,9 +52,10 @@ export default function Dashboard() {
     loading,
     error,
     activeSessions,
-    completedSessions, // We'll use this now
+    completedSessions,
     fetchUserSessions,
     createNewSession,
+    updateSessionName, // Added this function
     deleteSession,
     clearError,
   } = useGame();
@@ -65,6 +72,13 @@ export default function Dashboard() {
     sessionId: null,
   });
   const [isExporting, setIsExporting] = useState(false);
+
+  // New state for editing session names
+  const [editSession, setEditSession] = useState({
+    id: null,
+    name: "",
+    isEditing: false,
+  });
 
   // Fetch sessions on component mount
   useEffect(() => {
@@ -169,7 +183,6 @@ export default function Dashboard() {
       handleDownloadMenuClose();
     } catch (error) {
       console.error("Error downloading JSON:", error);
-      // Use the existing error handling mechanism
       clearError();
     } finally {
       setIsExporting(false);
@@ -202,11 +215,56 @@ export default function Dashboard() {
       handleDownloadMenuClose();
     } catch (error) {
       console.error("Error downloading Excel:", error);
-      // Use the existing error handling mechanism
       clearError();
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // NEW FUNCTIONS FOR EDITING SESSION NAMES
+
+  // Start editing a session name
+  const handleStartEdit = (session, e) => {
+    // Prevent event from propagating to parent (which might navigate to game)
+    if (e) e.stopPropagation();
+
+    setEditSession({
+      id: session.id,
+      name: session.name || "Untitled Game",
+      isEditing: true,
+    });
+  };
+
+  // Handle changes to the session name input
+  const handleNameChange = (e) => {
+    setEditSession({
+      ...editSession,
+      name: e.target.value,
+    });
+  };
+
+  // Save the edited session name
+  const handleSaveSessionName = async (e) => {
+    if (e) e.stopPropagation();
+
+    if (!editSession.id || !editSession.name.trim()) {
+      // Reset editing state if name is empty
+      setEditSession({ id: null, name: "", isEditing: false });
+      return;
+    }
+
+    try {
+      await updateSessionName(editSession.id, editSession.name.trim());
+      setEditSession({ id: null, name: "", isEditing: false });
+    } catch (error) {
+      console.error("Failed to update session name:", error);
+    }
+  };
+
+  // Cancel editing
+  const handleCancelEdit = (e) => {
+    if (e) e.stopPropagation();
+    setEditSession({ id: null, name: "", isEditing: false });
   };
 
   // Combine sessions for display
@@ -220,7 +278,7 @@ export default function Dashboard() {
           backgroundImage: `url(${backgroundImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          height: "300px", // Adjust height to match your banner's proportions
+          height: "300px",
           display: "flex",
         }}
       ></AppBar>
@@ -268,7 +326,7 @@ export default function Dashboard() {
                 variant="contained"
                 onClick={handleLogout}
                 startIcon={<LogoutIcon />}
-                sx={{ textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
+                sx={{ mt: 2, textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
               >
                 Logout
               </Button>
@@ -283,7 +341,7 @@ export default function Dashboard() {
                 display: "flex",
                 flexDirection: "column",
                 minHeight: 240,
-                minWidth: 300,
+                width: "100%",
               }}
             >
               <Box
@@ -331,7 +389,30 @@ export default function Dashboard() {
                 <Grid container spacing={2}>
                   {allSessions.map((session) => (
                     <Grid item xs={12} sm={6} key={session.id}>
-                      <Card>
+                      <Card
+                        sx={{
+                          cursor:
+                            editSession.isEditing &&
+                            editSession.id === session.id
+                              ? "default"
+                              : "pointer",
+                          transition: "box-shadow 0.3s",
+                          "&:hover": {
+                            boxShadow: 3,
+                          },
+                        }}
+                        onClick={() => {
+                          // Only navigate if we're not in edit mode
+                          if (
+                            !(
+                              editSession.isEditing &&
+                              editSession.id === session.id
+                            )
+                          ) {
+                            handleStartGame(session.id);
+                          }
+                        }}
+                      >
                         <CardContent>
                           <Box
                             sx={{
@@ -341,16 +422,73 @@ export default function Dashboard() {
                               mb: 1,
                             }}
                           >
-                            <Typography variant="h6">
-                              {session.name || "Untitled Game"}
-                            </Typography>
-                            {!session.isActive && (
-                              <Chip
-                                label="Completed"
-                                color="success"
-                                size="small"
-                                sx={{ ml: 1 }}
-                              />
+                            {editSession.isEditing &&
+                            editSession.id === session.id ? (
+                              // Edit mode
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  width: "100%",
+                                }}
+                              >
+                                <TextField
+                                  value={editSession.name}
+                                  onChange={handleNameChange}
+                                  variant="outlined"
+                                  size="small"
+                                  autoFocus
+                                  onClick={(e) => e.stopPropagation()}
+                                  sx={{ flexGrow: 1 }}
+                                  inputProps={{ maxLength: 50 }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={handleSaveSessionName}
+                                  sx={{ ml: 1 }}
+                                >
+                                  <CheckIcon />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={handleCancelEdit}
+                                  sx={{ ml: 0.5 }}
+                                >
+                                  <CloseIcon />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              // Display mode
+                              <>
+                                <Typography
+                                  variant="h6"
+                                  sx={{ display: "flex", alignItems: "center" }}
+                                >
+                                  {session.name || "Untitled Game"}
+                                  <Tooltip title="Edit Name">
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      onClick={(e) =>
+                                        handleStartEdit(session, e)
+                                      }
+                                      sx={{ ml: 1 }}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Typography>
+                                {!session.isActive && (
+                                  <Chip
+                                    label="Completed"
+                                    color="success"
+                                    size="small"
+                                    sx={{ ml: 1 }}
+                                  />
+                                )}
+                              </>
                             )}
                           </Box>
                           <Typography
@@ -400,7 +538,10 @@ export default function Dashboard() {
                                 )
                               }
                               sx={{ mr: 1 }}
-                              onClick={() => handleStartGame(session.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartGame(session.id);
+                              }}
                             >
                               {session.isActive ? "Continue" : "View"}
                             </Button>
@@ -408,9 +549,10 @@ export default function Dashboard() {
                               variant="outlined"
                               color="primary"
                               startIcon={<DownloadIcon />}
-                              onClick={(e) =>
-                                handleDownloadMenuOpen(e, session.id)
-                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadMenuOpen(e, session.id);
+                              }}
                               sx={{ mr: 1 }}
                               disabled={isExporting}
                             >
@@ -423,7 +565,10 @@ export default function Dashboard() {
                               variant="outlined"
                               color="error"
                               startIcon={<DeleteIcon />}
-                              onClick={() => openDeleteDialog(session)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteDialog(session);
+                              }}
                             >
                               Delete
                             </Button>

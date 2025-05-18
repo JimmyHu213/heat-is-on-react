@@ -136,7 +136,15 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
           </DialogContentText>
 
           {selectedHazard && (
-            <Card variant="outlined" sx={{ mt: 2 }}>
+            <Card
+              variant="outlined"
+              sx={{
+                mt: 2,
+                borderColor: getHazardIconAndColor(selectedHazard.id).color,
+                borderWidth: 5,
+                borderRadius: 2,
+              }}
+            >
               <CardContent>
                 <Typography variant="subtitle2" gutterBottom>
                   Hazard Effects:
@@ -165,9 +173,9 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
                 </Grid>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="body2" color="error">
-                  Warning: If any town's resilience drops below 20 points in any
-                  category, all other categories will receive a -10 point
-                  penalty.
+                  <strong>Warning - cascading impacts:</strong> If any town's
+                  resilience is below 20% in any segment, all other segments for
+                  that aspect of resilience will receive a -10% penalty.
                 </Typography>
               </CardContent>
             </Card>
