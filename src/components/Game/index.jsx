@@ -475,7 +475,7 @@ const Game = () => {
               <Typography variant="body2" color="text.secondary">
                 <strong>Warning - cascading impacts:</strong> If any town's
                 resilience is below 20% in any segment, all other segments for
-                that aspect of resilience will receive a -10% penalty. Use
+                that aspect of resilience will receive a -10 penalty. Use
                 adaptation cards strategically to maintain resilience across all
                 towns.
               </Typography>
