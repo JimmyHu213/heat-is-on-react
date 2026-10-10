@@ -1,6 +1,7 @@
 // src/services/exportService.js
 // Updated with fixed round events retrieval
 
+import { getTotalRounds } from "../utils/rounds";
 import gameSessionService from "./gameSessionService";
 import { hazards } from "../constants/hazards";
 import { allCards } from "../constants/cards";
@@ -28,6 +29,8 @@ class ExportService {
         throw new Error(`Session not found: ${sessionId}`);
       }
 
+      const roundsPlayed = Math.max(0, Math.min(session.isActive ? session.currentRound : session.currentRound - 1, getTotalRounds(session)));
+
       // Get towns
       const towns = await gameSessionService.getSessionTowns(sessionId);
 
@@ -35,7 +38,7 @@ class ExportService {
       // Get raw round events by directly accessing each round document
       const rawRoundEvents = await this.getRawRoundEvents(
         sessionId,
-        session.currentRound
+        roundsPlayed
       );
 
       // Convert to array format with proper hazard names
@@ -57,7 +60,7 @@ class ExportService {
 
       // Ensure we have an entry for each round, even if no hazards were applied
       const completeRoundEvents = [];
-      for (let round = 1; round <= session.currentRound; round++) {
+      for (let round = 1; round <= roundsPlayed; round++) {
         const existingEvent = roundEventsArray.find((e) => e.round === round);
         if (existingEvent) {
           completeRoundEvents.push(existingEvent);
@@ -93,7 +96,7 @@ class ExportService {
         cardPlaysArray.push(...processedCardPlays.cardPlaysArray);
 
         // Track town status for each round
-        for (let round = 1; round <= session.currentRound; round++) {
+        for (let round = 1; round <= roundsPlayed; round++) {
           // Calculate town stats for this round
           // We'll use the currentStats from town if available, or calculate from current values
           let roundStats = null;
@@ -125,6 +128,10 @@ class ExportService {
           name: session.name || "Untitled Game",
           userId: session.userId,
           currentRound: session.currentRound,
+          totalRounds: getTotalRounds(session),
+          roundsPlayed,
+          endedEarly: session.endedEarly === true,
+          digitalWheelEnabled: session.digitalWheelEnabled === true,
           isActive: session.isActive,
           createdAt: session.createdAt,
           completedAt: session.completedAt,

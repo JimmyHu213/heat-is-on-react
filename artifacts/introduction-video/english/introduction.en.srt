@@ -1,0 +1,55 @@
+1
+00:00:00,450 --> 00:00:06,877
+Welcome to The Heat Is On. Make decisions for your towns and discover how adaptation strategies build resilience.
+
+2
+00:00:08,367 --> 00:00:13,578
+Create a game, choose one to twenty rounds, and optionally enable the digital hazard wheel.
+
+3
+00:00:13,898 --> 00:00:19,793
+Five towns can play adaptation cards. Bludgeton is the comparison town and plays no cards.
+
+4
+00:00:21,283 --> 00:00:28,628
+Each round moves through Adapt, Event, Review, and Dividends. The presenter uses the next-step button to guide the group.
+
+5
+00:00:30,117 --> 00:00:35,705
+Select a town and a card. Check its cost, effects, and duration before confirming.
+
+6
+00:00:36,025 --> 00:00:42,471
+Landscaping, for example, costs fifteen effort points and improves all four bushfire resilience scores.
+
+7
+00:00:43,950 --> 00:00:50,223
+Spin the digital wheel, or select the result from a physical wheel. Confirm the hazard for all six towns.
+
+8
+00:00:50,543 --> 00:00:56,403
+Bushfire, flood, storm surge, heatwave, and biohazard each have different effects.
+
+9
+00:00:57,908 --> 00:01:02,851
+Flip a town's chart to explore Nature, Economy, Society, and Health.
+
+10
+00:01:03,171 --> 00:01:09,601
+Compare hazard charts and Bludgeton to discuss what worked. Watch for low scores that can trigger cascading penalties.
+
+11
+00:01:11,075 --> 00:01:15,961
+At round end, each resilience segment at exactly one hundred earns five effort points.
+
+12
+00:01:16,281 --> 00:01:23,349
+Confirm settlement to update budgets automatically. The final round also pays dividends. Do not add them twice.
+
+13
+00:01:24,825 --> 00:01:31,068
+Finish the game, or end it early, to review events, losses, final resilience, and budgets.
+
+14
+00:01:31,388 --> 00:01:35,287
+Compare all six towns. What would you do differently next time?

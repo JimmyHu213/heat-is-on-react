@@ -1,0 +1,226 @@
+rules_version = '2';
+// Data model: users/{uid} contains the account profile. game_sessions/{id}
+// belongs to userId. towns, round_events, round_stats and card_plays refer to
+// their parent sessionId; card_plays also refers to townId. Relationships,
+// creation timestamps and document IDs are immutable on updates.
+// Sessions optionally store totalRounds (1..20), digitalWheelEnabled (bool),
+// lastSettlementRound (int) and lastDividends (town ID -> 0..100 EP, multiples of 5).
+// Legacy sessions omit these fields and use five rounds. round_stats optionally
+// stores the dividends paid at closing. Town budgets may exceed 100 after dividends.
+// Sessions also persist stage, revision (optimistic undo/settlement guard) and
+// endedEarly. Event impactPoints records cumulative score loss for six towns.
+// subscription_requests/{uid}: owner-only application; name <=100, organization
+// <=200, message <=1000, authenticated email, pending status and timestamps.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    function ownsSession(id) {
+      return signedIn() && get(/databases/$(database)/documents/game_sessions/$(id)).data.userId == request.auth.uid;
+    }
+    function ownsSessionAfter(id) {
+      return signedIn() && getAfter(/databases/$(database)/documents/game_sessions/$(id)).data.userId == request.auth.uid;
+    }
+    function ownsTown(id) {
+      return ownsSession(get(/databases/$(database)/documents/towns/$(id)).data.sessionId);
+    }
+    function timestamps(d) { return d.createdAt is timestamp && d.updatedAt is timestamp; }
+    function text(s) { return s is string && s.size() > 0 && s.size() <= 200; }
+    function round(r) { return r is int && r >= 0 && r <= 21; }
+    function stats(s) {
+      return s.keys().toSet() == ['nature', 'economy', 'society', 'health'].toSet()
+        && s.values().hasOnly([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]);
+    }
+    function abilities(d) {
+      return stats(d.bushfire) && stats(d.flood) && stats(d.stormSurge)
+        && stats(d.heatwave) && stats(d.biohazard);
+    }
+    function snapshot(s) {
+      return s is map && (s.size() == 0 ||
+        (s.size() == 6
+        && abilities(s) && round(s.round)));
+    }
+    function validUser(d, uid) {
+      return d.keys().hasAll(['userId', 'email', 'displayName', 'createdAt', 'lastLogin'])
+        && d.keys().hasOnly(['userId', 'email', 'displayName', 'photoURL', 'createdAt', 'lastLogin', 'updatedAt'])
+        && d.userId == uid && d.email == request.auth.token.email
+        && d.displayName is string && d.displayName.size() <= 100
+        && d.createdAt is timestamp && d.lastLogin is timestamp
+        && (!('photoURL' in d) || (d.photoURL is string && d.photoURL.size() <= 2048))
+        && (!('updatedAt' in d) || d.updatedAt is timestamp);
+    }
+    function dividends(d) {
+      return d is map && d.size() == 6
+        && d.values().hasOnly([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]);
+    }
+    function totalRounds(d) { return d.get('totalRounds', 5); }
+    function validSession(d) {
+      return d.keys().hasAll(['userId', 'name', 'currentRound', 'isActive', 'completedAt', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'userId', 'name', 'totalRounds', 'digitalWheelEnabled', 'lastSettlementRound', 'lastDividends', 'currentRound', 'isActive', 'completedAt', 'createdAt', 'updatedAt', 'stage', 'revision', 'endedEarly'])
+        && text(d.userId) && text(d.name) && round(d.currentRound) && d.isActive is bool
+        && totalRounds(d) is int && totalRounds(d) >= 1 && totalRounds(d) <= 20
+        && d.currentRound <= totalRounds(d) + 1
+        && (d.isActive ? (d.currentRound <= totalRounds(d) && !d.get('endedEarly', false)) :
+          (d.currentRound >= 2 && (d.currentRound == totalRounds(d) + 1 || d.get('endedEarly', false))))
+        && (d.isActive ? d.completedAt == null : d.completedAt is timestamp)
+        && (!('endedEarly' in d) || d.endedEarly is bool)
+        && (!('revision' in d) || (d.revision is int && d.revision >= 0 && d.revision <= 1000000))
+        && (!('stage' in d) || (d.isActive ? d.stage in ['adaptation', 'hazard', 'review'] : d.stage == 'complete'))
+        && (!('digitalWheelEnabled' in d) || d.digitalWheelEnabled is bool)
+        && ((!('lastSettlementRound' in d) && !('lastDividends' in d)) ||
+          (d.lastSettlementRound is int && d.lastSettlementRound >= 1
+            && d.lastSettlementRound == d.currentRound - 1 && dividends(d.lastDividends)))
+        && timestamps(d);
+    }
+    function validSessionUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['id', 'userId', 'createdAt', 'totalRounds'])
+        && (resource.data.isActive || !request.resource.data.isActive)
+        && (!changed.hasAny(['isActive', 'endedEarly', 'completedAt']) ||
+          (resource.data.isActive && request.resource.data.currentRound == resource.data.currentRound + 1))
+        && (!changed.hasAny(['revision']) || request.resource.data.revision == resource.data.get('revision', 0) + 1)
+        && (request.resource.data.currentRound == resource.data.currentRound ||
+          (resource.data.isActive && request.resource.data.currentRound == resource.data.currentRound + 1))
+        && (!changed.hasAny(['lastSettlementRound', 'lastDividends']) ||
+          request.resource.data.currentRound == resource.data.currentRound + 1);
+    }
+    function validTown(d) {
+      return d.keys().hasAll(['sessionId', 'townNumber', 'name', 'townTemplateId', 'effortPoints', 'currentRound', 'bushfire', 'flood', 'stormSurge', 'heatwave', 'biohazard', 'currentStats', 'isComparisonTown', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'sessionId', 'townNumber', 'name', 'townTemplateId', 'effortPoints', 'currentRound', 'bushfire', 'flood', 'stormSurge', 'heatwave', 'biohazard', 'currentStats', 'isComparisonTown', 'createdAt', 'updatedAt'])
+        && text(d.sessionId) && text(d.name) && text(d.townTemplateId)
+        && d.townNumber is int && d.townNumber >= 1 && d.townNumber <= 6
+        && d.effortPoints is number && d.effortPoints >= 0 && d.effortPoints <= 12000 && round(d.currentRound) && d.isComparisonTown is bool
+        && abilities(d) && snapshot(d.currentStats) && timestamps(d);
+    }
+    function validEvent(d) {
+      return d.keys().hasAll(['sessionId', 'roundNumber', 'hazardIds', 'eventHistory', 'isComplete', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'sessionId', 'roundNumber', 'hazardIds', 'eventHistory', 'isComplete', 'completedAt', 'createdAt', 'updatedAt', 'impactPoints', 'impactComplete'])
+        && text(d.sessionId) && round(d.roundNumber) && d.isComplete is bool
+        && d.hazardIds is list && d.hazardIds.size() <= 5
+        && d.hazardIds.toSet().hasOnly(['bushfire', 'flood', 'stormSurge', 'heatwave', 'biohazard'])
+        && d.eventHistory is list && d.eventHistory.size() <= 5
+        && (d.eventHistory.size() < 1 || validHistory(d.eventHistory[0]))
+        && (d.eventHistory.size() < 2 || validHistory(d.eventHistory[1]))
+        && (d.eventHistory.size() < 3 || validHistory(d.eventHistory[2]))
+        && (d.eventHistory.size() < 4 || validHistory(d.eventHistory[3]))
+        && (d.eventHistory.size() < 5 || validHistory(d.eventHistory[4]))
+        && (!('completedAt' in d) || d.completedAt == null || d.completedAt is timestamp)
+        && (!('impactComplete' in d) || d.impactComplete is bool)
+        && (!('impactPoints' in d) || validImpacts(d.impactPoints))
+        && timestamps(d);
+    }
+    function loss(n) { return n is int && n >= 0 && n <= 10000; }
+    function validImpacts(p) {
+      return p is map && p.size() == 6 && loss(p.values()[0]) && loss(p.values()[1])
+        && loss(p.values()[2]) && loss(p.values()[3]) && loss(p.values()[4]) && loss(p.values()[5]);
+    }
+    function validSubscription(d, uid) {
+      return d.keys().hasAll(['userId', 'email', 'name', 'organization', 'message', 'status', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['userId', 'email', 'name', 'organization', 'message', 'status', 'createdAt', 'updatedAt'])
+        && d.userId == uid && d.email == request.auth.token.email
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && text(d.organization) && d.message is string && d.message.size() <= 1000
+        && d.status == 'pending' && d.createdAt == request.time && d.updatedAt == request.time;
+    }
+    function validHistory(h) {
+      return h is map && h.keys().hasAll(['type', 'hazardId', 'timestamp'])
+        && h.keys().hasOnly(['type', 'hazardId', 'timestamp'])
+        && h.type == 'hazard' && h.timestamp is timestamp
+        && h.hazardId in ['bushfire', 'flood', 'stormSurge', 'heatwave', 'biohazard'];
+    }
+    function validRoundStats(d) {
+      let t1 = d.towns.values()[0];
+      let t2 = d.towns.values()[1];
+      let t3 = d.towns.values()[2];
+      let t4 = d.towns.values()[3];
+      let t5 = d.towns.values()[4];
+      let t6 = d.towns.values()[5];
+      return d.keys().hasAll(['sessionId', 'roundNumber', 'towns', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'sessionId', 'roundNumber', 'towns', 'dividends', 'createdAt', 'updatedAt'])
+        && text(d.sessionId) && round(d.roundNumber)
+        && d.towns is map && d.towns.size() == 6 && timestamps(d)
+        && (!('dividends' in d) || (dividends(d.dividends) && d.dividends.keys().toSet() == d.towns.keys().toSet()))
+        && snapshotShape(t1) && snapshotShape(t2) && snapshotShape(t3)
+        && snapshotShape(t4) && snapshotShape(t5) && snapshotShape(t6)
+        && snapshotValues(t1).concat(snapshotValues(t2)).concat(snapshotValues(t3))
+          .concat(snapshotValues(t4)).concat(snapshotValues(t5)).concat(snapshotValues(t6))
+          .hasOnly([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]);
+    }
+    // Check all 120 scores in one native list operation. All game constants
+    // and card/hazard effects use multiples of five.
+    function statsShape(s) {
+      return s.keys().toSet() == ['nature', 'economy', 'society', 'health'].toSet();
+    }
+    function snapshotShape(s) {
+      return s.size() == 6 && round(s.round)
+        && statsShape(s.bushfire) && statsShape(s.flood) && statsShape(s.stormSurge)
+        && statsShape(s.heatwave) && statsShape(s.biohazard);
+    }
+    function snapshotValues(s) {
+      return s.bushfire.values().concat(s.flood.values()).concat(s.stormSurge.values())
+        .concat(s.heatwave.values()).concat(s.biohazard.values());
+    }
+    function cardRound(r) { return r is int && r >= 1 && r <= 22; }
+    function validPlay(d) {
+      return d.keys().hasAll(['sessionId', 'cardId', 'townId', 'playedAtRound', 'effectiveRounds', 'isActive', 'playedAt', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'sessionId', 'cardId', 'townId', 'playedAtRound', 'effectiveRounds', 'isActive', 'playedAt', 'createdAt', 'updatedAt'])
+        && text(d.sessionId) && text(d.cardId) && text(d.townId)
+        && round(d.playedAtRound) && d.effectiveRounds is list && d.effectiveRounds.size() <= 3
+        && d.effectiveRounds.size() >= 1
+        && cardRound(d.effectiveRounds[0])
+        && (d.effectiveRounds.size() < 2 || cardRound(d.effectiveRounds[1]))
+        && (d.effectiveRounds.size() < 3 || cardRound(d.effectiveRounds[2]))
+        && d.isActive is bool && d.playedAt is timestamp && timestamps(d)
+        && getAfter(/databases/$(database)/documents/towns/$(d.townId)).data.sessionId == d.sessionId;
+    }
+    function childUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'sessionId', 'createdAt']);
+    }
+    match /users/{uid} {
+      allow read, delete: if owner(uid);
+      allow create: if owner(uid) && validUser(request.resource.data, uid);
+      allow update: if owner(uid) && validUser(request.resource.data, uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userId', 'email', 'createdAt']);
+    }
+    match /subscription_requests/{uid} {
+      allow get: if owner(uid);
+      allow create: if owner(uid) && validSubscription(request.resource.data, uid);
+      // Status changes are handled by an administrator; applicants cannot approve themselves.
+    }
+    match /game_sessions/{id} {
+      allow read, delete: if owner(resource.data.userId);
+      allow create: if owner(request.resource.data.userId) && validSession(request.resource.data);
+      allow update: if owner(resource.data.userId) && validSession(request.resource.data)
+        && validSessionUpdate();
+    }
+    match /towns/{id} {
+      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow create: if ownsSessionAfter(request.resource.data.sessionId) && validTown(request.resource.data);
+      allow update: if ownsSession(resource.data.sessionId) && childUnchanged() && validTown(request.resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['townNumber', 'townTemplateId', 'isComparisonTown']);
+    }
+    match /round_events/{id} {
+      // The client checks this deterministic ID before creating a round event.
+      allow get: if ownsSession(id.split('_')[0]);
+      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow create: if ownsSessionAfter(request.resource.data.sessionId) && validEvent(request.resource.data)
+        && id == request.resource.data.sessionId + '_' + string(request.resource.data.roundNumber);
+      allow update: if ownsSession(resource.data.sessionId) && childUnchanged() && validEvent(request.resource.data)
+        && request.resource.data.roundNumber == resource.data.roundNumber;
+    }
+    match /round_stats/{id} {
+      allow get: if ownsSession(id.split('_')[0]);
+      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow create: if ownsSessionAfter(request.resource.data.sessionId) && validRoundStats(request.resource.data);
+      allow update: if ownsSession(resource.data.sessionId) && childUnchanged() && validRoundStats(request.resource.data)
+        && request.resource.data.roundNumber == resource.data.roundNumber;
+    }
+    match /card_plays/{id} {
+      allow read: if ownsSession(resource.data.sessionId) || ownsTown(resource.data.townId);
+      allow delete: if ownsSession(resource.data.sessionId);
+      allow create: if ownsSessionAfter(request.resource.data.sessionId) && validPlay(request.resource.data);
+      allow update: if ownsSession(resource.data.sessionId) && childUnchanged() && validPlay(request.resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['townId', 'cardId', 'playedAtRound', 'effectiveRounds', 'playedAt']);
+    }
+  }
+}

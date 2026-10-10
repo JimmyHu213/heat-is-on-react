@@ -14,6 +14,7 @@ import {
   secondaryColor,
 } from "./constants/palette";
 // Context Providers
+import { PresentationProvider } from "./contexts/PresentationContext";
 import AppProviders from "./contexts";
 
 // Components
@@ -25,6 +26,8 @@ import Game from "./components/Game";
 import PrivateRoute from "./components/common/PrivateRoute";
 import Footer from "./components/common/Footer";
 import { Box } from "@mui/material";
+import LanguageSwitcher from "./components/common/LanguageSwitcher";
+import { useLanguage } from "./i18n";
 
 // Create a Material UI theme
 const theme = createTheme({
@@ -34,21 +37,23 @@ const theme = createTheme({
       light: primaryColorLight,
     },
     secondary: {
-      main: secondaryColor,
+      main: "#c56e50",
     },
     background: {
-      default: primaryColor,
+      default: "#f3f7f5",
       paper: "#fff",
     },
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   },
+  shape: { borderRadius: 12 },
   components: {
+    MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: 10,
           textTransform: "none",
         },
       },
@@ -56,8 +61,9 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
-          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+          borderRadius: 16,
+          border: "1px solid #dce7e1",
+          boxShadow: "0 8px 24px rgba(28,61,51,0.06)",
         },
       },
     },
@@ -65,10 +71,13 @@ const theme = createTheme({
 });
 
 function App() {
+  // Re-render the presentation tree on a language change, preserving game state.
+  useLanguage();
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <PresentationProvider>
         <AppProviders>
           <Box
             sx={{
@@ -77,6 +86,7 @@ function App() {
               minHeight: "100vh", // This ensures the footer sticks to the bottom
             }}
           >
+            <LanguageSwitcher />
             <Routes>
               {/* Your existing routes */}
               <Route path="/login" element={<Login />} />
@@ -105,6 +115,7 @@ function App() {
             <Footer />
           </Box>
         </AppProviders>
+        </PresentationProvider>
       </Router>
     </ThemeProvider>
   );

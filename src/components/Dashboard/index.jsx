@@ -1,3 +1,4 @@
+import { t, localeTag } from '../../i18n';
 // src/components/Dashboard/index.jsx
 // Modified to include editable session names
 
@@ -28,6 +29,8 @@ import {
   TextField,
   IconButton,
   Tooltip,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -39,6 +42,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { primaryColor } from "../../constants/palette";
+import { MAX_ROUNDS } from "../../utils/rounds";
 import backgroundImage from "../../assets/images/web-banner.png";
 
 import DownloadIcon from "@mui/icons-material/Download";
@@ -66,6 +70,9 @@ export default function Dashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [newGame, setNewGame] = useState({ name: 'New Game', totalRounds: 5, digitalWheelEnabled: true });
+  const validSetup = newGame.name.trim().length > 0 && Number.isInteger(newGame.totalRounds) && newGame.totalRounds >= 1 && newGame.totalRounds <= MAX_ROUNDS;
   const [downloadMenu, setDownloadMenu] = useState({
     open: false,
     anchorEl: null,
@@ -102,10 +109,12 @@ export default function Dashboard() {
 
   // Handle create game
   async function handleCreateGame() {
+    if (!validSetup) return;
     setIsCreating(true);
     try {
-      const session = await createNewSession();
+      const session = await createNewSession({ ...newGame, name: newGame.name.trim() });
       if (session) {
+        setSetupOpen(false);
         navigate(`/game/${session.id}`);
       }
     } catch (error) {
@@ -145,7 +154,7 @@ export default function Dashboard() {
     if (!timestamp) return "N/A";
 
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+    return date.toLocaleDateString(localeTag()) + " " + date.toLocaleTimeString(localeTag());
   }
 
   const handleDownloadMenuOpen = (event, sessionId) => {
@@ -230,7 +239,7 @@ export default function Dashboard() {
 
     setEditSession({
       id: session.id,
-      name: session.name || "Untitled Game",
+      name: session.name || t("Untitled Game"),
       isEditing: true,
     });
   };
@@ -286,7 +295,7 @@ export default function Dashboard() {
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-            {error}
+            {t(error)}
           </Alert>
         )}
 
@@ -311,15 +320,13 @@ export default function Dashboard() {
                 gutterBottom
                 component="div"
                 align="center"
-              >
-                User Profile
-              </Typography>
+              >{t("User Profile")}</Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body2" gutterBottom>
-                <strong>Email:</strong> {currentUser.email}
+                <strong>{t("Email:")}</strong> {currentUser.email}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <strong>User ID:</strong> {currentUser.uid}
+                <strong>{t("User ID:")}</strong> {currentUser.uid}
               </Typography>
               <Button
                 color="primary"
@@ -327,9 +334,7 @@ export default function Dashboard() {
                 onClick={handleLogout}
                 startIcon={<LogoutIcon />}
                 sx={{ mt: 2, textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
-              >
-                Logout
-              </Button>
+              >{t("Logout")}</Button>
             </Paper>
           </Grid>
 
@@ -352,27 +357,27 @@ export default function Dashboard() {
                   mb: 2,
                 }}
               >
-                <Typography variant="h5">Game Sessions</Typography>
+                <Box><Typography variant="overline" color="text.secondary">{t("FACILITATE · EXPLORE · REFLECT")}</Typography>
+                  <Typography variant="h4">{t("Your games")}</Typography></Box>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     sx={{ mr: 2, ml: 2 }}
                   >
-                    {activeSessions.length}/3 active games
-                  </Typography>
+                    {activeSessions.length}{t("/3 active games")}</Typography>
                   <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
-                    onClick={handleCreateGame}
+                    onClick={() => setSetupOpen(true)}
                     disabled={isCreating || activeSessions.length >= 3}
                   >
                     {isCreating
-                      ? "Creating..."
+                      ? t("Creating...")
                       : activeSessions.length >= 3
-                      ? "Limit Reached"
-                      : "New Game"}
+                      ? t("Limit Reached")
+                      : t("New Game")}
                   </Button>
                 </Box>
               </Box>
@@ -382,9 +387,7 @@ export default function Dashboard() {
                   <CircularProgress />
                 </Box>
               ) : allSessions.length === 0 ? (
-                <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>
-                  No game sessions found. Create a new game to start!
-                </Typography>
+                <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>{t("No game sessions found. Create a new game to start!")}</Typography>
               ) : (
                 <Grid container spacing={2}>
                   {allSessions.map((session) => (
@@ -466,8 +469,8 @@ export default function Dashboard() {
                                   variant="h6"
                                   sx={{ display: "flex", alignItems: "center" }}
                                 >
-                                  {session.name || "Untitled Game"}
-                                  <Tooltip title="Edit Name">
+                                  {session.name || t("Untitled Game")}
+                                  <Tooltip title={t("Edit Name")}>
                                     <IconButton
                                       size="small"
                                       color="primary"
@@ -482,7 +485,7 @@ export default function Dashboard() {
                                 </Typography>
                                 {!session.isActive && (
                                   <Chip
-                                    label="Completed"
+                                    label={t("Completed")}
                                     color="success"
                                     size="small"
                                     sx={{ ml: 1 }}
@@ -496,7 +499,7 @@ export default function Dashboard() {
                             color="text.secondary"
                             gutterBottom
                           >
-                            <strong>Created:</strong>{" "}
+                            <strong>{t("Created:")}</strong>{" "}
                             {formatDate(session.createdAt)}
                           </Typography>
                           {session.isActive && (
@@ -505,7 +508,7 @@ export default function Dashboard() {
                               color="text.secondary"
                               gutterBottom
                             >
-                              <strong>Current Round:</strong>{" "}
+                              <strong>{t("Current Round:")}</strong>{" "}
                               {session.currentRound}
                             </Typography>
                           )}
@@ -516,7 +519,7 @@ export default function Dashboard() {
                               color="text.secondary"
                               gutterBottom
                             >
-                              <strong>Completed:</strong>{" "}
+                              <strong>{t("Completed:")}</strong>{" "}
                               {formatDate(session.completedAt)}
                             </Typography>
                           )}
@@ -543,7 +546,7 @@ export default function Dashboard() {
                                 handleStartGame(session.id);
                               }}
                             >
-                              {session.isActive ? "Continue" : "View"}
+                              {session.isActive ? t("Continue") : t("View")}
                             </Button>
                             <Button
                               variant="outlined"
@@ -558,8 +561,8 @@ export default function Dashboard() {
                             >
                               {isExporting &&
                               downloadMenu.sessionId === session.id
-                                ? "Exporting..."
-                                : "Export"}
+                                ? t("Exporting...")
+                                : t("Export")}
                             </Button>
                             <Button
                               variant="outlined"
@@ -569,9 +572,7 @@ export default function Dashboard() {
                                 e.stopPropagation();
                                 openDeleteDialog(session);
                               }}
-                            >
-                              Delete
-                            </Button>
+                            >{t("Delete")}</Button>
                           </Box>
                         </CardContent>
                       </Card>
@@ -584,20 +585,33 @@ export default function Dashboard() {
         </Grid>
       </Container>
 
+      <Dialog open={setupOpen} onClose={isCreating ? undefined : () => setSetupOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t("Set up a new game")}</DialogTitle>
+        <DialogContent>
+          <TextField autoFocus fullWidth margin="normal" label={t("Game name")} value={newGame.name}
+            inputProps={{ maxLength: 200 }} onChange={e => setNewGame({ ...newGame, name: e.target.value })} />
+          <TextField fullWidth margin="normal" type="number" label={t("Number of rounds")} value={newGame.totalRounds || ''}
+            inputProps={{ min: 1, max: MAX_ROUNDS }} helperText={t("Choose 1–{0} rounds before starting.", [MAX_ROUNDS])}
+            onChange={e => setNewGame({ ...newGame, totalRounds: Number(e.target.value) })} />
+          <FormControlLabel control={<Switch checked={newGame.digitalWheelEnabled}
+            onChange={e => setNewGame({ ...newGame, digitalWheelEnabled: e.target.checked })} />} label={t("Use the digital hazard wheel")} />
+          <Typography variant="body2" color="text.secondary">{t("Leave this off to use a physical wheel. You can switch during the game.")}</Typography>
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{t(error)}</Alert>}
+        </DialogContent>
+        <DialogActions><Button disabled={isCreating} onClick={() => setSetupOpen(false)}>{t("Cancel")}</Button>
+          <Button variant="contained" disabled={isCreating || !validSetup} onClick={handleCreateGame}>{isCreating ? t("Creating…") : t("Create game")}</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Confirmation Dialog */}
       <Dialog open={isDialogOpen} onClose={closeDeleteDialog}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogTitle>{t("Confirm Deletion")}</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this game session? This action
-            cannot be undone.
-          </DialogContentText>
+          <DialogContentText>{t("Are you sure you want to delete this game session? This action cannot be undone.")}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDeleteDialog}>Cancel</Button>
-          <Button onClick={handleDeleteSession} color="error">
-            Delete
-          </Button>
+          <Button onClick={closeDeleteDialog}>{t("Cancel")}</Button>
+          <Button onClick={handleDeleteSession} color="error">{t("Delete")}</Button>
         </DialogActions>
       </Dialog>
 
@@ -606,12 +620,8 @@ export default function Dashboard() {
         open={downloadMenu.open}
         onClose={handleDownloadMenuClose}
       >
-        <MenuItem onClick={handleDownloadJSON} disabled={isExporting}>
-          Download as JSON
-        </MenuItem>
-        <MenuItem onClick={handleDownloadExcel} disabled={isExporting}>
-          Download as Excel
-        </MenuItem>
+        <MenuItem onClick={handleDownloadJSON} disabled={isExporting}>{t("Download as JSON")}</MenuItem>
+        <MenuItem onClick={handleDownloadExcel} disabled={isExporting}>{t("Download as Excel")}</MenuItem>
       </Menu>
     </Box>
   );

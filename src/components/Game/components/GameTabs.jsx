@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 // src/components/Game/components/GameTabs.jsx
 import React from "react";
 import { Paper, Box, Tabs, Tab, Typography, useTheme } from "@mui/material";
@@ -65,19 +66,19 @@ const GameTabs = ({ activeTab, onTabChange, children }) => {
         >
           <Tab
             icon={<DashboardIcon />}
-            label="Dashboard"
+            label={t("Dashboard")}
             iconPosition="start"
             {...a11yProps(0)}
           />
           <Tab
             icon={<LocationCityIcon />}
-            label="Town Details"
+            label={t("Town Details")}
             iconPosition="start"
             {...a11yProps(1)}
           />
           <Tab
             icon={<HistoryIcon />}
-            label="Game History"
+            label={t("Game History")}
             iconPosition="start"
             {...a11yProps(2)}
           />

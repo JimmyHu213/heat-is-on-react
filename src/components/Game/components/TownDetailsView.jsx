@@ -1,3 +1,4 @@
+import { t, townLabel } from '../../../i18n';
 // src/components/Game/components/TownDetailsView.jsx
 import React, { useState } from "react";
 import {
@@ -35,7 +36,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 /**
  * Component to display detailed town information with name editing capability
  */
-const TownDetailsView = ({ towns, onUpdateTownName }) => {
+const TownDetailsView = ({ towns, onUpdateTownName, readOnly = false }) => {
   const theme = useTheme();
   const [editState, setEditState] = useState({});
 
@@ -141,7 +142,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
   // Handle budget points change
   const handleBudgetChange = (townId, newPoints) => {
     // Ensure input is numeric and within reasonable range
-    const points = Math.max(0, Math.min(1000, parseInt(newPoints) || 0));
+    const points = Math.max(0, Math.min(10000, parseInt(newPoints) || 0));
 
     setEditState({
       ...editState,
@@ -193,9 +194,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
   // If no towns, return a message
   if (!towns || towns.length === 0) {
     return (
-      <Typography variant="body1" align="center">
-        No town data available
-      </Typography>
+      <Typography variant="body1" align="center">{t("No town data available")}</Typography>
     );
   }
 
@@ -264,7 +263,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                       }}
                       autoFocus
                     />
-                    <Tooltip title="Save">
+                    <Tooltip title={t("Save")}>
                       <IconButton
                         size="small"
                         onClick={() => handleSaveName(town.id)}
@@ -273,7 +272,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                         <SaveIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Cancel">
+                    <Tooltip title={t("Cancel")}>
                       <IconButton
                         size="small"
                         onClick={() => handleCancelEdit(town.id)}
@@ -287,11 +286,12 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                   // Display mode
                   <>
                     <Typography variant="h6" fontWeight="bold">
-                      {town.name}
+                      {townLabel(town)}
                     </Typography>
-                    <Tooltip title="Edit Town Name">
+                    <Tooltip title={t("Edit Town Name")}>
                       <IconButton
                         size="small"
+                        disabled={readOnly}
                         onClick={() => handleStartEdit(town.id, town.name)}
                         sx={{ color: "white" }}
                       >
@@ -331,9 +331,9 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                         variant="outlined"
                         size="small"
                         type="number"
-                        label="Budget Points"
+                        label={t("Budget Points")}
                         InputProps={{
-                          inputProps: { min: 0, max: 1000 },
+                          inputProps: { min: 0, max: 10000 },
                         }}
                         sx={{
                           flexGrow: 1,
@@ -341,7 +341,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                         }}
                         autoFocus
                       />
-                      <Tooltip title="Save">
+                      <Tooltip title={t("Save")}>
                         <IconButton
                           size="small"
                           onClick={() => handleSaveBudget(town.id)}
@@ -350,7 +350,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                           <SaveIcon />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Cancel">
+                      <Tooltip title={t("Cancel")}>
                         <IconButton
                           size="small"
                           onClick={() => handleCancelEditBudget(town.id)}
@@ -368,12 +368,13 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                           sx={{ mr: 1, color: theme.palette.primary.main }}
                         />
                         <Typography variant="body2">
-                          <strong>Budget Points:</strong> {town.effortPoints}
+                          <strong>{t("Budget Points:")}</strong> {town.effortPoints}
                         </Typography>
                       </Box>
-                      <Tooltip title="Edit Budget Points">
+                      <Tooltip title={t("Edit Budget Points")}>
                         <IconButton
                           size="small"
+                          disabled={readOnly}
                           onClick={() =>
                             handleStartEditBudget(town.id, town.effortPoints)
                           }
@@ -388,9 +389,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
 
                 <Divider sx={{ mb: 2 }} />
 
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Hazard Resilience Levels
-                </Typography>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{t("Hazard Resilience Levels")}</Typography>
 
                 {hazardTypes.map((hazard) => (
                   <Box key={hazard.id} sx={{ mb: 3 }}>
@@ -399,7 +398,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                         {hazard.icon}
                       </Box>
                       <Typography variant="subtitle2" fontWeight="bold">
-                        {hazard.name}
+                        {t(hazard.name)}
                       </Typography>
                     </Box>
 
@@ -408,7 +407,7 @@ const TownDetailsView = ({ towns, onUpdateTownName }) => {
                         <Grid item xs={6} key={aspect.id}>
                           <Box sx={{ mb: 1 }}>
                             <Typography variant="body2" gutterBottom>
-                              {aspect.name}: {town[hazard.id][aspect.id]}
+                              {t(aspect.name)}: {town[hazard.id][aspect.id]}
                             </Typography>
                             <LinearProgress
                               variant="determinate"

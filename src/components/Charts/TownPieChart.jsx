@@ -1,4 +1,6 @@
+import { t, townLabel } from '../../i18n';
 import React from "react";
+import HazardIcon from "../common/HazardIcon";
 import { Box, Typography } from "@mui/material";
 import {
   bushfireColor1,
@@ -18,7 +20,7 @@ import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import BugReportIcon from "@mui/icons-material/BugReport";
 
-const TownPieChart = ({ town, isComparisonTown = false }) => {
+const TownPieChart = ({ town, isComparisonTown = false, embedded = false }) => {
   // Calculate radial positions for each slice group
   // Each hazard gets 72 degrees of the circle (360 / 5 = 72)
   const hazards = [
@@ -67,25 +69,27 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
   return (
     <Box
       sx={{
-        bgcolor: "grey.200",
+        bgcolor: embedded ? "transparent" : "grey.200",
         borderRadius: 2,
-        boxShadow: 2,
-        p: 2,
+        boxShadow: embedded ? 0 : 2,
+        p: embedded ? 0 : 2,
         height: "400px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        width: "280px",
+        width: embedded ? "100%" : "280px",
+        justifyContent: embedded ? "center" : undefined,
       }}
     >
       <Box
         sx={{
           position: "relative",
-          width: 280,
+          width: "100%",
+          maxWidth: 280,
           height: 280,
         }}
       >
-        <svg width="280" height="280" viewBox="0 0 280 280">
+        <svg width="100%" height="280" viewBox="0 0 280 280" role="img" aria-label={t("{0} resilience across five hazards", [townLabel(town)])}>
           {/* Render hazard wedges */}
           {hazards.map((hazard) => {
             // For each hazard, create wedges for each aspect
@@ -208,44 +212,16 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
             strokeDasharray="5,2"
           />
 
-          {/* Hazard icons */}
-          <g>
-            {/* Bushfire - top */}
-            <foreignObject x={220} y={20} width={30} height={30}>
-              <LocalFireDepartmentIcon
-                style={{ color: bushfireColor1, fontSize: 24 }}
-              />
-            </foreignObject>
-
-            {/* Flood - right */}
-            <foreignObject x={250} y={centerY} width={30} height={30}>
-              <FloodIcon style={{ color: floodColor1, fontSize: 24 }} />
-            </foreignObject>
-
-            {/* Storm Surge - bottom right */}
-            <foreignObject
-              x={centerX - 15}
-              y={centerY + 110}
-              width={30}
-              height={30}
-            >
-              <ThunderstormIcon
-                style={{ color: stormSurgeColor1, fontSize: 24 }}
-              />
-            </foreignObject>
-
-            {/* Heatwave - bottom left */}
-            <foreignObject x={10} y={centerY} width={30} height={30}>
-              <WbSunnyIcon style={{ color: heatwaveColor1, fontSize: 24 }} />
-            </foreignObject>
-
-            {/* Biohazard - left */}
-            <foreignObject x={40} y={20} width={30} height={30}>
-              <BugReportIcon style={{ color: biohazardColor1, fontSize: 24 }} />
-            </foreignObject>
-          </g>
+          {/* Designer icons fall back to the existing symbols if unavailable. */}
+          {hazards.map((hazard, index) => {
+            const positions = [[220, 20], [250, centerY], [centerX - 15, centerY + 110], [10, centerY], [40, 20]];
+            const [x, y] = positions[index];
+            return <foreignObject key={hazard.id} x={x} y={y} width={30} height={30}>
+              <HazardIcon hazardId={hazard.id} color={hazard.color} />
+            </foreignObject>;
+          })}
         </svg>
-        <Box
+        {!embedded && <Box
           sx={{
             position: "inherit",
             display: "flex",
@@ -266,9 +242,9 @@ const TownPieChart = ({ town, isComparisonTown = false }) => {
             gutterBottom
             sx={{ color: secondaryColor, textAlign: "center", my: "auto" }}
           >
-            {town.name}
+            {townLabel(town)}
           </Typography>
-        </Box>
+        </Box>}
       </Box>
     </Box>
   );

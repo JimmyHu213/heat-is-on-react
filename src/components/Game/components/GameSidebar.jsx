@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 // src/components/Game/components/GameSidebar.jsx
 import React from "react";
 import { Box, Typography, Divider } from "@mui/material";
@@ -18,13 +19,11 @@ const GameSidebar = ({
     <Box sx={{ p: 1 }}>
       {/* Game Status */}
       <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Game Controls
-        </Typography>
+        <Typography variant="h6" gutterBottom>{t("Game Controls")}</Typography>
         <Typography variant="body2" color="text.secondary">
           {disabled
             ? "Start the game to enable controls"
-            : `Round ${currentRound}: Apply hazards or adaptation cards`}
+            : t("Round {0}: Apply hazards or adaptation cards", [currentRound])}
         </Typography>
       </Box>
 

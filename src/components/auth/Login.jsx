@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 // src/components/auth/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -98,13 +99,11 @@ const Login = () => {
             <LockOutlinedIcon />
           </Avatar>
 
-          <Typography component="h1" variant="h5">
-            Sign In
-          </Typography>
+          <Typography component="h1" variant="h5">{t("Sign In")}</Typography>
 
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
-              {error}
+              {t(error)}
             </Alert>
           )}
 
@@ -119,7 +118,7 @@ const Login = () => {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label={t("Email Address")}
               name="email"
               autoComplete="email"
               autoFocus
@@ -133,7 +132,7 @@ const Login = () => {
               required
               fullWidth
               name="password"
-              label="Password"
+              label={t("Password")}
               type="password"
               id="password"
               autoComplete="current-password"
@@ -152,32 +151,26 @@ const Login = () => {
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Sign In"
+                t("Sign In")
               )}
             </Button>
 
             <Grid container spacing={2}>
               <Grid item xs>
                 <Link to="/forgot-password" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Forgot password?
-                  </Typography>
+                  <Typography variant="body2" color="primary">{t("Forgot password?")}</Typography>
                 </Link>
               </Grid>
               <Grid item>
                 <Link to="/signup" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Don't have an account? Sign Up
-                  </Typography>
+                  <Typography variant="body2" color="primary">{t("Don't have an account? Sign Up")}</Typography>
                 </Link>
               </Grid>
             </Grid>
 
             {/* For testing only - remove in production */}
             <Box sx={{ mt: 3, textAlign: "center" }}>
-              <Typography variant="caption" color="text.secondary">
-                Demo credentials: demo@example.com / password123
-              </Typography>
+              <Typography variant="caption" color="text.secondary">{t("Demo credentials: demo@example.com / password123")}</Typography>
             </Box>
           </Box>
         </Paper>

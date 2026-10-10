@@ -1,0 +1,10 @@
+[
+  {"title":"Explore climate adaptation through play","label":"THE HEAT IS ON","lines":["Welcome to The Heat Is On. Make decisions for your towns and discover how adaptation strategies build resilience."]},
+  {"title":"Set up your game","label":"01 / GET STARTED","lines":["Create a game, choose one to twenty rounds, and optionally enable the digital hazard wheel.","Five towns can play adaptation cards. Bludgeton is the comparison town and plays no cards."]},
+  {"title":"Follow four steps each round","label":"02 / THE ROUND","lines":["Each round moves through Adapt, Event, Review, and Dividends. The presenter uses the next-step button to guide the group."]},
+  {"title":"Choose how to spend your effort points","label":"03 / ADAPT","lines":["Select a town and a card. Check its cost, effects, and duration before confirming.","Landscaping, for example, costs fifteen effort points and improves all four bushfire resilience scores."]},
+  {"title":"Put your strategy to the test","label":"04 / EVENT","lines":["Spin the digital wheel, or select the result from a physical wheel. Confirm the hazard for all six towns.","Bushfire, flood, storm surge, heatwave, and biohazard each have different effects."]},
+  {"title":"Read the charts. Compare the outcomes.","label":"05 / REVIEW","lines":["Flip a town's chart to explore Nature, Economy, Society, and Health.","Compare hazard charts and Bludgeton to discuss what worked. Watch for low scores that can trigger cascading penalties."]},
+  {"title":"Settle dividends before moving on","label":"06 / DIVIDENDS","lines":["At round end, each resilience segment at exactly one hundred earns five effort points.","Confirm settlement to update budgets automatically. The final round also pays dividends. Do not add them twice."]},
+  {"title":"Turn the results into learning","label":"07 / REFLECT","lines":["Finish the game, or end it early, to review events, losses, final resilience, and budgets.","Compare all six towns. What would you do differently next time?"]}
+]

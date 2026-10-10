@@ -1,0 +1,124 @@
+{
+  "duration": 96.33333333333333,
+  "fps": 24,
+  "scenes": [
+    [
+      0,
+      7.916666666666667,
+      [
+        [
+          0.45,
+          6.877437641723356,
+          "Welcome to The Heat Is On. Make decisions for your towns and discover how adaptation strategies build resilience."
+        ]
+      ]
+    ],
+    [
+      7.916666666666667,
+      12.916666666666666,
+      [
+        [
+          0.45,
+          5.661337868480726,
+          "Create a game, choose one to twenty rounds, and optionally enable the digital hazard wheel."
+        ],
+        [
+          5.981337868480726,
+          11.876213151927438,
+          "Five towns can play adaptation cards. Bludgeton is the comparison town and plays no cards."
+        ]
+      ]
+    ],
+    [
+      20.833333333333332,
+      8.833333333333334,
+      [
+        [
+          0.45,
+          7.794988662131519,
+          "Each round moves through Adapt, Event, Review, and Dividends. The presenter uses the next-step button to guide the group."
+        ]
+      ]
+    ],
+    [
+      29.666666666666664,
+      13.833333333333334,
+      [
+        [
+          0.45,
+          6.038390022675737,
+          "Select a town and a card. Check its cost, effects, and duration before confirming."
+        ],
+        [
+          6.358390022675738,
+          12.80419501133787,
+          "Landscaping, for example, costs fifteen effort points and improves all four bushfire resilience scores."
+        ]
+      ]
+    ],
+    [
+      43.5,
+      13.958333333333334,
+      [
+        [
+          0.45,
+          6.7233786848072565,
+          "Spin the digital wheel, or select the result from a physical wheel. Confirm the hazard for all six towns."
+        ],
+        [
+          7.043378684807257,
+          12.902925170068027,
+          "Bushfire, flood, storm surge, heatwave, and biohazard each have different effects."
+        ]
+      ]
+    ],
+    [
+      57.458333333333336,
+      13.166666666666666,
+      [
+        [
+          0.45,
+          5.392857142857143,
+          "Flip a town's chart to explore Nature, Economy, Society, and Health."
+        ],
+        [
+          5.7128571428571435,
+          12.142834467120181,
+          "Compare hazard charts and Bludgeton to discuss what worked. Watch for low scores that can trigger cascading penalties."
+        ]
+      ]
+    ],
+    [
+      70.625,
+      13.75,
+      [
+        [
+          0.45,
+          5.335895691609977,
+          "At round end, each resilience segment at exactly one hundred earns five effort points."
+        ],
+        [
+          5.655895691609977,
+          12.724421768707483,
+          "Confirm settlement to update budgets automatically. The final round also pays dividends. Do not add them twice."
+        ]
+      ]
+    ],
+    [
+      84.375,
+      11.958333333333334,
+      [
+        [
+          0.45,
+          6.6931746031746036,
+          "Finish the game, or end it early, to review events, losses, final resilience, and budgets."
+        ],
+        [
+          7.013174603174604,
+          10.912131519274377,
+          "Compare all six towns. What would you do differently next time?"
+        ]
+      ]
+    ]
+  ]
+}

@@ -1,0 +1,19 @@
+// Locally hosted project media; browser overrides can replace these assets.
+export const BUILT_IN_MEDIA = {
+  "introVideo": "/media/introduction.mp4",
+  "introVideoEn": "/media/introduction-en.mp4",
+  "eventGifs": {
+    "bushfire": "/media/events/bushfire.gif",
+    "flood": "/media/events/flood.gif",
+    "stormSurge": "/media/events/stormSurge.gif",
+    "heatwave": "/media/events/heatwave.gif",
+    "biohazard": "/media/events/biohazard.gif"
+  },
+  "hazardIcons": {
+    "bushfire": "/media/icons/bushfire.svg",
+    "flood": "/media/icons/flood.svg",
+    "stormSurge": "/media/icons/stormSurge.svg",
+    "heatwave": "/media/icons/heatwave.svg",
+    "biohazard": "/media/icons/biohazard.svg"
+  }
+};
