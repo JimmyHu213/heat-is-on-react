@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:demo": "node scripts/run-seed-demo.mjs",
+    "test:game": "node --test scripts/test-rounds.mjs",
+    "test:i18n": "node --test scripts/test-i18n.mjs",
+    "test:game:emulator": "node scripts/run-seed-demo.mjs scripts/test-game-emulator.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

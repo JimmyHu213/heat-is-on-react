@@ -1,8 +1,13 @@
 // src/services/gameSessionService.js
+import { db } from "../firebase/config";
+import { doc, collection, runTransaction, serverTimestamp, Timestamp } from "firebase/firestore";
+import { DEFAULT_ROUNDS, HAZARD_IDS, validateRoundCount, planRoundTransition } from "../utils/rounds";
+import { totalResilience, buildGameSummary } from "../utils/gameSummary";
 import firestoreService from "./firestoreService";
 import { defaultTowns } from "../constants/towns";
 import { hazards } from "../constants/hazards";
 import { allCards } from "../constants/cards";
+import { buildHazardImpact } from "../utils/hazardImpact";
 
 /**
  * Game Session Service
@@ -24,7 +29,9 @@ class GameSessionService {
   // In src/services/gameSessionService.js
   // Add this check to the createSession method
 
-  async createSession(userId, name = "New Game") {
+  async createSession(userId, name = "New Game", options = {}) {
+    const totalRounds = validateRoundCount(options.totalRounds ?? DEFAULT_ROUNDS);
+    const digitalWheelEnabled = options.digitalWheelEnabled !== false;
     try {
       // Check if user already has 3 active sessions
       const activeSessions = await this.getUserActiveSessions(userId);
@@ -38,6 +45,10 @@ class GameSessionService {
         {
           userId,
           name,
+          totalRounds,
+          digitalWheelEnabled,
+          stage: "adaptation",
+          revision: 0,
           currentRound: 0,
           isActive: true,
           completedAt: null,
@@ -233,16 +244,17 @@ class GameSessionService {
    * @returns {Promise<Object>} Updated town
    */
   async updateTown(townId, data) {
-    try {
-      return await firestoreService.updateDocument(
-        this.TOWNS_COLLECTION,
-        townId,
-        data
-      );
-    } catch (error) {
-      console.error(`Error updating town ${townId}:`, error);
-      throw error;
-    }
+    const ref = doc(db, this.TOWNS_COLLECTION, townId);
+    await runTransaction(db, async transaction => {
+      const town = await transaction.get(ref);
+      const sessionRef = doc(db, this.SESSIONS_COLLECTION, town.data().sessionId);
+      const session = await transaction.get(sessionRef);
+      if (!session.data().isActive) throw new Error("This game has already finished.");
+      const { id, ...changes } = data;
+      transaction.update(ref, { ...changes, updatedAt: serverTimestamp() });
+      transaction.update(sessionRef, { revision: (session.data().revision || 0) + 1, updatedAt: serverTimestamp() });
+    });
+    return firestoreService.getDocument(this.TOWNS_COLLECTION, townId);
   }
 
   /**
@@ -250,55 +262,59 @@ class GameSessionService {
    * @param {string} sessionId - Session ID
    * @returns {Promise<Object>} Updated game session
    */
-  async advanceRound(sessionId) {
-    try {
-      // Get current session
-      const session = await this.getSession(sessionId);
-      if (!session) {
-        throw new Error(`Game session not found: ${sessionId}`);
+  async advanceRound(sessionId, expectedRound, endGame = false) {
+    // Query document IDs first; read their current contents inside the transaction.
+    const before = await firestoreService.getDocument(this.SESSIONS_COLLECTION, sessionId);
+    const towns = await this.getSessionTowns(sessionId);
+    if (towns.length !== 6) throw new Error("The game must contain all six towns before starting.");
+    const plays = await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION,
+      [["sessionId", "==", sessionId]]);
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+    await runTransaction(db, async transaction => {
+      const sessionSnap = await transaction.get(sessionRef);
+      if (!sessionSnap.exists()) throw new Error("Game session not found.");
+      if ((sessionSnap.data().revision || 0) !== (before.revision || 0)) {
+        throw new Error("The game changed during settlement. Refresh and try again.");
       }
-
-      // Save current round stats if not round 0
-      if (session.currentRound > 0) {
-        await this.saveRoundStats(sessionId, session.currentRound);
+      const townSnaps = await Promise.all(towns.map(t => transaction.get(doc(db, this.TOWNS_COLLECTION, t.id))));
+      const playSnaps = await Promise.all(plays.map(p => transaction.get(doc(db, this.CARD_PLAYS_COLLECTION, p.id))));
+      const currentTowns = townSnaps.map(s => ({ ...s.data(), id: s.id }));
+      const currentPlays = playSnaps.filter(s => s.exists()).map(s => ({ ...s.data(), id: s.id }));
+      const plan = planRoundTransition(sessionSnap.data(), currentTowns, currentPlays,
+        allCards, (town, card) => this.applyCardEffects(town, card), expectedRound, endGame);
+      const roundStatsRef = plan.round > 0
+        ? doc(db, this.ROUND_STATS_COLLECTION, `${sessionId}_${plan.round}`) : null;
+      const existingStats = roundStatsRef ? await transaction.get(roundStatsRef) : null;
+      const eventRef = plan.round > 0 ? doc(db, this.ROUND_EVENTS_COLLECTION, `${sessionId}_${plan.round}`) : null;
+      const eventSnap = eventRef ? await transaction.get(eventRef) : null;
+      const timestamp = serverTimestamp();
+      transaction.update(sessionRef, {
+        currentRound: plan.nextRound, isActive: !plan.isComplete,
+        endedEarly: plan.endedEarly, stage: plan.isComplete ? "complete" : "adaptation",
+        revision: (sessionSnap.data().revision || 0) + 1,
+        completedAt: plan.isComplete ? timestamp : null, updatedAt: timestamp,
+        ...(plan.round > 0 ? { lastSettlementRound: plan.round, lastDividends: plan.dividends } : {}),
+      });
+      for (const { id, ...town } of plan.towns) {
+        transaction.update(doc(db, this.TOWNS_COLLECTION, id), { ...town, updatedAt: timestamp });
       }
-
-      // Calculate new round
-      const newRound = session.currentRound + 1;
-
-      // Check if game should be completed (5 rounds)
-      const isComplete = newRound > 5;
-
-      // Update session
-      const updatedSession = await firestoreService.updateDocument(
-        this.SESSIONS_COLLECTION,
-        sessionId,
-        {
-          currentRound: newRound,
-          isActive: !isComplete,
-          completedAt: isComplete ? new Date() : null,
-        }
-      );
-
-      // Update towns' current round
-      const towns = await this.getSessionTowns(sessionId);
-      for (const town of towns) {
-        await this.updateTown(town.id, { currentRound: newRound });
+      for (const id of plan.deactivate) {
+        transaction.update(doc(db, this.CARD_PLAYS_COLLECTION, id), { isActive: false, updatedAt: timestamp });
       }
-
-      // Apply ongoing card effects for the new round
-      if (!isComplete) {
-        await this.applyOngoingCardEffects(sessionId, newRound);
+      if (eventSnap?.exists()) transaction.update(eventRef, { isComplete: true, completedAt: timestamp, updatedAt: timestamp });
+      if (plan.round > 0) {
+        transaction.set(roundStatsRef, {
+          sessionId, roundNumber: plan.round, towns: plan.snapshots,
+          dividends: plan.dividends, createdAt: existingStats?.data()?.createdAt || timestamp, updatedAt: timestamp,
+        }, { merge: true });
       }
+    });
+    return this.getSession(sessionId);
+  }
 
-      return {
-        ...updatedSession,
-        towns: await this.getSessionTowns(sessionId),
-      };
-    } catch (error) {
-      console.error(`Error advancing round for session ${sessionId}:`, error);
-      throw error;
-    }
+  async setDigitalWheel(sessionId, enabled) {
+    return firestoreService.updateDocument(this.SESSIONS_COLLECTION, sessionId,
+      { digitalWheelEnabled: Boolean(enabled) });
   }
 
   /**
@@ -308,136 +324,38 @@ class GameSessionService {
    * @param {number} round - Current round
    * @returns {Promise<Object>} Updated town and card play
    */
-  async applyCardToTown(townId, cardId, round) {
-    try {
-      // Get town
-      const town = await firestoreService.getDocument(
-        this.TOWNS_COLLECTION,
-        townId
-      );
-      if (!town) {
-        throw new Error(`Town not found: ${townId}`);
-      }
-
-      // Get card from constants
-      const card = allCards.find((c) => c.id === cardId);
-      if (!card) {
-        throw new Error(`Card not found: ${cardId}`);
-      }
-
-      // Check if town has enough effort points
-      if (town.effortPoints < card.cost) {
-        throw new Error(
-          `Not enough effort points: ${town.effortPoints} < ${card.cost}`
-        );
-      }
-
-      // Deduct card cost from town's effort points
-      const updatedEffortPoints = town.effortPoints - card.cost;
-
-      // Apply card effects to town ONLY FOR THE CURRENT ROUND
-      const updatedTown = {
-        ...this.applyCardEffects(town, card),
-        effortPoints: updatedEffortPoints,
-      };
-
-      // Update town
-      const savedTown = await this.updateTown(townId, updatedTown);
-
-      // Create card play record with effective rounds
-      // If card.duration is 3, and current round is 2, then effective rounds are [2, 3, 4]
-      const effectiveRounds = [];
-      const duration = card.duration || 1; // Rename to duration for clarity in future
-      for (let i = 0; i < duration; i++) {
-        effectiveRounds.push(round + i);
-      }
-
-      const cardPlay = await firestoreService.createDocument(
-        this.CARD_PLAYS_COLLECTION,
-        {
-          sessionId: town.sessionId,
-          cardId,
-          townId,
-          playedAtRound: round,
-          effectiveRounds,
-          isActive: true,
-          playedAt: new Date(),
-        }
-      );
-
-      return {
-        town: savedTown,
-        cardPlay,
-      };
-    } catch (error) {
-      console.error(`Error applying card ${cardId} to town ${townId}:`, error);
-      throw error;
-    }
+  assertPlayable(session, round) {
+    if (!session.isActive) throw new Error("This game has already finished.");
+    if (round < 1 || session.currentRound !== round) throw new Error("The round has changed. Refresh before continuing.");
   }
 
-  /**
-   * Apply ongoing card effects for all towns in a session
-   * @param {string} sessionId - Session ID
-   * @param {number} round - Current round
-   * @returns {Promise<void>} No return value
-   * @throws {Error} If an error occurs during the process
-   * */
-  async applyOngoingCardEffects(sessionId, round) {
-    try {
-      // Get all towns for this session
-      const towns = await this.getSessionTowns(sessionId);
-
-      // For each town, find active cards that affect the current round
-      for (const town of towns) {
-        // Get all active card plays for this town
-        const cardPlays = await firestoreService.getDocuments(
-          this.CARD_PLAYS_COLLECTION,
-          [
-            ["townId", "==", town.id],
-            ["isActive", "==", true],
-          ]
-        );
-
-        // Filter card plays that affect the current round
-        const activeCardPlays = cardPlays.filter((play) =>
-          play.effectiveRounds.includes(round)
-        );
-
-        // If there are active cards, apply their effects
-        if (activeCardPlays.length > 0) {
-          let updatedTown = { ...town };
-
-          for (const play of activeCardPlays) {
-            // Get card details
-            const card = allCards.find((c) => c.id === play.cardId);
-            if (card) {
-              // Apply card effects
-              updatedTown = this.applyCardEffects(updatedTown, card);
-
-              // Check if this is the last effective round for this card
-              const maxRound = Math.max(...play.effectiveRounds);
-              if (round >= maxRound) {
-                // Deactivate the card after its final round
-                await firestoreService.updateDocument(
-                  this.CARD_PLAYS_COLLECTION,
-                  play.id,
-                  { isActive: false }
-                );
-              }
-            }
-          }
-
-          // Save the updated town with all card effects applied
-          await this.updateTown(town.id, updatedTown);
-        }
-      }
-    } catch (error) {
-      console.error(
-        `Error applying ongoing card effects for session ${sessionId}, round ${round}:`,
-        error
-      );
-      throw error;
-    }
+  async applyCardToTown(townId, cardId, round) {
+    const card = allCards.find(c => c.id === cardId);
+    if (!card) throw new Error("Card not found.");
+    const townRef = doc(db, this.TOWNS_COLLECTION, townId);
+    const town = await firestoreService.getDocument(this.TOWNS_COLLECTION, townId);
+    if (!town) throw new Error("Town not found.");
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, town.sessionId);
+    const playRef = doc(collection(db, this.CARD_PLAYS_COLLECTION));
+    const undo = await runTransaction(db, async transaction => {
+      const [townSnap, sessionSnap] = await Promise.all([transaction.get(townRef), transaction.get(sessionRef)]);
+      const currentTown = { ...townSnap.data(), id: townId };
+      const session = sessionSnap.data();
+      this.assertPlayable(session, round);
+      if (currentTown.isComparisonTown) throw new Error("Bludgeton is the comparison town and cannot play adaptation cards.");
+      if (currentTown.effortPoints < card.cost) throw new Error("Not enough effort points to play this card.");
+      const { id, ...updated } = this.applyCardEffects(currentTown, card);
+      const timestamp = serverTimestamp();
+      transaction.update(townRef, { ...updated, effortPoints: currentTown.effortPoints - card.cost, updatedAt: timestamp });
+      transaction.set(playRef, { sessionId: town.sessionId, cardId, townId, playedAtRound: round,
+        effectiveRounds: Array.from({ length: card.duration || 1 }, (_, i) => round + i),
+        isActive: true, playedAt: timestamp, createdAt: timestamp, updatedAt: timestamp });
+      const revision = (session.revision || 0) + 1;
+      transaction.update(sessionRef, { revision, updatedAt: timestamp });
+      return { round, afterRevision: revision, towns: [currentTown], cardPlayId: playRef.id };
+    });
+    return { town: await firestoreService.getDocument(this.TOWNS_COLLECTION, townId), undo,
+      cardPlay: await firestoreService.getDocument(this.CARD_PLAYS_COLLECTION, playRef.id) };
   }
 
   /**
@@ -518,85 +436,91 @@ class GameSessionService {
    * @returns {Promise<Object>} Updated towns and round event
    */
   async applyHazardToSession(sessionId, hazardId, round) {
-    try {
-      // Get hazard from constants
-      const hazard = hazards.find((h) => h.id === hazardId);
-      if (!hazard) {
-        throw new Error(`Hazard not found: ${hazardId}`);
-      }
-
-      // Get towns
-      const towns = await this.getSessionTowns(sessionId);
+    const hazard = hazards.find(h => h.id === hazardId);
+    if (!hazard) throw new Error("Hazard not found.");
+    const towns = await this.getSessionTowns(sessionId);
+    if (towns.length !== 6) throw new Error("All six towns must be present.");
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+    const eventRef = doc(db, this.ROUND_EVENTS_COLLECTION, `${sessionId}_${round}`);
+    const { impact, ...undo } = await runTransaction(db, async transaction => {
+      const sessionSnap = await transaction.get(sessionRef);
+      this.assertPlayable(sessionSnap.data(), round);
+      const eventSnap = await transaction.get(eventRef);
+      const townSnaps = await Promise.all(towns.map(t => transaction.get(doc(db, this.TOWNS_COLLECTION, t.id))));
+      const previous = eventSnap.exists() ? eventSnap.data() : null;
+      if (previous?.hazardIds.includes(hazardId)) throw new Error("This hazard has already been applied in this round.");
+      const currentTowns = townSnaps.map(s => ({ ...s.data(), id: s.id }));
+      const timestamp = serverTimestamp();
+      const impactPoints = { ...previous?.impactPoints };
       const updatedTowns = [];
-
-      // Apply hazard to each town
-      for (const town of towns) {
-        const updatedTown = this.applyHazardEffects(town, hazard);
-        const savedTown = await this.updateTown(town.id, updatedTown);
-        updatedTowns.push(savedTown);
+      for (const town of currentTowns) {
+        const { id, ...updated } = this.applyHazardEffects(town, hazard);
+        updatedTowns.push({ ...updated, id });
+        impactPoints[id] = (impactPoints[id] || 0) + totalResilience(town) - totalResilience(updated);
+        transaction.update(doc(db, this.TOWNS_COLLECTION, id), { ...updated, updatedAt: timestamp });
       }
+      transaction.set(eventRef, { ...previous, sessionId, roundNumber: round,
+        hazardIds: [...(previous?.hazardIds || []), hazardId],
+        eventHistory: [...(previous?.eventHistory || []), { type: "hazard", hazardId, timestamp: Timestamp.now() }],
+        impactPoints, impactComplete: previous ? (previous.impactComplete !== false && Boolean(previous.impactPoints)) : true, isComplete: false, createdAt: previous?.createdAt || timestamp, updatedAt: timestamp });
+      const revision = (sessionSnap.data().revision || 0) + 1;
+      transaction.update(sessionRef, { revision, updatedAt: timestamp });
+      return { round, afterRevision: revision, towns: currentTowns, event: previous,
+        impact: buildHazardImpact(currentTowns, updatedTowns) };
+    });
+    return { towns: await this.getSessionTowns(sessionId), undo, impact,
+      roundEvent: await firestoreService.getDocument(this.ROUND_EVENTS_COLLECTION, eventRef.id) };
+  }
 
-      // Create or update round event
-      const roundEventId = `${sessionId}_${round}`;
-      let roundEvent = await firestoreService.getDocument(
-        this.ROUND_EVENTS_COLLECTION,
-        roundEventId
-      );
+  async undoAction(sessionId, snapshot) {
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+    const revision = await runTransaction(db, async transaction => {
+      const sessionSnap = await transaction.get(sessionRef);
+      this.assertPlayable(sessionSnap.data(), snapshot.round);
+      if ((sessionSnap.data().revision || 0) !== snapshot.afterRevision) {
+        throw new Error("The game has changed since this action. Refresh before continuing.");
+      }
+      const timestamp = serverTimestamp();
+      for (const { id, ...town } of snapshot.towns) {
+        transaction.update(doc(db, this.TOWNS_COLLECTION, id), { ...town, updatedAt: timestamp });
+      }
+      if (snapshot.cardPlayId) transaction.delete(doc(db, this.CARD_PLAYS_COLLECTION, snapshot.cardPlayId));
+      else {
+        const ref = doc(db, this.ROUND_EVENTS_COLLECTION, `${sessionId}_${snapshot.round}`);
+        if (snapshot.event) transaction.set(ref, { ...snapshot.event, updatedAt: timestamp });
+        else transaction.delete(ref);
+      }
+      const next = (sessionSnap.data().revision || 0) + 1;
+      transaction.update(sessionRef, { revision: next, updatedAt: timestamp });
+      return next;
+    });
+    return { session: await this.getSession(sessionId), revision };
+  }
 
-      if (roundEvent) {
-        // Update existing round event
-        const hazardIds = [...roundEvent.hazardIds];
-        if (!hazardIds.includes(hazardId)) {
-          hazardIds.push(hazardId);
+  async setStage(sessionId, stage, expectedRound) {
+    if (!["adaptation", "hazard", "review"].includes(stage)) throw new Error("Unknown game stage.");
+    const ref = doc(db, this.SESSIONS_COLLECTION, sessionId);
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(ref);
+      this.assertPlayable(snap.data(), expectedRound);
+      if (stage === 'review' && snap.data().digitalWheelEnabled !== false) {
+        const event = await transaction.get(doc(db, this.ROUND_EVENTS_COLLECTION, `${sessionId}_${expectedRound}`));
+        if (!event.exists() || !event.data().hazardIds?.length) {
+          throw new Error('Spin the hazard wheel and apply this round’s event before reviewing.');
         }
-
-        const eventHistory = [...roundEvent.eventHistory];
-        eventHistory.push({
-          type: "hazard",
-          hazardId,
-          timestamp: new Date(),
-        });
-
-        roundEvent = await firestoreService.updateDocument(
-          this.ROUND_EVENTS_COLLECTION,
-          roundEventId,
-          {
-            hazardIds,
-            eventHistory,
-          }
-        );
-      } else {
-        // Create new round event
-        roundEvent = await firestoreService.createDocument(
-          this.ROUND_EVENTS_COLLECTION,
-          {
-            sessionId,
-            roundNumber: round,
-            hazardIds: [hazardId],
-            eventHistory: [
-              {
-                type: "hazard",
-                hazardId,
-                timestamp: new Date(),
-              },
-            ],
-            isComplete: false,
-          },
-          roundEventId
-        );
       }
+      transaction.update(ref, { stage, updatedAt: serverTimestamp() });
+    });
+    return this.getSession(sessionId);
+  }
 
-      return {
-        towns: updatedTowns,
-        roundEvent,
-      };
-    } catch (error) {
-      console.error(
-        `Error applying hazard ${hazardId} to session ${sessionId}:`,
-        error
-      );
-      throw error;
-    }
+  async getSummary(sessionId) {
+    const [session, events, snapshots] = await Promise.all([
+      this.getSession(sessionId),
+      firestoreService.getDocuments(this.ROUND_EVENTS_COLLECTION, [["sessionId", "==", sessionId]]),
+      firestoreService.getDocuments(this.ROUND_STATS_COLLECTION, [["sessionId", "==", sessionId]]),
+    ]);
+    return buildGameSummary(session, events, snapshots);
   }
 
   /**
@@ -607,7 +531,7 @@ class GameSessionService {
    */
   applyHazardEffects(town, hazard) {
     // Clone the town to avoid mutations
-    const updatedTown = { ...town };
+    const updatedTown = { ...town, ...Object.fromEntries(HAZARD_IDS.map(id => [id, { ...town[id] }])) };
 
     const hazardType = hazard.id;
     const THRESHOLD = 20;

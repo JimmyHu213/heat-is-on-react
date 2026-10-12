@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 // src/components/auth/ForgotPassword.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
@@ -94,22 +95,17 @@ const ForgotPassword = () => {
             <PasswordIcon />
           </Avatar>
 
-          <Typography component="h1" variant="h5">
-            Reset Password
-          </Typography>
+          <Typography component="h1" variant="h5">{t("Reset Password")}</Typography>
 
           <Typography
             variant="body2"
             color="text.secondary"
             sx={{ mt: 1, textAlign: "center" }}
-          >
-            Enter your email address and we'll send you instructions to reset
-            your password.
-          </Typography>
+          >{t("Enter your email address and we'll send you instructions to reset your password.")}</Typography>
 
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
-              {error}
+              {t(error)}
             </Alert>
           )}
 
@@ -130,7 +126,7 @@ const ForgotPassword = () => {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label={t("Email Address")}
               name="email"
               autoComplete="email"
               autoFocus
@@ -149,23 +145,19 @@ const ForgotPassword = () => {
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Reset Password"
+                t("Reset Password")
               )}
             </Button>
 
             <Grid container spacing={2}>
               <Grid item xs>
                 <Link to="/login" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Back to Sign In
-                  </Typography>
+                  <Typography variant="body2" color="primary">{t("Back to Sign In")}</Typography>
                 </Link>
               </Grid>
               <Grid item>
                 <Link to="/signup" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Don't have an account? Sign Up
-                  </Typography>
+                  <Typography variant="body2" color="primary">{t("Don't have an account? Sign Up")}</Typography>
                 </Link>
               </Grid>
             </Grid>

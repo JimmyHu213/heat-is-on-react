@@ -154,8 +154,10 @@ class FirestoreService {
   async updateDocument(collectionPath, documentId, data) {
     try {
       const docRef = doc(db, collectionPath, documentId);
+      // Document IDs are read metadata, not fields to write back to Firestore.
+      const { id: _id, ...documentData } = data;
       await updateDoc(docRef, {
-        ...data,
+        ...documentData,
         updatedAt: serverTimestamp(),
       });
 

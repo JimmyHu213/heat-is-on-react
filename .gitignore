@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*asaaa 
 .pnpm-debug.log*
+.agents
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -169,3 +170,13 @@ firebase.json
 .firebase/
 firestore.indexes.json
 
+# Keep shared Hosting configuration in version control.
+!firebase.json
+!.firebaserc
+!firestore.rules
+!firestore.indexes.json
+
+
+# Local Firebase emulator logs
+firestore-debug.log
+ui-debug.log

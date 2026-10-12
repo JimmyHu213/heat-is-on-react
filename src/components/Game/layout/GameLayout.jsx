@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 // src/components/Game/layout/GameLayout.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -112,9 +113,7 @@ const GameLayout = ({
                 bgcolor: "rgba(255, 255, 255, 0.1)",
               },
             }}
-          >
-            Undo
-          </Button>
+          >{t("Undo")}</Button>
 
           <Button
             variant="contained"
@@ -129,7 +128,7 @@ const GameLayout = ({
               },
             }}
           >
-            {currentRound === 0 ? "Start Game" : "Next Round"}
+            {currentRound === 0 ? t("Start Game") : "Next Round"}
           </Button>
         </Toolbar>
       </AppBar>
@@ -189,7 +188,7 @@ const GameLayout = ({
             severity={notification.severity || "success"}
             sx={{ width: "100%" }}
           >
-            {notification.message}
+            {t(notification.message)}
           </Alert>
         </Snackbar>
       )}

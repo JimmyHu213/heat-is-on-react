@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 import React from "react";
 import { Card, Box, Typography } from "@mui/material";
 import {
@@ -58,7 +59,7 @@ const CustomBarChart = ({
           }}
         >
           <Typography color="white" fontSize={14}>
-            {label}
+            {t(label)}
           </Typography>
           <Typography color="white" fontWeight="bold" fontSize={15}>
             {payload[0].value.toFixed(1)}

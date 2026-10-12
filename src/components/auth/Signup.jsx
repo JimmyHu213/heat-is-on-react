@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 // src/components/auth/Signup.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -112,20 +113,16 @@ const Signup = () => {
             <PersonAddIcon />
           </Avatar>
 
-          <Typography component="h1" variant="h5">
-            Sign Up
-          </Typography>
+          <Typography component="h1" variant="h5">{t("Sign Up")}</Typography>
 
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
-              {error}
+              {t(error)}
             </Alert>
           )}
 
           {success && (
-            <Alert severity="success" sx={{ mt: 2, width: "100%" }}>
-              Account created successfully! Redirecting...
-            </Alert>
+            <Alert severity="success" sx={{ mt: 2, width: "100%" }}>{t("Account created successfully! Redirecting...")}</Alert>
           )}
 
           <Box
@@ -139,7 +136,7 @@ const Signup = () => {
               required
               fullWidth
               id="displayName"
-              label="Display Name"
+              label={t("Display Name")}
               name="displayName"
               autoComplete="name"
               autoFocus
@@ -153,7 +150,7 @@ const Signup = () => {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label={t("Email Address")}
               name="email"
               autoComplete="email"
               value={email}
@@ -166,14 +163,14 @@ const Signup = () => {
               required
               fullWidth
               name="password"
-              label="Password"
+              label={t("Password")}
               type="password"
               id="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              helperText="Password must be at least 6 characters long"
+              helperText={t("Password must be at least 6 characters long")}
             />
 
             <TextField
@@ -181,7 +178,7 @@ const Signup = () => {
               required
               fullWidth
               name="confirmPassword"
-              label="Confirm Password"
+              label={t("Confirm Password")}
               type="password"
               id="confirmPassword"
               autoComplete="new-password"
@@ -200,16 +197,14 @@ const Signup = () => {
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Sign Up"
+                t("Sign Up")
               )}
             </Button>
 
             <Grid container justifyContent="flex-end">
               <Grid item>
                 <Link to="/login" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Already have an account? Sign in
-                  </Typography>
+                  <Typography variant="body2" color="primary">{t("Already have an account? Sign in")}</Typography>
                 </Link>
               </Grid>
             </Grid>

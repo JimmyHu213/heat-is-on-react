@@ -1,3 +1,4 @@
+import { t } from '../../../i18n';
 // src/components/Game/components/TabPanels.jsx
 import React from "react";
 import { Box, Typography, Paper, Divider } from "@mui/material";
@@ -12,10 +13,10 @@ const DashboardPanel = ({ towns, currentRound }) => {
         <WelcomePanel />
       ) : (
         <>
-          <SectionTitle title="Town Hazard Overview" />
+          <SectionTitle title={t("Town Hazard Overview")} />
           <TownPieCharts towns={towns} />
 
-          <SectionTitle title="Town Statistics" sx={{ mt: 4 }} />
+          <SectionTitle title={t("Town Statistics")} sx={{ mt: 4 }} />
           <BarChartsView towns={towns} />
         </>
       )}
@@ -29,7 +30,7 @@ const DashboardPanel = ({ towns, currentRound }) => {
 const TownDetailsPanel = ({ towns }) => {
   return (
     <Box>
-      <SectionTitle title="Town Details" />
+      <SectionTitle title={t("Town Details")} />
       <TownDetailsView towns={towns} />
     </Box>
   );
@@ -46,7 +47,7 @@ const GameHistoryPanel = ({
 }) => {
   return (
     <Box>
-      <SectionTitle title="Game History" />
+      <SectionTitle title={t("Game History")} />
       <GameTable
         towns={towns}
         roundEvents={roundEvents}
@@ -63,28 +64,17 @@ const GameHistoryPanel = ({
 const WelcomePanel = () => {
   return (
     <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-      <Typography variant="h5" gutterBottom fontWeight="bold">
-        Welcome to The Heat Is On!
-      </Typography>
-      <Typography variant="body1" paragraph>
-        In this game, you'll manage 5 towns facing climate hazards over 5
-        rounds. Each town has different vulnerability levels to hazards:
-        bushfires, floods, storms, heatwaves, and biohazards.
-      </Typography>
-      <Typography variant="body1">
-        Click "Start Game" to begin the first round. During each round, you can:
-      </Typography>
+      <Typography variant="h5" gutterBottom fontWeight="bold">{t("Welcome to The Heat Is On!")}</Typography>
+      <Typography variant="body1" paragraph>{t("In this game, you'll manage 5 towns facing climate hazards over 5 rounds. Each town has different vulnerability levels to hazards: bushfires, floods, storms, heatwaves, and biohazards.")}</Typography>
+      <Typography variant="body1">{t("Click \"Start Game\" to begin the first round. During each round, you can:")}</Typography>
       <ul>
-        <li>Apply hazard events to test town resilience</li>
-        <li>Play adaptation cards to improve town resilience</li>
-        <li>Track progress through charts and tables</li>
+        <li>{t("Apply hazard events to test town resilience")}</li>
+        <li>{t("Play adaptation cards to improve town resilience")}</li>
+        <li>{t("Track progress through charts and tables")}</li>
       </ul>
       <Divider sx={{ my: 2 }} />
       <Typography variant="body2" color="text.secondary">
-        <strong>Tip:</strong> If any town's resilience score drops below 20 in
-        any category, all other categories will receive a -10 point penalty. Use
-        adaptation cards strategically to maintain resilience across all towns.
-      </Typography>
+        <strong>{t("Tip:")}</strong>{t("If any town's resilience score drops below 20 in any category, all other categories will receive a -10 point penalty. Use adaptation cards strategically to maintain resilience across all towns.")}</Typography>
     </Paper>
   );
 };

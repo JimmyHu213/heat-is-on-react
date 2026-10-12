@@ -1,6 +1,7 @@
+import { t, townLabel } from '../../../i18n';
 // src/components/Game/components/CardControls.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Typography,
@@ -18,11 +19,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Tabs,
-  Tab,
   FormHelperText,
 } from "@mui/material";
-import { cards, allAbilityCards } from "../../../constants/cards";
+import { allCards } from "../../../constants/cards";
 
 /**
  * Component for adaptation card controls
@@ -31,28 +30,9 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
   // State
   const [selectedTown, setSelectedTown] = useState("");
   const [selectedCard, setSelectedCard] = useState("");
-  const [cardCategory, setCardCategory] = useState(0); // 0 = Hazard specific, 1 = All-aspect
+  const submitting = useRef(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [availableCards, setAvailableCards] = useState([]);
-
-  // Set initial available cards
-  useEffect(() => {
-    // Start with hazard cards by default
-    setAvailableCards(cards);
-  }, []);
-
-  // Handle card category change
-  const handleCategoryChange = (event, newValue) => {
-    setCardCategory(newValue);
-    setSelectedCard("");
-
-    // Simply switch between the two card lists
-    if (newValue === 0) {
-      setAvailableCards(cards);
-    } else {
-      setAvailableCards(allAbilityCards);
-    }
-  };
+  const availableCards = [...allCards].sort((a, b) => a.name.localeCompare(b.name));
 
   // Handle town selection
   const handleTownChange = (event) => {
@@ -61,7 +41,6 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   // Handle card selection
   const handleCardChange = (event) => {
-    console.log("Selected card:", event.target.value);
     setSelectedCard(event.target.value);
   };
 
@@ -71,13 +50,13 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
   };
 
   // Handle confirm card play
-  const handleConfirmCard = () => {
-    if (selectedTown && selectedCard) {
-      onPlayCard(selectedTown, selectedCard);
-      // Reset selections
-      setSelectedCard("");
-    }
-    setDialogOpen(false);
+  const handleConfirmCard = async () => {
+    if (!selectedTown || !selectedCard || disabled || submitting.current) return;
+    submitting.current = true;
+    try {
+      const result = await onPlayCard(selectedTown, selectedCard);
+      if (result) { setSelectedCard(""); setDialogOpen(false); }
+    } finally { submitting.current = false; }
   };
 
   // Handle dialog close
@@ -87,7 +66,6 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   // Find card by ID
   const findCard = (cardId) => {
-    const allCards = [...cards, ...allAbilityCards];
     return allCards.find((card) => card.id === cardId);
   };
 
@@ -119,21 +97,17 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   return (
     <Box>
-      <Typography variant="subtitle1" gutterBottom>
-        Play Adaptation Cards
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Select a town and play adaptation cards to improve resilience.
-      </Typography>
+      <Typography variant="subtitle1" gutterBottom>{t("Play Adaptation Cards")}</Typography>
+      <Typography variant="body2" color="text.secondary" gutterBottom>{t("Select a town and play adaptation cards to improve resilience.")}</Typography>
 
       {/* Town Selection */}
       <FormControl fullWidth margin="normal" size="small">
-        <InputLabel id="town-select-label">Select Town</InputLabel>
+        <InputLabel id="town-select-label">{t("Select Town")}</InputLabel>
         <Select
           labelId="town-select-label"
           id="town-select"
           value={selectedTown}
-          label="Select Town"
+          label={t("Select Town")}
           onChange={handleTownChange}
           disabled={disabled}
         >
@@ -141,51 +115,33 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
             .filter((town) => !town.isComparisonTown)
             .map((town) => (
               <MenuItem key={town.id} value={town.id}>
-                {town.name}
+                {townLabel(town)}
               </MenuItem>
             ))}
         </Select>
       </FormControl>
 
-      {/* Card Category Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mt: 2 }}>
-        <Tabs
-          value={cardCategory}
-          onChange={handleCategoryChange}
-          variant="fullWidth"
-          disabled={disabled}
-        >
-          <Tab label="Hazard Cards" />
-          <Tab label="All-Aspect Cards" />
-        </Tabs>
-      </Box>
-
       {/* Card Selection */}
       <FormControl fullWidth margin="normal" size="small">
-        <InputLabel id="card-select-label">Select Card</InputLabel>
+        <InputLabel id="card-select-label">{t("Select Card")}</InputLabel>
         <Select
           labelId="card-select-label"
           id="card-select"
           value={selectedCard}
-          label="Select Card"
+          label={t("Select Card")}
           onChange={handleCardChange}
           disabled={disabled || !selectedTown}
         >
           {availableCards
-            .sort((a, b) => a.name.localeCompare(b.name))
             .map((card) => (
               <MenuItem key={card.id} value={card.id}>
                 {card.type === "stormSurge"
-                  ? card.name + " (storm surge)"
-                  : card.name + " (" + card.type + ")"}
+                  ? t(card.name) + " (" + t("storm surge") + ")"
+                  : t(card.name) + " (" + t(card.type) + ")"}
               </MenuItem>
             ))}
         </Select>
-        <FormHelperText>
-          {cardCategory === 0
-            ? "Hazard cards improve specific hazard resilience"
-            : "All-aspect cards improve a specific aspect across all hazards"}
-        </FormHelperText>
+        <FormHelperText>{t("All adaptation cards are listed together. The card type shows which resilience scores improve.")}</FormHelperText>
       </FormControl>
 
       {/* Apply Button */}
@@ -196,17 +152,13 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
         disabled={disabled || !selectedTown || !selectedCard}
         onClick={handleApplyCard}
         sx={{ mt: 2 }}
-      >
-        Apply Card
-      </Button>
+      >{t("Apply Card")}</Button>
 
       {/* Confirmation Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog}>
-        <DialogTitle>Apply Adaptation Card</DialogTitle>
+      <Dialog open={dialogOpen} onClose={disabled ? undefined : handleCloseDialog}>
+        <DialogTitle>{t("Apply Adaptation Card")}</DialogTitle>
         <DialogContent>
-          <DialogContentText component="div" sx={{ mb: 3 }}>
-            Are you sure you want to apply this card to the selected town?
-          </DialogContentText>
+          <DialogContentText component="div" sx={{ mb: 3 }}>{t("Are you sure you want to apply this card to the selected town?")}</DialogContentText>
 
           {selectedTown && selectedCard && (
             <>
@@ -220,45 +172,36 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
               >
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    {findCard(selectedCard)?.name}
+                    {t(findCard(selectedCard)?.name)}
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     gutterBottom
-                  >
-                    Type: {findCard(selectedCard)?.type}
+                  >{t("Type:")}{t(findCard(selectedCard)?.type)}
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     gutterBottom
-                  >
-                    Duration: {findCard(selectedCard)?.duration || 1} round(s)
-                  </Typography>
+                  >{t("Duration:")}{findCard(selectedCard)?.duration || 1}{t("round(s)")}</Typography>
                   <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" gutterBottom>
-                    Card Effects:
-                  </Typography>
+                  <Typography variant="subtitle2" gutterBottom>{t("Card Effects:")}</Typography>
                   <Grid container spacing={1}>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Nature: +{findCard(selectedCard)?.nature}
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="body2">{t("Nature: +")}{findCard(selectedCard)?.nature}
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Economy: +{findCard(selectedCard)?.economy}
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="body2">{t("Economy: +")}{findCard(selectedCard)?.economy}
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Society: +{findCard(selectedCard)?.society}
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="body2">{t("Society: +")}{findCard(selectedCard)?.society}
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Health: +{findCard(selectedCard)?.health}
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="body2">{t("Health: +")}{findCard(selectedCard)?.health}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -273,8 +216,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
                           ? "error.main"
                           : "success.main",
                     }}
-                  >
-                    Cost: {findCard(selectedCard)?.cost} points (Available:{" "}
+                  >{t("Cost:")}{findCard(selectedCard)?.cost}{t(" points (Available:")}{" "}
                     {towns.find((t) => t.id === selectedTown)?.effortPoints})
                   </Typography>
                 </CardContent>
@@ -283,14 +225,13 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button disabled={disabled} onClick={handleCloseDialog}>{t("Cancel")}</Button>
           <Button
+            disabled={disabled}
             onClick={handleConfirmCard}
             color="primary"
             variant="contained"
-          >
-            Apply Card
-          </Button>
+          >{t("Apply Card")}</Button>
         </DialogActions>
       </Dialog>
     </Box>

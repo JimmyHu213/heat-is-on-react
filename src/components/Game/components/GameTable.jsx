@@ -1,3 +1,4 @@
+import { t, townLabel } from '../../../i18n';
 // src/components/Game/components/GameTable.jsx
 import React from "react";
 import {
@@ -30,15 +31,13 @@ import BugReportIcon from "@mui/icons-material/BugReport";
 /**
  * Component to display a table of game events and cards played
  */
-const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
+const GameTable = ({ towns, roundEvents, townCardPlays, currentRound, totalRounds = 5 }) => {
   const theme = useTheme();
 
   // If no towns, show a message
   if (!towns || towns.length === 0) {
     return (
-      <Typography variant="body1" align="center">
-        No town data available
-      </Typography>
+      <Typography variant="body1" align="center">{t("No town data available")}</Typography>
     );
   }
 
@@ -146,12 +145,12 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
   };
 
   return (
-    <Paper sx={{ borderRadius: 2, overflow: "hidden", boxShadow: 1 }}>
+    <Paper sx={{ borderRadius: 2, overflowX: "auto", boxShadow: 1 }}>
       <Table size="medium" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.grey[200] }}>
             <TableCell sx={{ fontWeight: "bold" }}></TableCell>
-            {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => (
+            {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => (
               <TableCell
                 key={round}
                 align="center"
@@ -165,12 +164,12 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 }}
               >
                 <Typography variant="subtitle2">
-                  {`Year ${round + 2050}`}
+                  {t("Year {0}", [round + 2050])}
                 </Typography>
               </TableCell>
             ))}
             <TableCell align="center" sx={{ fontWeight: "bold" }}>
-              <Typography variant="subtitle2">Budget</Typography>
+              <Typography variant="subtitle2">{t("Budget")}</Typography>
             </TableCell>
           </TableRow>
         </TableHead>
@@ -178,9 +177,9 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
           {/* Events Row */}
           <TableRow sx={{ bgcolor: theme.palette.grey[50] }}>
             <TableCell sx={{ fontWeight: "bold" }}>
-              <Typography variant="subtitle2">Events</Typography>
+              <Typography variant="subtitle2">{t("Events")}</Typography>
             </TableCell>
-            {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
+            {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => {
               const hazards = roundEvents[round] || [];
 
               return (
@@ -198,7 +197,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                         key={index}
                         icon={getHazardIcon(hazardId)}
                         label={
-                          hazardId.charAt(0).toUpperCase() + hazardId.slice(1)
+                          t(hazardId === "stormSurge" ? t("Storm Surge") : hazardId.charAt(0).toUpperCase() + hazardId.slice(1))
                         }
                         variant="outlined"
                         size="small"
@@ -235,9 +234,9 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                 sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
               >
                 <TableCell>
-                  <Typography variant="subtitle2">{town.name}</Typography>
+                  <Typography variant="subtitle2">{townLabel(town)}</Typography>
                 </TableCell>
-                {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
+                {Array.from({ length: totalRounds }, (_, i) => i + 1).map((round) => {
                   const cards = townCardPlays[town.id]?.[round] || [];
 
                   return (
@@ -255,7 +254,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
                           return (
                             <Chip
                               key={index}
-                              label={cardName}
+                              label={t(cardName)}
                               size="small"
                               variant="outlined"
                               sx={{

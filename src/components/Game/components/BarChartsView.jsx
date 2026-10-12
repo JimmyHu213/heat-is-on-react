@@ -1,3 +1,4 @@
+import { t, townLabel } from '../../../i18n';
 // src/components/Game/components/BarChartsView.jsx
 import React from "react";
 import { Box, Grid, Paper, Typography, useTheme } from "@mui/material";
@@ -25,9 +26,7 @@ const BarChartsView = ({ towns }) => {
 
   if (!towns || towns.length === 0) {
     return (
-      <Typography variant="body1" align="center">
-        No town data available
-      </Typography>
+      <Typography variant="body1" align="center">{t("No town data available")}</Typography>
     );
   }
 
@@ -54,7 +53,7 @@ const BarChartsView = ({ towns }) => {
       });
 
       return {
-        name: aspectLabels[index],
+        name: t(aspectLabels[index]),
         value: sum,
         // Add individual values for each aspect type
         natureValue: aspect === "nature" ? sum : 0,
@@ -98,7 +97,7 @@ const BarChartsView = ({ towns }) => {
         (town.biohazard?.health || 0);
 
       return {
-        name: town.name,
+        name: townLabel(town),
         nature,
         economy,
         society,
@@ -145,7 +144,7 @@ const BarChartsView = ({ towns }) => {
               variant="body2"
               sx={{ color: entry.color, fontWeight: "bold" }}
             >
-              {entry.name}: {entry.value}
+              {t(entry.name)}: {entry.value}
             </Typography>
           ))}
         </Paper>
@@ -221,9 +220,7 @@ const BarChartsView = ({ towns }) => {
             fontWeight="bold"
             gutterBottom
             sx={{ color: "#fff" }} // Adding white text color for better contrast
-          >
-            Aspects Summary
-          </Typography>
+          >{t("Aspects Summary")}</Typography>
           <Box sx={{ height: 330, width: "100%" }}>
             <ResponsiveContainer>
               <BarChart
@@ -248,7 +245,7 @@ const BarChartsView = ({ towns }) => {
                 <Tooltip content={renderTooltip} />
                 <Bar
                   dataKey="natureValue"
-                  name="Nature"
+                  name={t("Nature")}
                   fill={natureColor}
                   radius={[4, 4, 4, 4]}
                   animationDuration={500}
@@ -256,7 +253,7 @@ const BarChartsView = ({ towns }) => {
                 />
                 <Bar
                   dataKey="economyValue"
-                  name="Economy"
+                  name={t("Economy")}
                   fill={economyColor}
                   radius={[4, 4, 4, 4]}
                   animationDuration={600}
@@ -264,7 +261,7 @@ const BarChartsView = ({ towns }) => {
                 />
                 <Bar
                   dataKey="societyValue"
-                  name="Society"
+                  name={t("Society")}
                   fill={societyColor}
                   radius={[4, 4, 4, 4]}
                   animationDuration={700}
@@ -272,7 +269,7 @@ const BarChartsView = ({ towns }) => {
                 />
                 <Bar
                   dataKey="healthValue"
-                  name="Health"
+                  name={t("Health")}
                   fill={healthColor}
                   radius={[4, 4, 4, 4]}
                   animationDuration={800}
@@ -302,9 +299,7 @@ const BarChartsView = ({ towns }) => {
             fontWeight="bold"
             gutterBottom
             sx={{ color: "#fff" }} // Adding white text color for better contrast
-          >
-            Towns Summary
-          </Typography>
+          >{t("Towns Summary")}</Typography>
           <Box sx={{ height: 330, width: "100%" }}>
             <ResponsiveContainer>
               <BarChart
@@ -330,7 +325,7 @@ const BarChartsView = ({ towns }) => {
                 <Legend wrapperStyle={{ fontSize: 12, color: "#fff" }} />
                 <Bar
                   dataKey="nature"
-                  name="Nature"
+                  name={t("Nature")}
                   stackId="a"
                   radius={[0, 0, 4, 4]}
                   fill={natureColor}
@@ -338,21 +333,21 @@ const BarChartsView = ({ towns }) => {
                 />
                 <Bar
                   dataKey="economy"
-                  name="Economy"
+                  name={t("Economy")}
                   stackId="a"
                   fill={economyColor}
                   animationDuration={600}
                 />
                 <Bar
                   dataKey="society"
-                  name="Society"
+                  name={t("Society")}
                   stackId="a"
                   fill={societyColor}
                   animationDuration={700}
                 />
                 <Bar
                   dataKey="health"
-                  name="Health"
+                  name={t("Health")}
                   stackId="a"
                   radius={[4, 4, 0, 0]}
                   fill={healthColor}
@@ -360,7 +355,7 @@ const BarChartsView = ({ towns }) => {
                 />
                 {/* Additional bar to show total at the top */}
                 <Bar
-                  dataKey="total"
+                  dataKey="total" name={t("total")}
                   stackId="b"
                   fill="transparent"
                   label={renderTotalLabel}

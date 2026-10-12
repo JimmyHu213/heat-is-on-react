@@ -1,3 +1,4 @@
+import { t } from '../../i18n';
 // src/components/common/Footer.jsx
 import React from "react";
 import { Box, Container, Typography, Grid, Link } from "@mui/material";
@@ -71,9 +72,7 @@ const Footer = () => {
         </Grid>
 
         <Typography variant="body2" color="text.secondary" align="center">
-          The Heat Is On © {new Date().getFullYear()} | Climate Change
-          Adaptation Game
-        </Typography>
+          The Heat Is On © {new Date().getFullYear()}{t("| Climate Change Adaptation Game")}</Typography>
       </Container>
     </Box>
   );

@@ -1,0 +1,18 @@
+Heat Is On presentation assets
+
+Animated GIFs: Animated Noto Emoji by Google, CC BY 4.0.
+Project: https://googlefonts.github.io/noto-emoji-files/
+License: https://creativecommons.org/licenses/by/4.0/
+GIFs are unmodified copies; their filenames describe their use in this game.
+These are illustrative event animations, not recordings of real disasters.
+Bushfire (fire): https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif
+Flood (rain cloud): https://fonts.gstatic.com/s/e/notoemoji/latest/1f327/512.gif
+Storm surge (wave): https://fonts.gstatic.com/s/e/notoemoji/latest/1f30a/512.gif
+Heatwave (hot face): https://fonts.gstatic.com/s/e/notoemoji/latest/1f975/512.gif
+Biohazard (microbe): https://fonts.gstatic.com/s/e/notoemoji/latest/1f9a0/512.gif
+
+SVG icons: Tabler Icons by Pawel Kuna, MIT License.
+Project: https://github.com/tabler/tabler-icons
+Full copyright and permission notice: /media/TABLER-LICENSE.txt
+Original icons: icons/outline/{flame,flood,ripple,sun-high,virus}.svg
+Changes: stroke colors set to match the five hazard colors in this game.
