@@ -163,9 +163,8 @@ sketch
 
 #firebase
 firebase-debug.log
-firestore.rules
 .firebaserc
-firebase.json
 .firebase/
-firestore.indexes.json
 
+.emulator-data/
+*-debug.log

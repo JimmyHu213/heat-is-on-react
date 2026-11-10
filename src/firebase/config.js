@@ -1,21 +1,35 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// Replace with your own Firebase config
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "the-heat-is-on.firebaseapp.com",
-  projectId: "the-heat-is-on",
-  storageBucket: "the-heat-is-on.firebasestorage.app",
-  messagingSenderId: "822876008624",
-  appId: "1:822876008624:web:0f973a4f8d01d52fab0b75",
-  measurementId: "G-YGN41SH46S",
-};
+// Set VITE_USE_FIREBASE_EMULATOR=true (see .env.emulator / `npm run dev:emulator`)
+// to talk to the local Auth + Firestore emulators instead of a cloud project.
+const useEmulator = import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true";
 
-// Initialize Firebase
+const firebaseConfig = useEmulator
+  ? {
+      // Emulators accept any key; a "demo-" project ID guarantees nothing
+      // can ever reach a real Firebase project.
+      apiKey: "demo-api-key",
+      authDomain: "demo-heat-is-on.firebaseapp.com",
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-heat-is-on",
+    }
+  : {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    };
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+if (useEmulator) {
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  console.info(`[firebase] Using local emulators (project ${firebaseConfig.projectId})`);
+}
