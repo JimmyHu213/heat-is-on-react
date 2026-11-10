@@ -3,6 +3,8 @@ import firestoreService from "./firestoreService";
 import { defaultTowns } from "../constants/towns";
 import { hazards } from "../constants/hazards";
 import { allCards } from "../constants/cards";
+import { applyCardEffects, cardEffectiveRounds } from "../game/cards";
+import { applyHazard } from "../game/hazards";
 
 /**
  * Game Session Service
@@ -337,20 +339,15 @@ class GameSessionService {
 
       // Apply card effects to town ONLY FOR THE CURRENT ROUND
       const updatedTown = {
-        ...this.applyCardEffects(town, card),
+        ...applyCardEffects(town, card),
         effortPoints: updatedEffortPoints,
       };
 
       // Update town
       const savedTown = await this.updateTown(townId, updatedTown);
 
-      // Create card play record with effective rounds
-      // If card.duration is 3, and current round is 2, then effective rounds are [2, 3, 4]
-      const effectiveRounds = [];
-      const duration = card.duration || 1; // Rename to duration for clarity in future
-      for (let i = 0; i < duration; i++) {
-        effectiveRounds.push(round + i);
-      }
+      // A card is effective in the round it's played and the following rounds of its duration
+      const effectiveRounds = cardEffectiveRounds(round, card.duration);
 
       const cardPlay = await firestoreService.createDocument(
         this.CARD_PLAYS_COLLECTION,
@@ -412,7 +409,7 @@ class GameSessionService {
             const card = allCards.find((c) => c.id === play.cardId);
             if (card) {
               // Apply card effects
-              updatedTown = this.applyCardEffects(updatedTown, card);
+              updatedTown = applyCardEffects(updatedTown, card);
 
               // Check if this is the last effective round for this card
               const maxRound = Math.max(...play.effectiveRounds);
@@ -441,76 +438,6 @@ class GameSessionService {
   }
 
   /**
-   * Apply card effects to town data (helper method)
-   * @param {Object} town - Town data
-   * @param {Object} card - Card data
-   * @returns {Object} Updated town data
-   */
-  applyCardEffects(town, card) {
-    // Clone the town to avoid mutations
-    const updatedTown = { ...town };
-
-    // Apply card based on type
-    if (
-      ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"].includes(
-        card.type
-      )
-    ) {
-      // Apply to specific hazard type
-      const hazardType = card.type;
-      updatedTown[hazardType] = this.addPoints(updatedTown[hazardType], card);
-    } else {
-      // Apply to all abilities but only for the specified aspect
-      const aspectTypes = ["nature", "economy", "society", "health"];
-      const hazardTypes = [
-        "bushfire",
-        "flood",
-        "stormSurge",
-        "heatwave",
-        "biohazard",
-      ];
-
-      // For "all" type cards
-      if (aspectTypes.includes(card.type)) {
-        const aspect = card.type;
-
-        // Apply to each hazard type
-        for (const hazardType of hazardTypes) {
-          const hazard = { ...updatedTown[hazardType] };
-          hazard[aspect] = this.clampValue(hazard[aspect] + card[aspect]);
-          updatedTown[hazardType] = hazard;
-        }
-      }
-    }
-
-    return updatedTown;
-  }
-
-  /**
-   * Add card points to a hazard's ability points
-   * @param {Object} ability - Hazard ability points
-   * @param {Object} card - Card with points to add
-   * @returns {Object} Updated ability points
-   */
-  addPoints(ability, card) {
-    return {
-      nature: this.clampValue(ability.nature + card.nature),
-      economy: this.clampValue(ability.economy + card.economy),
-      society: this.clampValue(ability.society + card.society),
-      health: this.clampValue(ability.health + card.health),
-    };
-  }
-
-  /**
-   * Clamp value between 0 and 100
-   * @param {number} value - Value to clamp
-   * @returns {number} Clamped value
-   */
-  clampValue(value) {
-    return Math.max(0, Math.min(100, value));
-  }
-
-  /**
    * Apply hazard to all towns in a session
    * @param {string} sessionId - Session ID
    * @param {string} hazardId - Hazard ID
@@ -531,7 +458,7 @@ class GameSessionService {
 
       // Apply hazard to each town
       for (const town of towns) {
-        const updatedTown = this.applyHazardEffects(town, hazard);
+        const updatedTown = applyHazard(town, hazard);
         const savedTown = await this.updateTown(town.id, updatedTown);
         updatedTowns.push(savedTown);
       }
@@ -597,70 +524,6 @@ class GameSessionService {
       );
       throw error;
     }
-  }
-
-  /**
-   * Apply hazard effects to town data (helper method)
-   * @param {Object} town - Town data
-   * @param {Object} hazard - Hazard data
-   * @returns {Object} Updated town data
-   */
-  applyHazardEffects(town, hazard) {
-    // Clone the town to avoid mutations
-    const updatedTown = { ...town };
-
-    const hazardType = hazard.id;
-    const THRESHOLD = 20;
-    const penaltyAmount = 10; // Amount to subtract from each aspect
-
-    // Get all hazard types
-    const hazardTypes = [
-      "bushfire",
-      "flood",
-      "stormSurge",
-      "heatwave",
-      "biohazard",
-    ];
-
-    // First, check which aspects are ALREADY below threshold before applying new hazard
-    for (const aspect of ["nature", "economy", "society", "health"]) {
-      // Check if this aspect is already below threshold in any hazard type
-      const isAspectVulnerable = hazardTypes.some(
-        (type) => updatedTown[type][aspect] <= THRESHOLD
-      );
-
-      if (isAspectVulnerable) {
-        // Apply the penalty to ALL hazard types for this aspect
-        for (const type of hazardTypes) {
-          updatedTown[type][aspect] = this.clampValue(
-            updatedTown[type][aspect] - penaltyAmount
-          );
-        }
-      }
-    }
-
-    // Then apply the hazard's direct effect to its corresponding hazard type
-    // (This happens after penalty check but before returning the updated town)
-    updatedTown[hazardType] = this.subtractPoints(
-      updatedTown[hazardType],
-      hazard
-    );
-
-    return updatedTown;
-  }
-  /**
-   * Subtract hazard points from ability points
-   * @param {Object} ability - Hazard ability points
-   * @param {Object} hazard - Hazard with points to subtract
-   * @returns {Object} Updated ability points
-   */
-  subtractPoints(ability, hazard) {
-    return {
-      nature: this.clampValue(ability.nature - hazard.nature),
-      economy: this.clampValue(ability.economy - hazard.economy),
-      society: this.clampValue(ability.society - hazard.society),
-      health: this.clampValue(ability.health - hazard.health),
-    };
   }
 
   /**
