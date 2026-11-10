@@ -66,7 +66,10 @@ duration, effects), the five hazards and their effects, scores clamped to 0–10
 and the existing penalty (if a score falls below 20, −10 to that aspect across all hazards).
 
 **Game length.** When creating a game the facilitator chooses 1–20 rounds (default 5) and
-whether to use the on-screen wheel (default on). Both are fixed once the game starts.
+whether to use the on-screen wheel (default on). Both are fixed once the game starts. They can
+optionally enter the **number of players** (1–200, blank allowed), which can be corrected until the
+game completes. It isn't used by the game rules; it's recorded for CCS's run log. *(Requested by
+John/CCS.)*
 Legacy games without a stored length are 5-round games.
 
 **Round 0 and starting.** A new game sits at round 0 (setup). *Start game* moves to round 1, stage *Adapt*.
@@ -188,7 +191,7 @@ A code review of PR #6 (2026-11-11, findings not yet verified) found these probl
 
 All additive; collection names are unchanged.
 
-- `game_sessions`: `totalRounds` (1–20), `digitalWheelEnabled`, `stage`
+- `game_sessions`: `totalRounds` (1–20), `playerCount` (1–200 or null), `digitalWheelEnabled`, `stage`
   (`adaptation | hazard | review | complete`), `revision`, `endedEarly`, `lastSettlementRound`,
   `lastDividends` (town ID → EP), and the stored undo state.
 - `round_events`: `impactPoints` (town ID → total loss) and `impactComplete`.
