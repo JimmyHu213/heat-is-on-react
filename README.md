@@ -79,6 +79,35 @@
    npm run build
    ```
 
+## Local Development (Firebase emulators)
+
+You don't need a cloud Firebase project to develop locally. The app can run against the Firebase Auth and Firestore emulators under a `demo-heat-is-on` project ID, which can never reach a real Firebase project. No real emails are sent: password-reset links show up in the Emulator UI and the emulator logs.
+
+**With Docker (recommended, no Java or Firebase CLI needed on your machine):**
+
+```bash
+docker compose up --build   # app: http://localhost:5173, Emulator UI: http://localhost:4000
+docker compose down         # emulator data is saved to .emulator-data/
+```
+
+After changing `package.json`, run `docker compose up --build -V` to refresh the container's dependencies.
+
+**Without Docker** (needs Java 21 on your PATH), in two terminals:
+
+```bash
+npm run emulators       # Auth :9099, Firestore :8080, UI :4000 (data saved to .emulator-data/ on Ctrl+C)
+npm run dev:emulator    # Vite in emulator mode (.env.emulator)
+```
+
+Use `npm run emulators:fresh` to start with an empty database. `npm run dev` still uses the cloud project configured in `.env`.
+
+**Firestore security rules** live in `firestore.rules`. The emulators load them automatically. To deploy them to a cloud project:
+
+```bash
+npx firebase login
+npx firebase deploy --only firestore:rules --project <project-id>
+```
+
 ## Game Mechanics
 
 1. **Game Sessions**: Each game consists of 5 rounds (years)
