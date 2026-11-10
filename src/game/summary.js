@@ -13,7 +13,11 @@ export function buildGameSummary({ session, towns, events, roundStats }) {
   const roundsPlayed = Math.max(0, session.currentRound - 1);
   const playedEvents = events.filter((event) => event.roundNumber <= roundsPlayed);
   const playedStats = roundStats.filter((stats) => stats.roundNumber <= roundsPlayed);
-  const hasCompleteImpacts = playedEvents.every((event) => event.impactPoints != null);
+  // Rounds from before losses were recorded have no impactPoints; a round where
+  // only some hazards were recorded is flagged impactComplete: false.
+  const hasCompleteImpacts = playedEvents.every(
+    (event) => event.impactPoints != null && event.impactComplete !== false
+  );
 
   const rows = towns.map((town) => ({
     id: town.id,

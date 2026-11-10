@@ -47,6 +47,16 @@ test("most impacted is empty when a played round has no stored losses", () => {
   assert.deepEqual(summary.mostImpacted, []);
 });
 
+test("most impacted is empty when a played round's losses are only partly recorded", () => {
+  // e.g. a round where one hazard was applied before losses were stored, and one after.
+  const events = [
+    { roundNumber: 1, hazardIds: ["flood", "heatwave"], impactPoints: { a: 5, b: 20, cmp: 0 }, impactComplete: false },
+  ];
+  const summary = buildGameSummary({ session, towns, events, roundStats: [] });
+  assert.equal(summary.hasCompleteImpacts, false);
+  assert.deepEqual(summary.mostImpacted, []);
+});
+
 test("events and dividends after the rounds played are ignored", () => {
   const events = [{ roundNumber: 3, hazardIds: ["flood"], impactPoints: { a: 99, b: 0, cmp: 0 } }];
   const roundStats = [
