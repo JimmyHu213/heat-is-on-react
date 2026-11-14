@@ -1,17 +1,69 @@
 // src/services/gameSessionService.js
-import firestoreService from "./firestoreService";
-import { defaultTowns } from "../constants/towns";
-import { hazards } from "../constants/hazards";
-import { allCards } from "../constants/cards";
-import { applyCardEffects, cardEffectiveRounds } from "../game/cards";
-import { applyHazard } from "../game/hazards";
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  runTransaction,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
+import { allCards } from "../constants/cards.js";
+import { hazards } from "../constants/hazards.js";
+import { defaultTowns } from "../constants/towns.js";
+import { db } from "../firebase/config.js";
+import { applyCardEffects, cardEffectiveRounds, playCard } from "../game/cards.js";
+import { GameRuleError } from "../game/errors.js";
+import { applyHazard, buildHazardImpact } from "../game/hazards.js";
+import {
+  getTotalRounds,
+  validateBudget,
+  validateGameOptions,
+} from "../game/options.js";
+import { planSettlement, planStartGame } from "../game/settlement.js";
+import {
+  assertCanApplyHazard,
+  assertCanPlayCard,
+  canChangeStage,
+  getStage,
+} from "../game/stages.js";
+import { buildCardUndo, buildHazardUndo, planUndo } from "../game/undo.js";
+import firestoreService from "./firestoreService.js";
+
+function assertRevision(session, expectedRevision) {
+  const current = session.revision ?? 0;
+  if (expectedRevision !== undefined && current !== expectedRevision) {
+    throw new GameRuleError(
+      "stale-revision",
+      "This game changed elsewhere. Refresh to continue."
+    );
+  }
+  return current + 1;
+}
+
+function townDocRefs(sessionId) {
+  return defaultTowns.map((_, index) =>
+    doc(db, "towns", `${sessionId}_town_${index + 1}`)
+  );
+}
+
+async function readTownsInTx(tx, sessionId) {
+  const refs = townDocRefs(sessionId);
+  const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+  const towns = [];
+  for (const snap of snaps) {
+    if (snap.exists()) {
+      towns.push({ id: snap.id, ...snap.data() });
+    }
+  }
+  return towns.sort((a, b) => a.townNumber - b.townNumber);
+}
 
 /**
  * Game Session Service
- * Handles CRUD operations for game sessions, towns, and related entities
+ * Handles CRUD and atomic transactions for game sessions, towns, and related entities
  */
 class GameSessionService {
-  // Collection paths
   SESSIONS_COLLECTION = "game_sessions";
   TOWNS_COLLECTION = "towns";
   CARD_PLAYS_COLLECTION = "card_plays";
@@ -20,33 +72,40 @@ class GameSessionService {
 
   /**
    * Create a new game session
-   * @param {string} userId - User ID
-   * @returns {Promise<Object>} Created game session
    */
-  // In src/services/gameSessionService.js
-  // Add this check to the createSession method
-
-  async createSession(userId, name = "New Game") {
+  async createSession(userId, name = "New Game", options = {}) {
     try {
-      // Check if user already has 3 active sessions
+      const trimmedName = (name ?? "").trim() || "New Game";
+      if (trimmedName.length > 100) {
+        throw new GameRuleError("invalid-session-name", "Session name is too long");
+      }
+      const validated = validateGameOptions(options);
+
       const activeSessions = await this.getUserActiveSessions(userId);
       if (activeSessions.length >= 3) {
         throw new Error("Maximum session limit reached (3)");
       }
 
-      // Create new session
       const session = await firestoreService.createDocument(
         this.SESSIONS_COLLECTION,
         {
           userId,
-          name,
+          name: trimmedName,
           currentRound: 0,
+          totalRounds: validated.totalRounds,
+          digitalWheelEnabled: validated.digitalWheelEnabled,
+          playerCount: validated.playerCount,
+          stage: "adaptation",
+          revision: 0,
           isActive: true,
+          endedEarly: false,
           completedAt: null,
+          lastSettlementRound: 0,
+          lastDividends: {},
+          lastUndo: null,
         }
       );
 
-      // Create towns for this session
       const sessionTowns = await this.createTownsForSession(session.id);
 
       return {
@@ -61,20 +120,21 @@ class GameSessionService {
 
   /**
    * Update the name of a game session
-   * @param {string} sessionId - Session ID
-   * @param {string} newName - New session name
-   * @returns {Promise<Object>} Updated game session
-   * */
+   */
   async updateSessionName(sessionId, newName) {
     try {
       if (!newName || newName.trim() === "") {
         throw new Error("Session name cannot be empty");
       }
+      const trimmed = newName.trim();
+      if (trimmed.length > 100) {
+        throw new GameRuleError("invalid-session-name", "Session name is too long");
+      }
 
       return await firestoreService.updateDocument(
         this.SESSIONS_COLLECTION,
         sessionId,
-        { name: newName.trim() }
+        { name: trimmed }
       );
     } catch (error) {
       console.error(`Error updating session name for ${sessionId}:`, error);
@@ -83,10 +143,30 @@ class GameSessionService {
   }
 
   /**
+   * Update optional player count on an active session
+   */
+  async updatePlayerCount(sessionId, playerCount) {
+    const validated = validateGameOptions({ playerCount });
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+    return await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sessionRef);
+      if (!snap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: snap.id, ...snap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+      tx.update(sessionRef, {
+        playerCount: validated.playerCount,
+        updatedAt: serverTimestamp(),
+      });
+      return { ...session, playerCount: validated.playerCount };
+    });
+  }
+
+  /**
    * Get a game session by ID
-   * @param {string} sessionId - Session ID
-   * @param {string} userId - User ID
-   * @returns {Promise<Object|null>} Game session or null if not found
    */
   async getSession(sessionId) {
     try {
@@ -97,7 +177,6 @@ class GameSessionService {
 
       if (!session) return null;
 
-      // Get all towns for this session
       const towns = await this.getSessionTowns(sessionId);
 
       return {
@@ -112,8 +191,6 @@ class GameSessionService {
 
   /**
    * Get active game sessions for a user
-   * @param {string} userId - User ID
-   * @returns {Promise<Array>} Array of active game sessions
    */
   async getUserActiveSessions(userId) {
     try {
@@ -133,9 +210,6 @@ class GameSessionService {
 
   /**
    * Get completed game sessions for a user
-   * @param {string} userId - User ID
-   * @param {number} limitCount - Maximum number of sessions to return
-   * @returns {Promise<Array>} Array of completed game sessions
    */
   async getUserCompletedSessions(userId, limitCount = 10) {
     try {
@@ -159,44 +233,38 @@ class GameSessionService {
 
   /**
    * Create towns for a game session with sequential IDs
-   * @param {string} sessionId - Session ID
-   * @returns {Promise<Array>} Array of created towns
    */
   async createTownsForSession(sessionId) {
     try {
       const towns = [];
-
-      // Use first 5 default towns
       const townTemplates = defaultTowns;
 
       for (let i = 0; i < townTemplates.length; i++) {
         const template = townTemplates[i];
-        const townNumber = i + 1; // Ensure sequential IDs (1, 2, 3, 4, 5)
-        const townId = `${sessionId}_town_${townNumber}`; // Unique ID for each town
-
+        const townNumber = i + 1;
+        const townId = `${sessionId}_town_${townNumber}`;
         const isComparisonTown = template.name === "Bludgeton";
 
         const townData = {
           sessionId,
           townNumber,
-          name: template.name, // Ensure name matches ID
+          name: template.name,
           townTemplateId: template.id,
           effortPoints: 100,
           currentRound: 0,
-          bushfire: template.baseStats.bushfire,
-          flood: template.baseStats.flood,
-          stormSurge: template.baseStats.stormSurge,
-          heatwave: template.baseStats.heatwave,
-          biohazard: template.baseStats.biohazard,
-          currentStats: {}, // Will be populated when round starts
-          isComparisonTown: isComparisonTown,
+          bushfire: structuredClone(template.baseStats.bushfire),
+          flood: structuredClone(template.baseStats.flood),
+          stormSurge: structuredClone(template.baseStats.stormSurge),
+          heatwave: structuredClone(template.baseStats.heatwave),
+          biohazard: structuredClone(template.baseStats.biohazard),
+          currentStats: {},
+          isComparisonTown,
         };
 
-        // Use explicit ID for the document
         const town = await firestoreService.createDocument(
           this.TOWNS_COLLECTION,
           townData,
-          townId // Pass the explicit ID as the third parameter
+          townId
         );
 
         towns.push(town);
@@ -210,18 +278,15 @@ class GameSessionService {
   }
 
   /**
-   * Get towns for a game session ordered by ID
-   * @param {string} sessionId - Session ID
-   * @returns {Promise<Array>} Array of towns ordered by ID
+   * Get towns for a game session ordered by townNumber
    */
   async getSessionTowns(sessionId) {
     try {
-      // Get towns from Firestore
       const towns = await firestoreService.getDocuments(this.TOWNS_COLLECTION, [
         ["sessionId", "==", sessionId],
       ]);
 
-      return towns.sort((a, b) => a.townNumber - b.townNumber); // Sort by ID
+      return towns.sort((a, b) => a.townNumber - b.townNumber);
     } catch (error) {
       console.error(`Error getting towns for session ${sessionId}:`, error);
       throw error;
@@ -229,74 +294,642 @@ class GameSessionService {
   }
 
   /**
-   * Update a town
-   * @param {string} townId - Town ID
-   * @param {Object} data - Data to update
-   * @returns {Promise<Object>} Updated town
+   * Rename a town (only changes `name`; not a game move)
    */
-  async updateTown(townId, data) {
-    try {
-      return await firestoreService.updateDocument(
-        this.TOWNS_COLLECTION,
-        townId,
-        data
-      );
-    } catch (error) {
-      console.error(`Error updating town ${townId}:`, error);
-      throw error;
+  async updateTownName(townId, name) {
+    const trimmed = typeof name === "string" ? name.trim() : "";
+    if (!trimmed || trimmed.length > 80) {
+      throw new GameRuleError("invalid-town-name", "Town name must be 1–80 characters");
     }
+    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, {
+      name: trimmed,
+    });
   }
 
   /**
-   * Advance game session to next round
-   * @param {string} sessionId - Session ID
-   * @returns {Promise<Object>} Updated game session
+   * Set a town's manual budget (0–999 EP). Runs in a transaction, bumps session revision, clears undo.
+   */
+  async updateTownBudget(townId, effortPoints, { expectedRevision } = {}) {
+    const validatedBudget = validateBudget(effortPoints);
+    const townRef = doc(db, this.TOWNS_COLLECTION, townId);
+
+    const committed = await runTransaction(db, async (tx) => {
+      const townSnap = await tx.get(townRef);
+      if (!townSnap.exists()) {
+        throw new GameRuleError("not-found", `Town not found: ${townId}`);
+      }
+      const town = { id: townSnap.id, ...townSnap.data() };
+      const sessionRef = doc(db, this.SESSIONS_COLLECTION, town.sessionId);
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+
+      const nextRev = assertRevision(session, expectedRevision);
+
+      tx.update(townRef, {
+        effortPoints: validatedBudget,
+        updatedAt: serverTimestamp(),
+      });
+      tx.update(sessionRef, {
+        revision: nextRev,
+        lastUndo: null,
+        updatedAt: serverTimestamp(),
+      });
+
+      return {
+        town: { ...town, effortPoints: validatedBudget },
+        session: { ...session, revision: nextRev, lastUndo: null },
+      };
+    });
+
+    return committed;
+  }
+
+  /**
+   * Legacy helper: routes to updateTownBudget or updateTownName without overwriting full town state
+   */
+  async updateTown(townId, data, options = {}) {
+    if (data && typeof data.effortPoints === "number") {
+      const current = await firestoreService.getDocument(this.TOWNS_COLLECTION, townId);
+      if (current && current.effortPoints !== data.effortPoints) {
+        const res = await this.updateTownBudget(townId, data.effortPoints, options);
+        if (data.name && data.name !== current.name) {
+          return await this.updateTownName(townId, data.name);
+        }
+        return res.town;
+      }
+    }
+    if (data && typeof data.name === "string") {
+      return await this.updateTownName(townId, data.name);
+    }
+    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, data);
+  }
+
+  /**
+   * Start a new game (moves round 0 -> round 1, stage "adaptation")
+   */
+  async startGame(sessionId, { expectedRevision } = {}) {
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+
+    const committed = await runTransaction(db, async (tx) => {
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      const towns = await readTownsInTx(tx, sessionId);
+
+      const startPlan = planStartGame(session);
+      const nextRev = assertRevision(session, expectedRevision);
+
+      const sessionPatch = {
+        currentRound: startPlan.nextRound,
+        stage: startPlan.stage,
+        revision: nextRev,
+        totalRounds: getTotalRounds(session),
+        digitalWheelEnabled: session.digitalWheelEnabled ?? true,
+        playerCount: session.playerCount ?? null,
+        endedEarly: false,
+        lastUndo: null,
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, sessionPatch);
+
+      const updatedTowns = towns.map((town) => {
+        const ref = doc(db, this.TOWNS_COLLECTION, town.id);
+        tx.update(ref, {
+          currentRound: startPlan.nextRound,
+          updatedAt: serverTimestamp(),
+        });
+        return { ...town, currentRound: startPlan.nextRound };
+      });
+
+      return {
+        ...session,
+        ...sessionPatch,
+        towns: updatedTowns,
+      };
+    });
+
+    return committed;
+  }
+
+  /**
+   * Change the stage within the current round (adaptation <-> hazard <-> review)
+   */
+  async changeStage(sessionId, targetStage, { expectedRevision } = {}) {
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+
+    return await runTransaction(db, async (tx) => {
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+      if (session.currentRound === 0) {
+        throw new GameRuleError("not-started", "Game has not started yet");
+      }
+
+      const eventRef = doc(
+        db,
+        this.ROUND_EVENTS_COLLECTION,
+        `${sessionId}_${session.currentRound}`
+      );
+      const eventSnap = await tx.get(eventRef);
+      const hazardCount = eventSnap.exists()
+        ? (eventSnap.data().hazardIds ?? []).length
+        : 0;
+
+      const currentStage = getStage(session, hazardCount);
+      if (!canChangeStage(currentStage, targetStage, hazardCount)) {
+        throw new GameRuleError(
+          "invalid-stage-transition",
+          `Cannot move from ${currentStage} to ${targetStage}`
+        );
+      }
+
+      const nextRev = assertRevision(session, expectedRevision);
+      const patch = {
+        stage: targetStage,
+        revision: nextRev,
+        totalRounds: getTotalRounds(session),
+        lastUndo: null,
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, patch);
+
+      return {
+        ...session,
+        ...patch,
+      };
+    });
+  }
+
+  /**
+   * Apply an adaptation card to a town in a single transaction
+   */
+  async applyCardToTown(townId, cardId, round, { expectedRevision } = {}) {
+    const card = allCards.find((c) => c.id === cardId);
+    if (!card) {
+      throw new GameRuleError("card-not-found", `Card not found: ${cardId}`);
+    }
+
+    const townRef = doc(db, this.TOWNS_COLLECTION, townId);
+    const playRef = doc(collection(db, this.CARD_PLAYS_COLLECTION));
+
+    return await runTransaction(db, async (tx) => {
+      const townSnap = await tx.get(townRef);
+      if (!townSnap.exists()) {
+        throw new GameRuleError("not-found", `Town not found: ${townId}`);
+      }
+      const town = { id: townSnap.id, ...townSnap.data() };
+
+      const sessionRef = doc(db, this.SESSIONS_COLLECTION, town.sessionId);
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+      if (session.currentRound === 0) {
+        throw new GameRuleError("not-started", "Game has not started yet");
+      }
+      if (round !== undefined && session.currentRound !== round) {
+        throw new GameRuleError("stale-round", "Round changed elsewhere");
+      }
+
+      const eventRef = doc(
+        db,
+        this.ROUND_EVENTS_COLLECTION,
+        `${session.id}_${session.currentRound}`
+      );
+      const eventSnap = await tx.get(eventRef);
+      const hazardCount = eventSnap.exists()
+        ? (eventSnap.data().hazardIds ?? []).length
+        : 0;
+
+      const currentStage = getStage(session, hazardCount);
+      assertCanPlayCard(currentStage);
+
+      const nextRev = assertRevision(session, expectedRevision);
+      const { town: updatedTown, play } = playCard(
+        town,
+        card,
+        session.currentRound
+      );
+
+      const lastUndo = buildCardUndo({
+        round: session.currentRound,
+        townBefore: town,
+        cardPlayId: playRef.id,
+      });
+
+      tx.update(townRef, {
+        effortPoints: updatedTown.effortPoints,
+        bushfire: updatedTown.bushfire,
+        flood: updatedTown.flood,
+        stormSurge: updatedTown.stormSurge,
+        heatwave: updatedTown.heatwave,
+        biohazard: updatedTown.biohazard,
+        updatedAt: serverTimestamp(),
+      });
+
+      const cardPlayDoc = {
+        sessionId: session.id,
+        cardId: play.cardId,
+        townId: play.townId,
+        playedAtRound: play.playedAtRound,
+        effectiveRounds: play.effectiveRounds,
+        isActive: true,
+        playedAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      tx.set(playRef, cardPlayDoc);
+
+      const sessionPatch = {
+        revision: nextRev,
+        stage: currentStage,
+        totalRounds: getTotalRounds(session),
+        lastUndo,
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, sessionPatch);
+
+      return {
+        town: updatedTown,
+        cardPlay: { id: playRef.id, ...cardPlayDoc },
+        session: { ...session, ...sessionPatch },
+      };
+    });
+  }
+
+  /**
+   * Apply a hazard to all towns in a session in a single transaction
+   */
+  async applyHazardToSession(
+    sessionId,
+    hazardId,
+    round,
+    { expectedRevision } = {}
+  ) {
+    const hazard = hazards.find((h) => h.id === hazardId);
+    if (!hazard) {
+      throw new GameRuleError("hazard-not-found", `Hazard not found: ${hazardId}`);
+    }
+
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+
+    return await runTransaction(db, async (tx) => {
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+      if (session.currentRound === 0) {
+        throw new GameRuleError("not-started", "Game has not started yet");
+      }
+      if (round !== undefined && session.currentRound !== round) {
+        throw new GameRuleError("stale-round", "Round changed elsewhere");
+      }
+
+      const activeRound = session.currentRound;
+      const towns = await readTownsInTx(tx, sessionId);
+      const roundEventId = `${sessionId}_${activeRound}`;
+      const eventRef = doc(db, this.ROUND_EVENTS_COLLECTION, roundEventId);
+      const eventSnap = await tx.get(eventRef);
+      const existingEvent = eventSnap.exists()
+        ? { id: eventSnap.id, ...eventSnap.data() }
+        : null;
+
+      const existingHazardIds = existingEvent
+        ? [...(existingEvent.hazardIds ?? [])]
+        : [];
+      const currentStage = getStage(session, existingHazardIds.length);
+      assertCanApplyHazard(currentStage, existingHazardIds.length);
+
+      const nextRev = assertRevision(session, expectedRevision);
+
+      const updatedTowns = towns.map((town) => applyHazard(town, hazard));
+      const impact = buildHazardImpact(towns, updatedTowns);
+
+      const prevImpacts = existingEvent?.impactPoints ?? {};
+      const impactPoints = { ...prevImpacts };
+      for (const item of impact) {
+        impactPoints[item.townId] = (impactPoints[item.townId] ?? 0) + item.loss;
+      }
+      const impactComplete = existingEvent
+        ? existingEvent.impactComplete !== false &&
+          existingEvent.impactPoints != null
+        : true;
+
+      const hazardIds = [...existingHazardIds, hazardId];
+      const eventHistory = [
+        ...(existingEvent?.eventHistory ?? []),
+        {
+          type: "hazard",
+          hazardId,
+          timestamp: new Date(),
+        },
+      ];
+
+      const lastUndo = buildHazardUndo({
+        round: activeRound,
+        townsBefore: towns,
+        roundEventBefore: existingEvent,
+      });
+
+      for (const updatedTown of updatedTowns) {
+        const ref = doc(db, this.TOWNS_COLLECTION, updatedTown.id);
+        tx.update(ref, {
+          bushfire: updatedTown.bushfire,
+          flood: updatedTown.flood,
+          stormSurge: updatedTown.stormSurge,
+          heatwave: updatedTown.heatwave,
+          biohazard: updatedTown.biohazard,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      const eventPayload = {
+        sessionId,
+        roundNumber: activeRound,
+        hazardIds,
+        eventHistory,
+        impactPoints,
+        impactComplete,
+        isComplete: false,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (existingEvent) {
+        tx.update(eventRef, eventPayload);
+      } else {
+        tx.set(eventRef, {
+          ...eventPayload,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      const sessionPatch = {
+        revision: nextRev,
+        stage: currentStage,
+        totalRounds: getTotalRounds(session),
+        lastUndo,
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, sessionPatch);
+
+      return {
+        towns: updatedTowns,
+        roundEvent: { id: roundEventId, ...eventPayload },
+        impact,
+        session: { ...session, ...sessionPatch },
+      };
+    });
+  }
+
+  /**
+   * Settle the current round (or end the game early) in a single transaction
+   */
+  async settleRound(
+    sessionId,
+    { expectedRound, expectedRevision, endEarly = false, allowAnyStage = false } = {}
+  ) {
+    const activePlaysQuery = query(
+      collection(db, this.CARD_PLAYS_COLLECTION),
+      where("sessionId", "==", sessionId),
+      where("isActive", "==", true)
+    );
+    const activePlaySnaps = await getDocs(activePlaysQuery);
+    const activePlayRefs = activePlaySnaps.docs.map((d) => d.ref);
+
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+
+    return await runTransaction(db, async (tx) => {
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      if (!session.isActive) {
+        throw new GameRuleError("game-complete", "Game is already completed");
+      }
+      if (session.currentRound === 0) {
+        throw new GameRuleError("not-started", "Game has not started yet");
+      }
+
+      const round = session.currentRound;
+      const towns = await readTownsInTx(tx, sessionId);
+      const eventRef = doc(
+        db,
+        this.ROUND_EVENTS_COLLECTION,
+        `${sessionId}_${round}`
+      );
+      const statsRef = doc(
+        db,
+        this.ROUND_STATS_COLLECTION,
+        `${sessionId}_${round}`
+      );
+
+      const [eventSnap, statsSnap, ...playDocSnaps] = await Promise.all([
+        tx.get(eventRef),
+        tx.get(statsRef),
+        ...activePlayRefs.map((ref) => tx.get(ref)),
+      ]);
+
+      if (statsSnap.exists()) {
+        throw new GameRuleError("already-settled", "Round already settled");
+      }
+
+      const hazardCount = eventSnap.exists()
+        ? (eventSnap.data().hazardIds ?? []).length
+        : 0;
+      const currentStage = allowAnyStage
+        ? "review"
+        : getStage(session, hazardCount);
+
+      const activePlays = playDocSnaps
+        .filter((s) => s.exists() && s.data().isActive === true)
+        .map((s) => ({ id: s.id, ...s.data() }));
+
+      const plan = planSettlement({
+        session,
+        towns,
+        activePlays,
+        cards: allCards,
+        expectedRound: expectedRound ?? round,
+        stage: currentStage,
+        endEarly,
+      });
+
+      const nextRev = assertRevision(session, expectedRevision);
+
+      const roundStatsData = {
+        sessionId,
+        roundNumber: plan.round,
+        towns: plan.snapshots,
+        dividends: plan.dividends,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      tx.set(statsRef, roundStatsData);
+
+      for (const updatedTown of plan.towns) {
+        const ref = doc(db, this.TOWNS_COLLECTION, updatedTown.id);
+        const currentStats = plan.snapshots[updatedTown.id];
+        tx.update(ref, {
+          effortPoints: updatedTown.effortPoints,
+          currentRound: updatedTown.currentRound,
+          bushfire: updatedTown.bushfire,
+          flood: updatedTown.flood,
+          stormSurge: updatedTown.stormSurge,
+          heatwave: updatedTown.heatwave,
+          biohazard: updatedTown.biohazard,
+          currentStats,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      for (const playId of plan.deactivatePlayIds) {
+        tx.update(doc(db, this.CARD_PLAYS_COLLECTION, playId), {
+          isActive: false,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      const completedAtValue = plan.isComplete ? new Date() : null;
+      const sessionPatch = {
+        currentRound: plan.nextRound,
+        isActive: !plan.isComplete,
+        completedAt: plan.isComplete ? serverTimestamp() : null,
+        endedEarly: plan.endedEarly,
+        stage: plan.nextStage,
+        lastSettlementRound: plan.round,
+        lastDividends: plan.dividends,
+        lastUndo: null,
+        revision: nextRev,
+        totalRounds: getTotalRounds(session),
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, sessionPatch);
+
+      return {
+        ...session,
+        ...sessionPatch,
+        completedAt: completedAtValue,
+        towns: plan.towns.map((t) => ({
+          ...t,
+          currentStats: plan.snapshots[t.id],
+        })),
+        dividends: plan.dividends,
+      };
+    });
+  }
+
+  /**
+   * Undo the most recent card play or hazard application in the current round
+   */
+  async undoLastMove(sessionId, { expectedRevision } = {}) {
+    const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
+
+    return await runTransaction(db, async (tx) => {
+      const sessionSnap = await tx.get(sessionRef);
+      if (!sessionSnap.exists()) {
+        throw new GameRuleError("not-found", "Game not found");
+      }
+      const session = { id: sessionSnap.id, ...sessionSnap.data() };
+      const towns = await readTownsInTx(tx, sessionId);
+
+      const planned = planUndo({ session, currentTowns: towns });
+      const nextRev = assertRevision(session, expectedRevision);
+
+      let eventRef = null;
+      let eventSnap = null;
+      if (planned.kind === "hazard") {
+        eventRef = doc(
+          db,
+          this.ROUND_EVENTS_COLLECTION,
+          `${sessionId}_${planned.round}`
+        );
+        eventSnap = await tx.get(eventRef);
+      }
+
+      for (const restoredTown of planned.towns) {
+        tx.update(doc(db, this.TOWNS_COLLECTION, restoredTown.id), {
+          effortPoints: restoredTown.effortPoints,
+          bushfire: restoredTown.bushfire,
+          flood: restoredTown.flood,
+          stormSurge: restoredTown.stormSurge,
+          heatwave: restoredTown.heatwave,
+          biohazard: restoredTown.biohazard,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      if (planned.kind === "card" && planned.deleteCardPlayId) {
+        tx.delete(doc(db, this.CARD_PLAYS_COLLECTION, planned.deleteCardPlayId));
+      } else if (planned.kind === "hazard" && eventRef && eventSnap?.exists()) {
+        tx.update(eventRef, {
+          hazardIds: planned.roundEventPatch.hazardIds,
+          eventHistory: planned.roundEventPatch.eventHistory,
+          impactPoints: planned.roundEventPatch.impactPoints,
+          impactComplete: planned.roundEventPatch.impactComplete,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      const sessionPatch = {
+        lastUndo: null,
+        revision: nextRev,
+        updatedAt: serverTimestamp(),
+      };
+      tx.update(sessionRef, sessionPatch);
+
+      return {
+        kind: planned.kind,
+        round: planned.round,
+        towns: planned.towns,
+        roundEventPatch: planned.roundEventPatch,
+        session: { ...session, ...sessionPatch },
+      };
+    });
+  }
+
+  /**
+   * Backwards-compatible wrapper for round advancement
    */
   async advanceRound(sessionId) {
     try {
-      // Get current session
-      const session = await this.getSession(sessionId);
-      if (!session) {
-        throw new Error(`Game session not found: ${sessionId}`);
-      }
-
-      // Save current round stats if not round 0
-      if (session.currentRound > 0) {
-        await this.saveRoundStats(sessionId, session.currentRound);
-      }
-
-      // Calculate new round
-      const newRound = session.currentRound + 1;
-
-      // Check if game should be completed (5 rounds)
-      const isComplete = newRound > 5;
-
-      // Update session
-      const updatedSession = await firestoreService.updateDocument(
+      const session = await firestoreService.getDocument(
         this.SESSIONS_COLLECTION,
-        sessionId,
-        {
-          currentRound: newRound,
-          isActive: !isComplete,
-          completedAt: isComplete ? new Date() : null,
-        }
+        sessionId
       );
-
-      // Update towns' current round
-      const towns = await this.getSessionTowns(sessionId);
-      for (const town of towns) {
-        await this.updateTown(town.id, { currentRound: newRound });
+      if (!session) {
+        throw new GameRuleError("not-found", `Game session not found: ${sessionId}`);
       }
 
-      // Apply ongoing card effects for the new round
-      if (!isComplete) {
-        await this.applyOngoingCardEffects(sessionId, newRound);
+      if (session.currentRound === 0) {
+        return await this.startGame(sessionId);
       }
 
-      return {
-        ...updatedSession,
-        towns: await this.getSessionTowns(sessionId),
-      };
+      return await this.settleRound(sessionId, {
+        expectedRound: session.currentRound,
+        allowAnyStage: true,
+      });
     } catch (error) {
       console.error(`Error advancing round for session ${sessionId}:`, error);
       throw error;
@@ -304,286 +937,82 @@ class GameSessionService {
   }
 
   /**
-   * Apply a card to a town
-   * @param {string} townId - Town ID
-   * @param {string} cardId - Card ID
-   * @param {number} round - Current round
-   * @returns {Promise<Object>} Updated town and card play
+   * Apply ongoing card effects for all towns in a session (kept for legacy callers)
    */
-  async applyCardToTown(townId, cardId, round) {
-    try {
-      // Get town
-      const town = await firestoreService.getDocument(
-        this.TOWNS_COLLECTION,
-        townId
-      );
-      if (!town) {
-        throw new Error(`Town not found: ${townId}`);
-      }
-
-      // Get card from constants
-      const card = allCards.find((c) => c.id === cardId);
-      if (!card) {
-        throw new Error(`Card not found: ${cardId}`);
-      }
-
-      // Check if town has enough effort points
-      if (town.effortPoints < card.cost) {
-        throw new Error(
-          `Not enough effort points: ${town.effortPoints} < ${card.cost}`
-        );
-      }
-
-      // Deduct card cost from town's effort points
-      const updatedEffortPoints = town.effortPoints - card.cost;
-
-      // Apply card effects to town ONLY FOR THE CURRENT ROUND
-      const updatedTown = {
-        ...applyCardEffects(town, card),
-        effortPoints: updatedEffortPoints,
-      };
-
-      // Update town
-      const savedTown = await this.updateTown(townId, updatedTown);
-
-      // A card is effective in the round it's played and the following rounds of its duration
-      const effectiveRounds = cardEffectiveRounds(round, card.duration);
-
-      const cardPlay = await firestoreService.createDocument(
-        this.CARD_PLAYS_COLLECTION,
-        {
-          sessionId: town.sessionId,
-          cardId,
-          townId,
-          playedAtRound: round,
-          effectiveRounds,
-          isActive: true,
-          playedAt: new Date(),
-        }
-      );
-
-      return {
-        town: savedTown,
-        cardPlay,
-      };
-    } catch (error) {
-      console.error(`Error applying card ${cardId} to town ${townId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Apply ongoing card effects for all towns in a session
-   * @param {string} sessionId - Session ID
-   * @param {number} round - Current round
-   * @returns {Promise<void>} No return value
-   * @throws {Error} If an error occurs during the process
-   * */
   async applyOngoingCardEffects(sessionId, round) {
-    try {
-      // Get all towns for this session
-      const towns = await this.getSessionTowns(sessionId);
-
-      // For each town, find active cards that affect the current round
-      for (const town of towns) {
-        // Get all active card plays for this town
-        const cardPlays = await firestoreService.getDocuments(
-          this.CARD_PLAYS_COLLECTION,
-          [
-            ["townId", "==", town.id],
-            ["isActive", "==", true],
-          ]
-        );
-
-        // Filter card plays that affect the current round
-        const activeCardPlays = cardPlays.filter((play) =>
-          play.effectiveRounds.includes(round)
-        );
-
-        // If there are active cards, apply their effects
-        if (activeCardPlays.length > 0) {
-          let updatedTown = { ...town };
-
-          for (const play of activeCardPlays) {
-            // Get card details
-            const card = allCards.find((c) => c.id === play.cardId);
-            if (card) {
-              // Apply card effects
-              updatedTown = applyCardEffects(updatedTown, card);
-
-              // Check if this is the last effective round for this card
-              const maxRound = Math.max(...play.effectiveRounds);
-              if (round >= maxRound) {
-                // Deactivate the card after its final round
-                await firestoreService.updateDocument(
-                  this.CARD_PLAYS_COLLECTION,
-                  play.id,
-                  { isActive: false }
-                );
-              }
+    const towns = await this.getSessionTowns(sessionId);
+    for (const town of towns) {
+      const cardPlays = await firestoreService.getDocuments(
+        this.CARD_PLAYS_COLLECTION,
+        [
+          ["townId", "==", town.id],
+          ["isActive", "==", true],
+        ]
+      );
+      const activeCardPlays = cardPlays.filter((play) =>
+        play.effectiveRounds.includes(round)
+      );
+      if (activeCardPlays.length > 0) {
+        let updatedTown = { ...town };
+        for (const play of activeCardPlays) {
+          const card = allCards.find((c) => c.id === play.cardId);
+          if (card) {
+            updatedTown = applyCardEffects(updatedTown, card);
+            const maxRound = Math.max(...play.effectiveRounds);
+            if (round >= maxRound) {
+              await firestoreService.updateDocument(
+                this.CARD_PLAYS_COLLECTION,
+                play.id,
+                { isActive: false }
+              );
             }
           }
-
-          // Save the updated town with all card effects applied
-          await this.updateTown(town.id, updatedTown);
         }
+        await firestoreService.updateDocument(
+          this.TOWNS_COLLECTION,
+          town.id,
+          updatedTown
+        );
       }
-    } catch (error) {
-      console.error(
-        `Error applying ongoing card effects for session ${sessionId}, round ${round}:`,
-        error
-      );
-      throw error;
     }
   }
 
   /**
-   * Apply hazard to all towns in a session
-   * @param {string} sessionId - Session ID
-   * @param {string} hazardId - Hazard ID
-   * @param {number} round - Current round
-   * @returns {Promise<Object>} Updated towns and round event
-   */
-  async applyHazardToSession(sessionId, hazardId, round) {
-    try {
-      // Get hazard from constants
-      const hazard = hazards.find((h) => h.id === hazardId);
-      if (!hazard) {
-        throw new Error(`Hazard not found: ${hazardId}`);
-      }
-
-      // Get towns
-      const towns = await this.getSessionTowns(sessionId);
-      const updatedTowns = [];
-
-      // Apply hazard to each town
-      for (const town of towns) {
-        const updatedTown = applyHazard(town, hazard);
-        const savedTown = await this.updateTown(town.id, updatedTown);
-        updatedTowns.push(savedTown);
-      }
-
-      // Create or update round event
-      const roundEventId = `${sessionId}_${round}`;
-      let roundEvent = await firestoreService.getDocument(
-        this.ROUND_EVENTS_COLLECTION,
-        roundEventId
-      );
-
-      if (roundEvent) {
-        // Update existing round event
-        const hazardIds = [...roundEvent.hazardIds];
-        if (!hazardIds.includes(hazardId)) {
-          hazardIds.push(hazardId);
-        }
-
-        const eventHistory = [...roundEvent.eventHistory];
-        eventHistory.push({
-          type: "hazard",
-          hazardId,
-          timestamp: new Date(),
-        });
-
-        roundEvent = await firestoreService.updateDocument(
-          this.ROUND_EVENTS_COLLECTION,
-          roundEventId,
-          {
-            hazardIds,
-            eventHistory,
-          }
-        );
-      } else {
-        // Create new round event
-        roundEvent = await firestoreService.createDocument(
-          this.ROUND_EVENTS_COLLECTION,
-          {
-            sessionId,
-            roundNumber: round,
-            hazardIds: [hazardId],
-            eventHistory: [
-              {
-                type: "hazard",
-                hazardId,
-                timestamp: new Date(),
-              },
-            ],
-            isComplete: false,
-          },
-          roundEventId
-        );
-      }
-
-      return {
-        towns: updatedTowns,
-        roundEvent,
-      };
-    } catch (error) {
-      console.error(
-        `Error applying hazard ${hazardId} to session ${sessionId}:`,
-        error
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Save round stats for all towns in a session
-   * @param {string} sessionId - Session ID
-   * @param {number} round - Round number
-   * @returns {Promise<Object>} Saved round stats
+   * Save round stats for all towns in a session (kept for legacy callers)
    */
   async saveRoundStats(sessionId, round) {
-    try {
-      // Get all towns
-      const towns = await this.getSessionTowns(sessionId);
+    const towns = await this.getSessionTowns(sessionId);
+    const townStats = {};
 
-      // Prepare town stats
-      const townStats = {};
-
-      for (const town of towns) {
-        // Snapshot of current stats
-        const currentStats = {
-          bushfire: town.bushfire,
-          flood: town.flood,
-          stormSurge: town.stormSurge,
-          heatwave: town.heatwave,
-          biohazard: town.biohazard,
-          round,
-        };
-
-        // Update town's current stats
-        await this.updateTown(town.id, { currentStats });
-
-        // Add to round stats
-        townStats[town.id] = currentStats;
-      }
-
-      // Save round stats
-      const roundStatsId = `${sessionId}_${round}`;
-      const roundStats = await firestoreService.createDocument(
-        this.ROUND_STATS_COLLECTION,
-        {
-          sessionId,
-          roundNumber: round,
-          towns: townStats,
-        },
-        roundStatsId
-      );
-
-      return roundStats;
-    } catch (error) {
-      console.error(
-        `Error saving round stats for session ${sessionId}, round ${round}:`,
-        error
-      );
-      throw error;
+    for (const town of towns) {
+      const currentStats = {
+        bushfire: town.bushfire,
+        flood: town.flood,
+        stormSurge: town.stormSurge,
+        heatwave: town.heatwave,
+        biohazard: town.biohazard,
+        round,
+      };
+      await firestoreService.updateDocument(this.TOWNS_COLLECTION, town.id, {
+        currentStats,
+      });
+      townStats[town.id] = currentStats;
     }
+
+    const roundStatsId = `${sessionId}_${round}`;
+    return await firestoreService.createDocument(
+      this.ROUND_STATS_COLLECTION,
+      {
+        sessionId,
+        roundNumber: round,
+        towns: townStats,
+      },
+      roundStatsId
+    );
   }
 
   /**
-   * Get round events for a session
-   * @param {string} sessionId - Session ID
-   * @returns {Promise<Object>} Map of round number to events
+   * Get round events for a session (map of roundNumber -> hazardIds)
    */
   async getSessionRoundEvents(sessionId) {
     try {
@@ -593,7 +1022,6 @@ class GameSessionService {
       );
 
       const roundEvents = {};
-
       for (const event of events) {
         roundEvents[event.roundNumber] = event.hazardIds;
       }
@@ -609,11 +1037,26 @@ class GameSessionService {
   }
 
   /**
-   * Get card plays for a town grouped by round
-   * @param {string} townId - Town ID
-   * @returns {Promise<Object>} Map of round number to card names
+   * Get raw round event documents for a session
    */
-  // In gameSessionService.js - getTownCardPlays method
+  async getSessionRoundEventDocs(sessionId) {
+    return await firestoreService.getDocuments(this.ROUND_EVENTS_COLLECTION, [
+      ["sessionId", "==", sessionId],
+    ]);
+  }
+
+  /**
+   * Get round stats documents for a session
+   */
+  async getSessionRoundStats(sessionId) {
+    return await firestoreService.getDocuments(this.ROUND_STATS_COLLECTION, [
+      ["sessionId", "==", sessionId],
+    ]);
+  }
+
+  /**
+   * Get card plays for a town grouped by round
+   */
   async getTownCardPlays(townId) {
     try {
       const cardPlays = await firestoreService.getDocuments(
@@ -624,28 +1067,21 @@ class GameSessionService {
       const cardsByRound = {};
 
       for (const play of cardPlays) {
-        // Find card details
         const card = allCards.find((c) => c.id === play.cardId);
 
         if (card) {
-          for (const round of play.effectiveRounds) {
+          for (const round of play.effectiveRounds ?? cardEffectiveRounds(play.playedAtRound, card.duration)) {
             if (!cardsByRound[round]) {
               cardsByRound[round] = [];
             }
 
-            // Just add the card name as a string, as in the original implementation
             let displayName = card.name;
-
-            // If this card has multi-round duration, indicate it
             if (card.duration > 1) {
               const playedAt = play.playedAtRound;
               const duration = card.duration;
-
-              // If this is the first round the card is active
               if (round === playedAt) {
                 displayName = `${card.name} (${duration} rounds)`;
               } else {
-                // Show which round of effect this is
                 const currentEffect = round - playedAt + 1;
                 displayName = `${card.name} (${currentEffect}/${duration})`;
               }
@@ -665,59 +1101,39 @@ class GameSessionService {
 
   /**
    * Delete a game session and all related data
-   * @param {string} sessionId - Session ID
-   * @returns {Promise<boolean>} True if successful
    */
   async deleteSession(sessionId) {
     try {
-      // Get towns in this session
-      const towns = await this.getSessionTowns(sessionId);
+      const [towns, roundEvents, roundStats, cardPlays] = await Promise.all([
+        this.getSessionTowns(sessionId),
+        firestoreService.getDocuments(this.ROUND_EVENTS_COLLECTION, [
+          ["sessionId", "==", sessionId],
+        ]),
+        firestoreService.getDocuments(this.ROUND_STATS_COLLECTION, [
+          ["sessionId", "==", sessionId],
+        ]),
+        firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, [
+          ["sessionId", "==", sessionId],
+        ]),
+      ]);
 
-      // Get round events
-      const roundEvents = await firestoreService.getDocuments(
-        this.ROUND_EVENTS_COLLECTION,
-        [["sessionId", "==", sessionId]]
-      );
-
-      // Get round stats
-      const roundStats = await firestoreService.getDocuments(
-        this.ROUND_STATS_COLLECTION,
-        [["sessionId", "==", sessionId]]
-      );
-
-      // Get card plays
-      const cardPlays = await firestoreService.getDocuments(
-        this.CARD_PLAYS_COLLECTION,
-        [["sessionId", "==", sessionId]]
-      );
-
-      // Delete all related data in a batch operation
       const operations = [];
 
-      // Delete session
-      operations.push(["delete", this.SESSIONS_COLLECTION, sessionId]);
-
-      // Delete towns
       for (const town of towns) {
         operations.push(["delete", this.TOWNS_COLLECTION, town.id]);
       }
-
-      // Delete round events
       for (const event of roundEvents) {
         operations.push(["delete", this.ROUND_EVENTS_COLLECTION, event.id]);
       }
-
-      // Delete round stats
       for (const stats of roundStats) {
         operations.push(["delete", this.ROUND_STATS_COLLECTION, stats.id]);
       }
-
-      // Delete card plays
       for (const play of cardPlays) {
         operations.push(["delete", this.CARD_PLAYS_COLLECTION, play.id]);
       }
+      // Delete session last so ownership checks on child documents succeed during the batch
+      operations.push(["delete", this.SESSIONS_COLLECTION, sessionId]);
 
-      // Execute batch operation
       if (operations.length > 0) {
         await firestoreService.batchOperation(operations);
       }
@@ -728,83 +1144,34 @@ class GameSessionService {
       throw error;
     }
   }
-  /**
-   * Delete a round event
-   * @param {string} eventId - Round event ID
-   * @returns {Promise<boolean>} True if successful
-   */
+
   async deleteRoundEvent(eventId) {
-    try {
-      return await firestoreService.deleteDocument(
-        this.ROUND_EVENTS_COLLECTION,
-        eventId
-      );
-    } catch (error) {
-      console.error(`Error deleting round event ${eventId}:`, error);
-      throw error;
-    }
+    return await firestoreService.deleteDocument(
+      this.ROUND_EVENTS_COLLECTION,
+      eventId
+    );
   }
 
-  /**
-   * Update a round event
-   * @param {string} eventId - Round event ID
-   * @param {Object} data - Data to update
-   * @returns {Promise<Object>} Updated round event
-   */
   async updateRoundEvent(eventId, data) {
-    try {
-      return await firestoreService.updateDocument(
-        this.ROUND_EVENTS_COLLECTION,
-        eventId,
-        data
-      );
-    } catch (error) {
-      console.error(`Error updating round event ${eventId}:`, error);
-      throw error;
-    }
+    return await firestoreService.updateDocument(
+      this.ROUND_EVENTS_COLLECTION,
+      eventId,
+      data
+    );
   }
 
-  /**
-   * Get card plays for a town in a specific round
-   * @param {string} townId - Town ID
-   * @param {number} round - Round number
-   * @returns {Promise<Array>} Array of card plays
-   */
   async getTownCardPlaysForRound(townId, round) {
-    try {
-      const cardPlays = await firestoreService.getDocuments(
-        this.CARD_PLAYS_COLLECTION,
-        [
-          ["townId", "==", townId],
-          ["playedAtRound", "==", round],
-        ]
-      );
-
-      return cardPlays;
-    } catch (error) {
-      console.error(
-        `Error getting card plays for town ${townId} in round ${round}:`,
-        error
-      );
-      throw error;
-    }
+    return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, [
+      ["townId", "==", townId],
+      ["playedAtRound", "==", round],
+    ]);
   }
 
-  /**
-   * Delete a card play
-   * @param {string} playId - Card play ID
-   * @returns {Promise<boolean>} True if successful
-   */
   async deleteCardPlay(playId) {
-    try {
-      return await firestoreService.deleteDocument(
-        this.CARD_PLAYS_COLLECTION,
-        playId
-      );
-    } catch (error) {
-      console.error(`Error deleting card play ${playId}:`, error);
-      throw error;
-    }
+    return await firestoreService.deleteDocument(
+      this.CARD_PLAYS_COLLECTION,
+      playId
+    );
   }
 }
 
