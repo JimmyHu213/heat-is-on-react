@@ -70,7 +70,8 @@ service cloud.firestore {
 
     // Game sessions belong to the user in their `userId` field.
     match /game_sessions/{sessionId} {
-      allow read, delete: if canAccessGameData() && resource.data.userId == request.auth.uid;
+      allow read: if resource == null ? canAccessGameData() : (canAccessGameData() && resource.data.userId == request.auth.uid);
+      allow delete: if canAccessGameData() && resource.data.userId == request.auth.uid;
 
       allow create: if canAccessGameData()
         && request.resource.data.userId == request.auth.uid
@@ -117,7 +118,8 @@ service cloud.firestore {
 
     // Towns belong to a session.
     match /towns/{townId} {
-      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
 
       allow create: if ownsSession(request.resource.data.sessionId)
         && request.resource.data.name is string
@@ -153,7 +155,8 @@ service cloud.firestore {
 
     // Card plays belong to a session.
     match /card_plays/{playId} {
-      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
 
       allow create: if ownsSession(request.resource.data.sessionId)
         && request.resource.data.townId is string
@@ -177,7 +180,8 @@ service cloud.firestore {
 
     // Round events use ID `<sessionId>_<roundNumber>`.
     match /round_events/{eventId} {
-      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
 
       allow create: if ownsSession(request.resource.data.sessionId)
         && request.resource.data.roundNumber is int
@@ -198,7 +202,8 @@ service cloud.firestore {
 
     // Round stats use ID `<sessionId>_<roundNumber>` and are written once on settlement.
     match /round_stats/{statsId} {
-      allow read, delete: if ownsSession(resource.data.sessionId);
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
 
       allow create: if ownsSession(request.resource.data.sessionId)
         && request.resource.data.roundNumber is int
