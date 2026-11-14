@@ -359,7 +359,8 @@ class GameSessionService {
       if (current && current.effortPoints !== data.effortPoints) {
         const res = await this.updateTownBudget(townId, data.effortPoints, options);
         if (data.name && data.name !== current.name) {
-          return await this.updateTownName(townId, data.name);
+          await this.updateTownName(townId, data.name);
+          return { ...res.town, name: data.name.trim() };
         }
         return res.town;
       }

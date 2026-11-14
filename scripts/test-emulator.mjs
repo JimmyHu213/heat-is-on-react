@@ -259,6 +259,17 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
   const afterRenameSession = await gameSessionService.getSession(sessionId);
   assert.equal(afterRenameSession.revision, 15);
 
+  // Simultaneous budget + name update via updateTown preserves both changes and bumps revision once
+  const bothUpdated = await gameSessionService.updateTown(
+    town1Id,
+    { effortPoints: 260, name: "Hobart Restored" },
+    { expectedRevision: 15 }
+  );
+  assert.equal(bothUpdated.effortPoints, 260);
+  assert.equal(bothUpdated.name, "Hobart Restored");
+  const afterBothSession = await gameSessionService.getSession(sessionId);
+  assert.equal(afterBothSession.revision, 16);
+
   // Update playerCount on active game
   const updatedPlayers = await gameSessionService.updatePlayerCount(
     sessionId,
@@ -268,17 +279,17 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
 
   // Finish round 2 -> completes the 2-round game
   await gameSessionService.changeStage(sessionId, "hazard", {
-    expectedRevision: 15,
-  });
-  await gameSessionService.applyHazardToSession(sessionId, "flood", 2, {
     expectedRevision: 16,
   });
-  await gameSessionService.changeStage(sessionId, "review", {
+  await gameSessionService.applyHazardToSession(sessionId, "flood", 2, {
     expectedRevision: 17,
+  });
+  await gameSessionService.changeStage(sessionId, "review", {
+    expectedRevision: 18,
   });
   const finished = await gameSessionService.settleRound(sessionId, {
     expectedRound: 2,
-    expectedRevision: 18,
+    expectedRevision: 19,
   });
   assert.equal(finished.isActive, false);
   assert.equal(finished.stage, "complete");

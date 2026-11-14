@@ -1,5 +1,6 @@
 // src/contexts/GameContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
+import { formatGameRuleError } from "../game/errors.js";
 import { getStage } from "../game/stages.js";
 import gameSessionService from "../services/gameSessionService.js";
 import { useAuth } from "./AuthContext";
@@ -9,13 +10,7 @@ const GameContext = createContext();
 const REFRESH_WARNING = "Saved; refresh to see the latest";
 
 function formatMoveError(err, fallback) {
-  if (err?.code === "stale-revision") {
-    return "This game changed elsewhere. Refresh to continue.";
-  }
-  if (err?.name === "GameRuleError" && err.message) {
-    return err.message;
-  }
-  return fallback;
+  return formatGameRuleError(err, fallback);
 }
 
 export function useGame() {
@@ -123,10 +118,10 @@ export function GameProvider({ children }) {
       );
 
       if (currentSession && currentSession.id === sessionId) {
-        setCurrentSession({
-          ...currentSession,
+        setCurrentSession((prev) => ({
+          ...prev,
           name: newName.trim(),
-        });
+        }));
       }
 
       try {
@@ -429,12 +424,18 @@ export function GameProvider({ children }) {
 
     setLoading(true);
     try {
-      const updatedTown = await gameSessionService.updateTownName(townId, name);
+      await gameSessionService.updateTownName(townId, name);
+      const trimmedName = name.trim();
+      let updatedTown = null;
       setTowns((prevTowns) =>
-        prevTowns.map((t) => (t.id === townId ? updatedTown : t))
+        prevTowns.map((t) => {
+          if (t.id !== townId) return t;
+          updatedTown = { ...t, name: trimmedName };
+          return updatedTown;
+        })
       );
       setError(null);
-      return updatedTown;
+      return updatedTown || { id: townId, name: trimmedName };
     } catch (err) {
       console.error("Error updating town name:", err);
       setError(
@@ -476,13 +477,34 @@ export function GameProvider({ children }) {
   const updateTown = async (updatedTown) => {
     if (!currentSession || !updatedTown) return null;
     const existing = towns.find((t) => t.id === updatedTown.id);
-    if (existing && updatedTown.effortPoints !== existing.effortPoints) {
-      return await updateTownBudget(updatedTown.id, updatedTown.effortPoints);
+    let resultTown = existing || null;
+    if (
+      existing &&
+      typeof updatedTown.effortPoints === "number" &&
+      updatedTown.effortPoints !== existing.effortPoints
+    ) {
+      resultTown = await updateTownBudget(
+        updatedTown.id,
+        updatedTown.effortPoints
+      );
+      if (!resultTown) return null;
     }
-    if (existing && updatedTown.name !== existing.name) {
-      return await updateTownName(updatedTown.id, updatedTown.name);
+    if (
+      existing &&
+      typeof updatedTown.name === "string" &&
+      updatedTown.name !== existing.name
+    ) {
+      const renamed = await updateTownName(updatedTown.id, updatedTown.name);
+      if (!renamed) return null;
+      const mergedName = updatedTown.name.trim();
+      resultTown = { ...(resultTown || existing), name: mergedName };
+      setTowns((prevTowns) =>
+        prevTowns.map((t) =>
+          t.id === updatedTown.id ? { ...t, name: mergedName } : t
+        )
+      );
     }
-    return existing || null;
+    return resultTown;
   };
 
   const revertToPreviousState = async () => {
