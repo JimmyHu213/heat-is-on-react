@@ -17,7 +17,6 @@ import {
   Paper,
   Snackbar,
   useTheme,
-  useMediaQuery,
   Tooltip,
 } from "@mui/material";
 
@@ -31,7 +30,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import LocationCityIcon from "@mui/icons-material/LocationCity";
 import HistoryIcon from "@mui/icons-material/History";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 
 // Components
 import TownPieCharts from "./components/TownPieCharts";
@@ -40,14 +39,17 @@ import GameTable from "./components/GameTable";
 import TownDetailsView from "./components/TownDetailsView";
 import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
+import StageBar from "./components/StageBar";
+import HazardImpactDialog from "./components/HazardImpactDialog";
+import DividendsDialog from "./components/DividendsDialog";
+import EndEarlyDialog from "./components/EndEarlyDialog";
+import GameSummaryDialog from "./components/GameSummaryDialog";
 import { primaryColor } from "../../constants/palette";
-import { SpaceBar } from "@mui/icons-material";
 import { allCards } from "../../constants/cards";
+import { getTotalRounds } from "../../game/options.js";
 
-// Drawer width
 const drawerWidth = 500;
 
-// TabPanel component
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
 
@@ -59,124 +61,149 @@ function TabPanel(props) {
       aria-labelledby={`game-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
     </div>
   );
 }
 
-/**
- * Main Game component
- */
 const Game = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  // Game Context
   const {
     loading,
     error,
     currentSession,
     currentRound,
+    currentStage,
     towns,
     roundEvents,
+    roundEventDocs,
+    roundStats,
     townCardPlays,
+    lastHazardImpact,
+    lastHazardId,
     loadSession,
-    advanceRound,
+    startGame,
+    changeStage,
+    settleRound,
     applyHazard,
     playCard,
-    refreshSessionData,
+    updatePlayerCount,
     clearError,
+    clearLastHazardImpact,
     updateTown,
     revertToPreviousState,
     canRevert,
   } = useGame();
 
-  // Local state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
-  // Load session data
+  const [dividendsDialogOpen, setDividendsDialogOpen] = useState(false);
+  const [endEarlyDialogOpen, setEndEarlyDialogOpen] = useState(false);
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+
   useEffect(() => {
     loadSession(sessionId);
   }, [sessionId]);
 
-  // Handle tab change
+  const totalRounds = currentSession ? getTotalRounds(currentSession) : 5;
+  const hazardCountThisRound = (roundEvents[currentRound] || []).length;
+
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
 
-  // Handle drawer toggle
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  // Navigate back to dashboard
   const navigateToDashboard = () => {
     navigate("/");
   };
 
-  // Handle advance round
-  const handleAdvanceRound = async () => {
-    await advanceRound();
+  const showNotification = (message, severity = "success") => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
 
-    if (currentRound === 5) {
-      showNotification("Game completed successfully!", "success");
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
-      // Optional: Add a slight delay before redirecting to dashboard
-      setTimeout(() => {
-        navigate("/");
-      }, 2000);
-    } else {
+  const handleStartGame = async () => {
+    const updated = await startGame();
+    if (updated) {
+      showNotification("Game started! Round 1 (Adapt stage) begins.", "success");
+    }
+  };
+
+  const handleChangeStage = async (targetStage) => {
+    const updated = await changeStage(targetStage);
+    if (updated) {
+      const stageLabels = {
+        adaptation: "Adapt",
+        hazard: "Event",
+        review: "Review",
+      };
       showNotification(
-        currentRound === 0
-          ? "Game started! Round 1 begins."
-          : `Advanced to Round ${currentRound + 1}`,
-        "success"
+        `Moved to ${stageLabels[targetStage] || targetStage} stage`,
+        "info"
       );
     }
   };
 
-  // Handle updating town name and other properties
+  const handleConfirmSettleRound = async () => {
+    const settlingRound = currentRound;
+    const updated = await settleRound({ endEarly: false });
+    if (updated) {
+      setDividendsDialogOpen(false);
+      if (!updated.isActive) {
+        showNotification("Game completed! Viewing summary.", "success");
+        setSummaryDialogOpen(true);
+      } else {
+        showNotification(
+          `Round ${settlingRound} settled! Dividends awarded. Welcome to Round ${updated.currentRound}.`,
+          "success"
+        );
+      }
+    }
+  };
+
+  const handleConfirmEndEarly = async () => {
+    const updated = await settleRound({ endEarly: true });
+    if (updated) {
+      setEndEarlyDialogOpen(false);
+      showNotification("Game ended early and settled. Viewing summary.", "info");
+      setSummaryDialogOpen(true);
+    }
+  };
+
   const handleUpdateTownName = async (
     townId,
     newName,
     fullTownUpdate = null
   ) => {
     try {
-      // Find the town to update
       const town = towns.find((t) => t.id === townId);
       if (!town) {
         throw new Error(`Town with ID ${townId} not found`);
       }
 
-      // Create updated town object
-      let updatedTown;
+      const updatedTown = fullTownUpdate || {
+        ...town,
+        name: newName,
+      };
 
-      if (fullTownUpdate) {
-        // If a full town update is provided, use it
-        updatedTown = fullTownUpdate;
-      } else {
-        // Otherwise just update the name
-        updatedTown = {
-          ...town,
-          name: newName,
-        };
-      }
-
-      // Call the update function from context/service
-      // This should handle loading state internally
       const result = await updateTown(updatedTown);
 
       if (result) {
-        // Refresh session data to reflect changes
-        await refreshSessionData();
-
-        // Show appropriate notification
         if (
           fullTownUpdate &&
           fullTownUpdate.effortPoints !== town.effortPoints
@@ -191,34 +218,30 @@ const Game = () => {
       }
     } catch (err) {
       console.error("Failed to update town:", err);
-      showNotification({
-        message: "Failed to update town information",
-        severity: "error",
-      });
+      showNotification("Failed to update town information", "error");
     }
   };
 
-  // Handle revert
   const handleRevert = async () => {
     const result = await revertToPreviousState();
     if (result) {
-      showNotification("Successfully reverted to previous state", "success");
+      showNotification("Reverted last move in this round", "success");
     }
   };
 
-  // Handle applying hazard
   const handleApplyHazard = async (hazardId) => {
-    await applyHazard(hazardId);
-    showNotification("Applied hazard to all towns", "warning");
+    const result = await applyHazard(hazardId);
+    if (result) {
+      setDrawerOpen(false);
+      showNotification("Applied hazard to all towns", "warning");
+    }
   };
 
-  // Handle playing card
   const handlePlayCard = async (townId, cardId) => {
     try {
       const town = towns.find((t) => t.id === townId);
       const card = allCards.find((c) => c.id === cardId);
 
-      // Check if town has enough effort points
       if (town.effortPoints < card.cost) {
         showNotification(
           `Not enough effort points! ${town.name} has ${town.effortPoints} points, but needs ${card.cost}.`,
@@ -227,33 +250,19 @@ const Game = () => {
         return;
       }
 
-      await playCard(townId, cardId);
-
-      showNotification(
-        `Applied adaptation card to ${town?.name || "town"} (-${
-          card.cost
-        } effort points)`,
-        "info"
-      );
-    } catch (error) {
-      console.error("Error playing card:", error);
-      showNotification(error.message || "Failed to play card", "error");
+      const result = await playCard(townId, cardId);
+      if (result) {
+        showNotification(
+          `Applied ${card.name} to ${town?.name || "town"} (-${card.cost} EP)`,
+          "info"
+        );
+      }
+    } catch (err) {
+      console.error("Error playing card:", err);
+      showNotification(err.message || "Failed to play card", "error");
     }
   };
 
-  // Show notification
-  const showNotification = (message, severity = "success") => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  };
-
-  // Handle notification close
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-
-  // Loading indicator
   if (loading && !currentSession) {
     return (
       <Box
@@ -269,6 +278,31 @@ const Game = () => {
     );
   }
 
+  if (!loading && !currentSession) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          gap: 2,
+          p: 3,
+        }}
+      >
+        <Alert severity="error">{error || "Game not found"}</Alert>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBackIcon />}
+          onClick={navigateToDashboard}
+        >
+          Back to Dashboard
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       {/* App Bar */}
@@ -278,8 +312,6 @@ const Game = () => {
           zIndex: theme.zIndex.drawer + 1,
           backgroundColor: "#E38A6C",
           boxShadow: 3,
-          // width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["width", "margin"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -287,7 +319,6 @@ const Game = () => {
         }}
       >
         <Toolbar>
-          {/* Drawer toggle button (visible on all screen sizes) */}
           <Tooltip title={drawerOpen ? "Hide Controls" : "Show Controls"}>
             <IconButton
               color="inherit"
@@ -309,10 +340,15 @@ const Game = () => {
           </IconButton>
 
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Current Year: {2050 + currentRound}
+            {currentSession?.name || "Workshop"} ·{" "}
+            {currentStage === "setup"
+              ? "Setup"
+              : currentStage === "complete"
+              ? "Completed"
+              : `Year ${2050 + currentRound} (Round ${currentRound}/${totalRounds})`}
           </Typography>
 
-          {/* Revert button */}
+          {/* Undo button */}
           <Button
             variant="outlined"
             color="inherit"
@@ -331,71 +367,94 @@ const Game = () => {
             Undo
           </Button>
 
-          <Button
-            variant="contained"
-            color={currentRound === 5 ? "success" : "secondary"}
-            startIcon={currentRound === 5 ? <DoneIcon /> : <PlayArrowIcon />}
-            onClick={handleAdvanceRound}
-            disabled={loading || currentRound > 5}
-          >
-            {currentRound === 0
-              ? "Start Game"
-              : currentRound === 5
-              ? "Finish Game"
-              : "Next Year"}
-          </Button>
+          {currentStage === "setup" && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<PlayArrowIcon />}
+              onClick={handleStartGame}
+              disabled={loading}
+            >
+              Start Game
+            </Button>
+          )}
+
+          {currentStage === "review" && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<DoneIcon />}
+              onClick={() => setDividendsDialogOpen(true)}
+              disabled={loading}
+            >
+              {currentRound >= totalRounds ? "Finish Game" : "Settle Round"}
+            </Button>
+          )}
+
+          {currentStage === "complete" && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<AssessmentIcon />}
+              onClick={() => setSummaryDialogOpen(true)}
+            >
+              Summary
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
 
       {/* Side Drawer */}
       <Drawer
-        variant={"temporary"}
+        variant="temporary"
         open={drawerOpen}
         onClose={handleDrawerToggle}
         sx={{
-          //width: drawerWidth,
           flexShrink: 0,
           "& .MuiDrawer-paper": {
             width: drawerWidth,
+            maxWidth: "100vw",
             boxSizing: "border-box",
             bgcolor: "#f8f8f8",
           },
         }}
       >
         <Toolbar>
-          {/* Add drawer header with a close button */}
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
               width: "100%",
             }}
           >
             <Typography variant="subtitle1" fontWeight="bold">
-              Game Controls
+              Facilitator Controls
             </Typography>
-            <Box sx={{ flexGrow: 1 }} />
-            {/* <IconButton onClick={handleDrawerToggle}>
+            <IconButton onClick={handleDrawerToggle} size="small">
               <ChevronLeftIcon />
-            </IconButton> */}
+            </IconButton>
           </Box>
         </Toolbar>
         <Divider />
         <Box sx={{ overflow: "auto", p: 2 }}>
-          <HazardControls
-            onApplyHazard={handleApplyHazard}
-            disabled={loading || currentRound === 0}
+          <CardControls
+            towns={towns}
+            onPlayCard={handlePlayCard}
+            disabled={loading || currentRound === 0 || !currentSession?.isActive}
             currentRound={currentRound}
+            currentStage={currentStage}
           />
 
           <Divider sx={{ my: 2 }} />
 
-          <CardControls
-            towns={towns}
-            onPlayCard={handlePlayCard}
-            disabled={loading || currentRound === 0}
+          <HazardControls
+            onApplyHazard={handleApplyHazard}
+            disabled={loading || currentRound === 0 || !currentSession?.isActive}
             currentRound={currentRound}
+            currentStage={currentStage}
+            digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
+            hazardCountThisRound={hazardCountThisRound}
           />
         </Box>
       </Drawer>
@@ -406,8 +465,6 @@ const Game = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          // maxWidth: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          // ml: { sm: drawerOpen ? `${drawerWidth}px` : 0 },
           transition: theme.transitions.create(["margin", "width"], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -418,12 +475,29 @@ const Game = () => {
         }}
       >
         <Toolbar /> {/* Spacer for AppBar */}
-        {/* Error message */}
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
             {error}
           </Alert>
         )}
+
+        {/* Facilitated Stage Bar */}
+        <StageBar
+          session={currentSession}
+          currentRound={currentRound}
+          currentStage={currentStage}
+          hazardCountThisRound={hazardCountThisRound}
+          loading={loading}
+          onStartGame={handleStartGame}
+          onChangeStage={handleChangeStage}
+          onOpenDividends={() => setDividendsDialogOpen(true)}
+          onOpenEndEarly={() => setEndEarlyDialogOpen(true)}
+          onOpenSummary={() => setSummaryDialogOpen(true)}
+          onUpdatePlayerCount={updatePlayerCount}
+          onOpenControlsDrawer={() => setDrawerOpen(true)}
+        />
+
         {/* Tabs */}
         <Paper sx={{ borderRadius: 1, mb: 2 }}>
           <Tabs
@@ -449,7 +523,7 @@ const Game = () => {
             />
           </Tabs>
         </Paper>
-        {/* Rest of the component remains the same */}
+
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
           {currentRound === 0 ? (
@@ -458,51 +532,107 @@ const Game = () => {
                 Welcome to The Heat Is On!
               </Typography>
               <Typography variant="body1" paragraph>
-                In this game, you'll manage 5 towns facing climate hazards over
-                5 rounds. Each town has different vulnerability levels to
-                hazards: bushfires, floods, storms, heatwaves, and biohazards.
-              </Typography>
-              <Typography variant="body1">
-                Click "Start Game" to begin the first round. During each round,
-                you can:
+                In this workshop, groups manage 5 towns (plus Bludgeton as a
+                comparison town) facing climate hazards over {totalRounds}{" "}
+                round{totalRounds === 1 ? "" : "s"}. Each round moves through
+                four guided stages:
               </Typography>
               <ul>
-                <li>Apply hazard events to test town resilience</li>
-                <li>Play adaptation cards to improve town resilience</li>
-                <li>Track progress through charts and tables</li>
+                <li>
+                  <strong>1. Adapt:</strong> Groups discuss and purchase
+                  adaptation cards for their towns.
+                </li>
+                <li>
+                  <strong>2. Event:</strong> Spin the hazard wheel (or enter the
+                  physical wheel result) to apply climate hazards and view the
+                  impact report.
+                </li>
+                <li>
+                  <strong>3. Review:</strong> Flip town cards to compare
+                  dimension averages and overall resilience against Bludgeton.
+                </li>
+                <li>
+                  <strong>4. Dividends:</strong> Award 5 Effort Points for every
+                  segment at 100% and advance to the next round.
+                </li>
               </ul>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" color="text.secondary">
                 <strong>Warning - cascading impacts:</strong> If any town's
-                resilience is below 20% in any segment, all other segments for
-                that aspect of resilience will receive a -10% penalty. Use
-                adaptation cards strategically to maintain resilience across all
-                towns.
+                resilience is at or below 20% in any segment, all other segments
+                for that aspect of resilience will receive a -10% penalty when a
+                hazard strikes.
               </Typography>
             </Paper>
           ) : (
             <>
-              <TownPieCharts towns={towns} />
-
+              <TownPieCharts towns={towns} currentStage={currentStage} />
               <BarChartsView towns={towns} />
             </>
           )}
         </TabPanel>
+
         <TabPanel value={activeTab} index={1}>
           <TownDetailsView
             towns={towns}
             onUpdateTownName={handleUpdateTownName}
+            disabled={!currentSession?.isActive}
           />
         </TabPanel>
+
         <TabPanel value={activeTab} index={2}>
           <GameTable
             towns={towns}
             roundEvents={roundEvents}
             townCardPlays={townCardPlays}
             currentRound={currentRound}
+            totalRounds={totalRounds}
           />
         </TabPanel>
       </Box>
+
+      {/* Post-Hazard Impact Dialog */}
+      <HazardImpactDialog
+        open={Boolean(lastHazardImpact)}
+        onClose={clearLastHazardImpact}
+        impact={lastHazardImpact}
+        towns={towns}
+        hazardId={lastHazardId}
+      />
+
+      {/* Round Settlement / Dividends Dialog */}
+      <DividendsDialog
+        open={dividendsDialogOpen}
+        onClose={() => setDividendsDialogOpen(false)}
+        onConfirm={handleConfirmSettleRound}
+        towns={towns}
+        currentRound={currentRound}
+        totalRounds={totalRounds}
+        session={currentSession}
+        roundStats={roundStats}
+        loading={loading}
+      />
+
+      {/* End Game Early Dialog */}
+      <EndEarlyDialog
+        open={endEarlyDialogOpen}
+        onClose={() => setEndEarlyDialogOpen(false)}
+        onConfirm={handleConfirmEndEarly}
+        currentRound={currentRound}
+        totalRounds={totalRounds}
+        towns={towns}
+        loading={loading}
+      />
+
+      {/* End-of-Game Summary Dialog */}
+      <GameSummaryDialog
+        open={summaryDialogOpen}
+        onClose={() => setSummaryDialogOpen(false)}
+        session={currentSession}
+        towns={towns}
+        roundEventDocs={roundEventDocs}
+        roundStats={roundStats}
+      />
 
       {/* Notification Snackbar */}
       <Snackbar
