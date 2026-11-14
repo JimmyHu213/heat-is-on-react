@@ -11,6 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test \"src/**/*.test.js\"",
+    "test:emulator": "VITE_USE_FIREBASE_EMULATOR=true node --test --test-force-exit scripts/test-emulator.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

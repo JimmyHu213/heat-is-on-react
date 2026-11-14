@@ -4,7 +4,8 @@ import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
 // Set VITE_USE_FIREBASE_EMULATOR=true (see .env.emulator / `npm run dev:emulator`)
 // to talk to the local Auth + Firestore emulators instead of a cloud project.
-const useEmulator = import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true";
+const env = import.meta.env ?? globalThis.process?.env ?? {};
+const useEmulator = env.VITE_USE_FIREBASE_EMULATOR === "true";
 
 const firebaseConfig = useEmulator
   ? {
@@ -12,16 +13,16 @@ const firebaseConfig = useEmulator
       // can ever reach a real Firebase project.
       apiKey: "demo-api-key",
       authDomain: "demo-heat-is-on.firebaseapp.com",
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "demo-heat-is-on",
+      projectId: env.VITE_FIREBASE_PROJECT_ID || "demo-heat-is-on",
     }
   : {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID,
-      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+      apiKey: env.VITE_FIREBASE_API_KEY,
+      authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.VITE_FIREBASE_APP_ID,
+      measurementId: env.VITE_FIREBASE_MEASUREMENT_ID,
     };
 
 const app = initializeApp(firebaseConfig);

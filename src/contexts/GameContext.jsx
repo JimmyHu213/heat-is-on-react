@@ -1,10 +1,17 @@
 // src/contexts/GameContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { formatGameRuleError } from "../game/errors.js";
+import { getStage } from "../game/stages.js";
+import gameSessionService from "../services/gameSessionService.js";
 import { useAuth } from "./AuthContext";
-import gameSessionService from "../services/gameSessionService";
-import { produce } from "immer";
 
 const GameContext = createContext();
+
+const REFRESH_WARNING = "Saved; refresh to see the latest";
+
+function formatMoveError(err, fallback) {
+  return formatGameRuleError(err, fallback);
+}
 
 export function useGame() {
   return useContext(GameContext);
@@ -23,23 +30,22 @@ export function GameProvider({ children }) {
   const [towns, setTowns] = useState([]);
   const [roundEvents, setRoundEvents] = useState({});
   const [townCardPlays, setTownCardPlays] = useState({});
+  const [lastHazardImpact, setLastHazardImpact] = useState(null);
 
-  // Fetch user's sessions when user changes
   useEffect(() => {
     if (currentUser) {
       fetchUserSessions();
     } else {
-      // Clear data when user logs out
       setActiveSessions([]);
       setCompletedSessions([]);
       setCurrentSession(null);
       setTowns([]);
       setRoundEvents({});
       setTownCardPlays({});
+      setLastHazardImpact(null);
     }
   }, [currentUser]);
 
-  // Fetch user's active and completed sessions
   const fetchUserSessions = async () => {
     if (!currentUser) return;
 
@@ -63,15 +69,11 @@ export function GameProvider({ children }) {
     }
   };
 
-  // In src/contexts/GameContext.jsx
-  // Modify the createNewSession function
-
-  const createNewSession = async () => {
+  const createNewSession = async (name = "New Game", options = {}) => {
     if (!currentUser) return null;
 
     setLoading(true);
     try {
-      // Check if user already has 3 active sessions
       if (activeSessions.length >= 3) {
         setError(
           "You can only have a maximum of 3 active game sessions. Please complete or delete an existing session."
@@ -79,25 +81,34 @@ export function GameProvider({ children }) {
         return null;
       }
 
-      const session = await gameSessionService.createSession(currentUser.uid);
+      const session = await gameSessionService.createSession(
+        currentUser.uid,
+        name,
+        options
+      );
 
-      // Refresh session list
-      await fetchUserSessions();
-
-      setError(null);
+      try {
+        await fetchUserSessions();
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Saved session, but refresh failed:", refreshErr);
+        setError(REFRESH_WARNING);
+      }
       return session;
     } catch (err) {
       console.error("Error creating new session:", err);
-      setError("Failed to create a new game session. Please try again.");
+      setError(
+        formatMoveError(
+          err,
+          "Failed to create a new game session. Please try again."
+        )
+      );
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // In src/contexts/GameContext.jsx
-
-  // Add a new function to the GameProvider component
   const updateSessionName = async (sessionId, newName) => {
     setLoading(true);
     try {
@@ -106,18 +117,20 @@ export function GameProvider({ children }) {
         newName
       );
 
-      // Update current session if it's the active one
       if (currentSession && currentSession.id === sessionId) {
-        setCurrentSession({
-          ...currentSession,
-          name: newName,
-        });
+        setCurrentSession((prev) => ({
+          ...prev,
+          name: newName.trim(),
+        }));
       }
 
-      // Refresh session lists to reflect the change
-      await fetchUserSessions();
-
-      setError(null);
+      try {
+        await fetchUserSessions();
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Saved session name, but refresh failed:", refreshErr);
+        setError(REFRESH_WARNING);
+      }
       return updatedSession;
     } catch (err) {
       console.error("Error updating session name:", err);
@@ -128,24 +141,52 @@ export function GameProvider({ children }) {
     }
   };
 
-  // Load a specific game session
+  const updatePlayerCount = async (sessionId, playerCount) => {
+    setLoading(true);
+    try {
+      const updated = await gameSessionService.updatePlayerCount(
+        sessionId,
+        playerCount
+      );
+      if (currentSession && currentSession.id === sessionId) {
+        setCurrentSession((prev) => ({
+          ...prev,
+          playerCount: updated.playerCount,
+        }));
+      }
+      setError(null);
+      return updated;
+    } catch (err) {
+      console.error("Error updating player count:", err);
+      setError(
+        formatMoveError(err, "Failed to update player count. Please try again.")
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadSession = async (sessionId) => {
     setLoading(true);
     try {
       const session = await gameSessionService.getSession(sessionId);
       if (!session) {
-        throw new Error("Session not found");
+        setCurrentSession(null);
+        setTowns([]);
+        setRoundEvents({});
+        setTownCardPlays({});
+        setError("Game not found");
+        return null;
       }
 
       setCurrentSession(session);
       setCurrentRound(session.currentRound);
       setTowns(session.towns || []);
 
-      // Load round events
       const events = await gameSessionService.getSessionRoundEvents(sessionId);
       setRoundEvents(events);
 
-      // Load card plays for each town
       const cardPlays = {};
       for (const town of session.towns || []) {
         const townCards = await gameSessionService.getTownCardPlays(town.id);
@@ -164,16 +205,11 @@ export function GameProvider({ children }) {
     }
   };
 
-  // Delete a game session
   const deleteSession = async (sessionId) => {
     setLoading(true);
     try {
       await gameSessionService.deleteSession(sessionId);
 
-      // Refresh session list
-      await fetchUserSessions();
-
-      // If this was the current session, clear it
       if (currentSession && currentSession.id === sessionId) {
         setCurrentSession(null);
         setTowns([]);
@@ -181,7 +217,13 @@ export function GameProvider({ children }) {
         setTownCardPlays({});
       }
 
-      setError(null);
+      try {
+        await fetchUserSessions();
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Deleted session, but refresh failed:", refreshErr);
+        setError(REFRESH_WARNING);
+      }
       return true;
     } catch (err) {
       console.error("Error deleting session:", err);
@@ -192,32 +234,96 @@ export function GameProvider({ children }) {
     }
   };
 
-  // Advance to the next round
-  const advanceRound = async () => {
+  const startGame = async () => {
     if (!currentSession) return null;
 
     setLoading(true);
     try {
-      const updatedSession = await gameSessionService.advanceRound(
-        currentSession.id
+      const updatedSession = await gameSessionService.startGame(
+        currentSession.id,
+        { expectedRevision: currentSession.revision }
       );
 
       setCurrentSession(updatedSession);
       setCurrentRound(updatedSession.currentRound);
       setTowns(updatedSession.towns || []);
-
       setError(null);
       return updatedSession;
     } catch (err) {
-      console.error("Error advancing round:", err);
-      setError("Failed to advance to the next round. Please try again.");
+      console.error("Error starting game:", err);
+      setError(formatMoveError(err, "Failed to start game. Please try again."));
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Apply a card to a town
+  const changeStage = async (targetStage) => {
+    if (!currentSession) return null;
+
+    setLoading(true);
+    try {
+      const updatedSession = await gameSessionService.changeStage(
+        currentSession.id,
+        targetStage,
+        { expectedRevision: currentSession.revision }
+      );
+      setCurrentSession((prev) => ({ ...prev, ...updatedSession }));
+      setError(null);
+      return updatedSession;
+    } catch (err) {
+      console.error("Error changing stage:", err);
+      setError(
+        formatMoveError(err, "Failed to change stage. Please try again.")
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const settleRound = async ({ endEarly = false, allowAnyStage = false } = {}) => {
+    if (!currentSession) return null;
+
+    setLoading(true);
+    try {
+      const updatedSession = await gameSessionService.settleRound(
+        currentSession.id,
+        {
+          expectedRound: currentRound,
+          expectedRevision: currentSession.revision,
+          endEarly,
+          allowAnyStage,
+        }
+      );
+
+      setCurrentSession(updatedSession);
+      setCurrentRound(updatedSession.currentRound);
+      setTowns(updatedSession.towns || []);
+      setError(null);
+      return updatedSession;
+    } catch (err) {
+      console.error("Error settling round:", err);
+      setError(
+        formatMoveError(
+          err,
+          "Failed to advance to the next round. Please try again."
+        )
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const advanceRound = async () => {
+    if (!currentSession) return null;
+    if (currentRound === 0) {
+      return await startGame();
+    }
+    return await settleRound({ allowAnyStage: true });
+  };
+
   const playCard = async (townId, cardId) => {
     if (!currentSession || currentRound === 0) return null;
 
@@ -226,33 +332,40 @@ export function GameProvider({ children }) {
       const result = await gameSessionService.applyCardToTown(
         townId,
         cardId,
-        currentRound
+        currentRound,
+        { expectedRevision: currentSession.revision }
       );
 
-      // Update town in state
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
       setTowns((prevTowns) =>
         prevTowns.map((t) => (t.id === result.town.id ? result.town : t))
       );
 
-      // Update card plays
-      const townCards = await gameSessionService.getTownCardPlays(townId);
-      setTownCardPlays((prev) => ({
-        ...prev,
-        [townId]: townCards,
-      }));
+      try {
+        const townCards = await gameSessionService.getTownCardPlays(townId);
+        setTownCardPlays((prev) => ({
+          ...prev,
+          [townId]: townCards,
+        }));
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Card saved, but card plays re-read failed:", refreshErr);
+        setError(REFRESH_WARNING);
+        return { ...result, refreshFailed: true };
+      }
 
-      setError(null);
       return result;
     } catch (err) {
       console.error("Error playing card:", err);
-      setError("Failed to play the card. Please try again.");
+      setError(
+        formatMoveError(err, "Failed to play the card. Please try again.")
+      );
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Apply a hazard to all towns
   const applyHazard = async (hazardId) => {
     if (!currentSession || currentRound === 0) return null;
 
@@ -261,212 +374,226 @@ export function GameProvider({ children }) {
       const result = await gameSessionService.applyHazardToSession(
         currentSession.id,
         hazardId,
-        currentRound
+        currentRound,
+        { expectedRevision: currentSession.revision }
       );
 
-      // Update towns
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
       setTowns(result.towns);
+      setLastHazardImpact(result.impact);
 
-      // Update round events
-      const events = await gameSessionService.getSessionRoundEvents(
-        currentSession.id
-      );
-      setRoundEvents(events);
+      try {
+        const events = await gameSessionService.getSessionRoundEvents(
+          currentSession.id
+        );
+        setRoundEvents(events);
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Hazard saved, but events re-read failed:", refreshErr);
+        setRoundEvents((prev) => ({
+          ...prev,
+          [currentRound]: result.roundEvent.hazardIds,
+        }));
+        setError(REFRESH_WARNING);
+        return { ...result, refreshFailed: true };
+      }
 
-      setError(null);
       return result;
     } catch (err) {
       console.error("Error applying hazard:", err);
-      setError("Failed to apply the hazard. Please try again.");
+      setError(
+        formatMoveError(err, "Failed to apply the hazard. Please try again.")
+      );
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Refresh data for the current session
   const refreshSessionData = async () => {
     if (!currentSession) return;
-
-    setLoading(true);
-    try {
-      await loadSession(currentSession.id);
-      setError(null);
-    } catch (err) {
-      console.error("Error refreshing session data:", err);
-      setError("Failed to refresh game data. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    await loadSession(currentSession.id);
   };
 
-  // Get town by ID
   const getTownById = (townId) => {
     return towns.find((town) => town.id === townId) || null;
   };
 
-  // State for undo functionality
-  const [stateHistory, setStateHistory] = useState([]);
-
-  // Save current state to history before making changes
-  const saveStateSnapshot = () => {
-    setStateHistory(
-      produce((draft) => {
-        draft.push({
-          towns: towns,
-          roundEvents: roundEvents,
-          townCardPlays: townCardPlays,
-        });
-      })
-    );
-  };
-
-  const updateTown = async (updatedTown) => {
+  const updateTownName = async (townId, name) => {
     if (!currentSession) return null;
 
     setLoading(true);
     try {
-      // Call the service to update the town
-      const result = await gameSessionService.updateTown(
-        updatedTown.id,
-        updatedTown
-      );
-
-      // Update towns in state
+      await gameSessionService.updateTownName(townId, name);
+      const trimmedName = name.trim();
+      let updatedTown = null;
       setTowns((prevTowns) =>
-        prevTowns.map((town) => (town.id === updatedTown.id ? result : town))
+        prevTowns.map((t) => {
+          if (t.id !== townId) return t;
+          updatedTown = { ...t, name: trimmedName };
+          return updatedTown;
+        })
       );
-
       setError(null);
-      return result;
+      return updatedTown || { id: townId, name: trimmedName };
     } catch (err) {
-      console.error("Error updating town:", err);
-      setError("Failed to update town. Please try again.");
+      console.error("Error updating town name:", err);
+      setError(
+        formatMoveError(err, "Failed to update town name. Please try again.")
+      );
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Revert to previous state
-  const revertToPreviousState = async () => {
-    if (stateHistory.length === 0) {
-      setError("Nothing to revert");
-      return null;
-    }
+  const updateTownBudget = async (townId, effortPoints) => {
+    if (!currentSession) return null;
 
     setLoading(true);
     try {
-      // Get the last state from history
-      const previousState = stateHistory[stateHistory.length - 1];
-
-      // Update towns in database
-      for (const town of previousState.towns) {
-        await gameSessionService.updateTown(town.id, town);
-      }
-
-      // NEW CODE: Handle round events reversion
-      // Get the latest round event for the current round
-      const currentRoundEventId = `${currentSession.id}_${currentRound}`;
-
-      // We need to determine if we should update or delete the round event
-      const previousRoundEvents = previousState.roundEvents[currentRound] || [];
-
-      if (previousRoundEvents.length === 0) {
-        // If there were no hazards in the previous state, delete the current round event
-        await gameSessionService.deleteRoundEvent(currentRoundEventId);
-      } else {
-        // Otherwise update it with the previous hazards
-        await gameSessionService.updateRoundEvent(currentRoundEventId, {
-          hazardIds: previousRoundEvents,
-        });
-      }
-
-      // NEW CODE: Handle card plays reversion
-      // For each town, we need to restore its card plays to the previous state
-      for (const townId in previousState.townCardPlays) {
-        const previousPlays =
-          previousState.townCardPlays[townId][currentRound] || [];
-
-        // Get current card plays for this town in this round
-        const currentPlays = await gameSessionService.getTownCardPlaysForRound(
-          townId,
-          currentRound
-        );
-
-        // Delete card plays that don't exist in the previous state
-        for (const play of currentPlays) {
-          if (!previousPlays.includes(play.cardName)) {
-            await gameSessionService.deleteCardPlay(play.id);
-          }
-        }
-      }
-
-      // Update UI state
-      setTowns(previousState.towns);
-      setRoundEvents(previousState.roundEvents);
-      setTownCardPlays(previousState.townCardPlays);
-
-      // Remove the used state from history
-      setStateHistory((prevHistory) => prevHistory.slice(0, -1));
-
+      const result = await gameSessionService.updateTownBudget(
+        townId,
+        effortPoints,
+        { expectedRevision: currentSession.revision }
+      );
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
+      setTowns((prevTowns) =>
+        prevTowns.map((t) => (t.id === townId ? result.town : t))
+      );
       setError(null);
-      return true;
+      return result.town;
     } catch (err) {
-      console.error("Error reverting to previous state:", err);
-      setError("Failed to revert changes. Please try again.");
+      console.error("Error updating town budget:", err);
+      setError(
+        formatMoveError(err, "Failed to update town budget. Please try again.")
+      );
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Wrap functions that modify state to save snapshots
-  const wrappedApplyHazard = async (hazardId) => {
-    saveStateSnapshot();
-    return applyHazard(hazardId);
+  const updateTown = async (updatedTown) => {
+    if (!currentSession || !updatedTown) return null;
+    const existing = towns.find((t) => t.id === updatedTown.id);
+    let resultTown = existing || null;
+    if (
+      existing &&
+      typeof updatedTown.effortPoints === "number" &&
+      updatedTown.effortPoints !== existing.effortPoints
+    ) {
+      resultTown = await updateTownBudget(
+        updatedTown.id,
+        updatedTown.effortPoints
+      );
+      if (!resultTown) return null;
+    }
+    if (
+      existing &&
+      typeof updatedTown.name === "string" &&
+      updatedTown.name !== existing.name
+    ) {
+      const renamed = await updateTownName(updatedTown.id, updatedTown.name);
+      if (!renamed) return null;
+      const mergedName = updatedTown.name.trim();
+      resultTown = { ...(resultTown || existing), name: mergedName };
+      setTowns((prevTowns) =>
+        prevTowns.map((t) =>
+          t.id === updatedTown.id ? { ...t, name: mergedName } : t
+        )
+      );
+    }
+    return resultTown;
   };
 
-  const wrappedPlayCard = async (townId, cardId) => {
-    saveStateSnapshot();
-    return playCard(townId, cardId);
+  const revertToPreviousState = async () => {
+    if (!currentSession) return null;
+
+    setLoading(true);
+    try {
+      const result = await gameSessionService.undoLastMove(currentSession.id, {
+        expectedRevision: currentSession.revision,
+      });
+
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
+      setTowns(result.towns);
+      setLastHazardImpact(null);
+
+      try {
+        const events = await gameSessionService.getSessionRoundEvents(
+          currentSession.id
+        );
+        setRoundEvents(events);
+
+        const cardPlays = {};
+        for (const town of result.towns || []) {
+          const townCards = await gameSessionService.getTownCardPlays(town.id);
+          cardPlays[town.id] = townCards;
+        }
+        setTownCardPlays(cardPlays);
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Undo saved, but re-read failed:", refreshErr);
+        setError(REFRESH_WARNING);
+        return { ...result, refreshFailed: true };
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Error reverting to previous state:", err);
+      setError(
+        formatMoveError(err, "Failed to revert changes. Please try again.")
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const wrappedAdvanceRound = async () => {
-    setStateHistory([]);
-    return advanceRound();
-  };
+  const hazardCountThisRound = (roundEvents[currentRound] || []).length;
+  const currentStage = currentSession
+    ? getStage(currentSession, hazardCountThisRound)
+    : "setup";
+  const canRevert = Boolean(
+    currentSession?.isActive &&
+      currentSession?.lastUndo &&
+      currentSession.lastUndo.round === currentRound
+  );
 
-  // Context value
   const value = {
-    // State
     loading,
     error,
     activeSessions,
     completedSessions,
     currentSession,
     currentRound,
+    currentStage,
     towns,
     roundEvents,
     townCardPlays,
-    canRevert: stateHistory.length > 0,
+    lastHazardImpact,
+    canRevert,
 
-    // Actions
     fetchUserSessions,
     createNewSession,
     updateSessionName,
+    updatePlayerCount,
     loadSession,
     deleteSession,
-    advanceRound: wrappedAdvanceRound,
-    playCard: wrappedPlayCard,
-    applyHazard: wrappedApplyHazard,
+    startGame,
+    changeStage,
+    settleRound,
+    advanceRound,
+    playCard,
+    applyHazard,
     refreshSessionData,
     getTownById,
     updateTown,
-    saveStateSnapshot,
+    updateTownName,
+    updateTownBudget,
     revertToPreviousState,
 
-    // Clear error
     clearError: () => setError(null),
   };
 

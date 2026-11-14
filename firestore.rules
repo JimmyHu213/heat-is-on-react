@@ -8,28 +8,217 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Single gate for all game data. CCS integration adds its subscription
+    // and session-age check here in one place.
+    function canAccessGameData() {
+      return signedIn();
+    }
+
+    function ownsSession(sessionId) {
+      return canAccessGameData()
+        && sessionId is string
+        && exists(/databases/$(database)/documents/game_sessions/$(sessionId))
+        && get(/databases/$(database)/documents/game_sessions/$(sessionId)).data.userId == request.auth.uid;
+    }
+
+    function isScore(v) {
+      return v is int && v >= 0 && v <= 100;
+    }
+
+    function validAspectMap(m) {
+      return m is map
+        && isScore(m.nature)
+        && isScore(m.economy)
+        && isScore(m.society)
+        && isScore(m.health);
+    }
+
+    function validTownScores(data) {
+      return validAspectMap(data.bushfire)
+        && validAspectMap(data.flood)
+        && validAspectMap(data.stormSurge)
+        && validAspectMap(data.heatwave)
+        && validAspectMap(data.biohazard);
+    }
+
+    function validStage(data) {
+      return !('stage' in data)
+        || data.stage in ['adaptation', 'hazard', 'review', 'complete'];
+    }
+
+    function validTotalRounds(data) {
+      return !('totalRounds' in data)
+        || (data.totalRounds is int && data.totalRounds >= 1 && data.totalRounds <= 20);
+    }
+
+    function validPlayerCount(data) {
+      return !('playerCount' in data)
+        || data.playerCount == null
+        || (data.playerCount is int && data.playerCount >= 1 && data.playerCount <= 200);
+    }
+
+    function validWheelFlag(data) {
+      return !('digitalWheelEnabled' in data)
+        || data.digitalWheelEnabled is bool;
+    }
+
     // A user's own profile document (keyed by auth uid).
+    // Does not require request.auth.token.email so custom-token CCS users work.
     match /users/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
     // Game sessions belong to the user in their `userId` field.
     match /game_sessions/{sessionId} {
-      allow read, update, delete: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if resource == null ? canAccessGameData() : (canAccessGameData() && resource.data.userId == request.auth.uid);
+      allow delete: if canAccessGameData() && resource.data.userId == request.auth.uid;
+
+      allow create: if canAccessGameData()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.currentRound is int
+        && request.resource.data.currentRound >= 0
+        && request.resource.data.currentRound <= 20
+        && request.resource.data.isActive is bool
+        && validTotalRounds(request.resource.data)
+        && validPlayerCount(request.resource.data)
+        && validWheelFlag(request.resource.data)
+        && validStage(request.resource.data)
+        && (!('revision' in request.resource.data) || request.resource.data.revision == 0);
+
+      allow update: if canAccessGameData()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.currentRound is int
+        && (request.resource.data.currentRound == resource.data.currentRound
+            || request.resource.data.currentRound == resource.data.currentRound + 1)
+        && request.resource.data.currentRound >= 0
+        && request.resource.data.currentRound <= 21
+        && request.resource.data.isActive is bool
+        && validTotalRounds(request.resource.data)
+        && validPlayerCount(request.resource.data)
+        && validWheelFlag(request.resource.data)
+        && validStage(request.resource.data)
+        && (resource.data.currentRound == 0
+            || !('totalRounds' in resource.data)
+            || request.resource.data.totalRounds == resource.data.totalRounds)
+        && (resource.data.currentRound == 0
+            || !('digitalWheelEnabled' in resource.data)
+            || request.resource.data.digitalWheelEnabled == resource.data.digitalWheelEnabled)
+        && (!('revision' in request.resource.data)
+            || !('revision' in resource.data)
+            || request.resource.data.revision == resource.data.revision
+            || request.resource.data.revision == resource.data.revision + 1);
     }
 
-    // Per-session data (linked to a session by `sessionId`).
-    // Any signed-in user for now; tighten to session owners if needed.
-    match /towns/{id}         { allow read, write: if signedIn(); }
-    match /card_plays/{id}    { allow read, write: if signedIn(); }
-    match /round_events/{id}  { allow read, write: if signedIn(); }
-    match /round_stats/{id}   { allow read, write: if signedIn(); }
+    // Towns belong to a session.
+    match /towns/{townId} {
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
+
+      allow create: if ownsSession(request.resource.data.sessionId)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.townNumber is int
+        && request.resource.data.townNumber >= 1
+        && request.resource.data.townNumber <= 6
+        && request.resource.data.effortPoints is int
+        && request.resource.data.effortPoints >= 0
+        && request.resource.data.effortPoints <= 999
+        && request.resource.data.currentRound is int
+        && request.resource.data.currentRound >= 0
+        && request.resource.data.currentRound <= 21
+        && request.resource.data.isComparisonTown is bool
+        && validTownScores(request.resource.data);
+
+      allow update: if ownsSession(resource.data.sessionId)
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.townNumber == resource.data.townNumber
+        && request.resource.data.isComparisonTown == resource.data.isComparisonTown
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.effortPoints is int
+        && request.resource.data.effortPoints >= 0
+        && request.resource.data.effortPoints <= 9999
+        && request.resource.data.currentRound is int
+        && request.resource.data.currentRound >= 0
+        && request.resource.data.currentRound <= 21
+        && validTownScores(request.resource.data);
+    }
+
+    // Card plays belong to a session.
+    match /card_plays/{playId} {
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
+
+      allow create: if ownsSession(request.resource.data.sessionId)
+        && request.resource.data.townId is string
+        && request.resource.data.cardId is string
+        && request.resource.data.playedAtRound is int
+        && request.resource.data.playedAtRound >= 1
+        && request.resource.data.playedAtRound <= 20
+        && request.resource.data.effectiveRounds is list
+        && request.resource.data.effectiveRounds.size() >= 1
+        && request.resource.data.effectiveRounds.size() <= 3
+        && request.resource.data.isActive == true;
+
+      allow update: if ownsSession(resource.data.sessionId)
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.townId == resource.data.townId
+        && request.resource.data.cardId == resource.data.cardId
+        && request.resource.data.playedAtRound == resource.data.playedAtRound
+        && request.resource.data.effectiveRounds == resource.data.effectiveRounds
+        && request.resource.data.isActive is bool;
+    }
+
+    // Round events use ID `<sessionId>_<roundNumber>`.
+    match /round_events/{eventId} {
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
+
+      allow create: if ownsSession(request.resource.data.sessionId)
+        && request.resource.data.roundNumber is int
+        && request.resource.data.roundNumber >= 1
+        && request.resource.data.roundNumber <= 20
+        && eventId == request.resource.data.sessionId + "_" + string(request.resource.data.roundNumber)
+        && request.resource.data.hazardIds is list
+        && request.resource.data.hazardIds.size() >= 0
+        && request.resource.data.hazardIds.size() <= 5;
+
+      allow update: if ownsSession(resource.data.sessionId)
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.roundNumber == resource.data.roundNumber
+        && request.resource.data.hazardIds is list
+        && request.resource.data.hazardIds.size() >= 0
+        && request.resource.data.hazardIds.size() <= 5;
+    }
+
+    // Round stats use ID `<sessionId>_<roundNumber>` and are written once on settlement.
+    match /round_stats/{statsId} {
+      allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
+      allow delete: if ownsSession(resource.data.sessionId);
+
+      allow create: if ownsSession(request.resource.data.sessionId)
+        && request.resource.data.roundNumber is int
+        && request.resource.data.roundNumber >= 1
+        && request.resource.data.roundNumber <= 20
+        && statsId == request.resource.data.sessionId + "_" + string(request.resource.data.roundNumber)
+        && request.resource.data.towns is map;
+
+      allow update: if false;
+    }
 
     // Optional shared game reference data (not currently written by the app).
-    match /gameSettings/{id}  { allow read: if signedIn(); }
-    match /townTemplates/{id} { allow read: if signedIn(); }
-    match /cards/{id}         { allow read: if signedIn(); }
-    match /hazards/{id}       { allow read: if signedIn(); }
+    match /gameSettings/{id}  { allow read: if canAccessGameData(); }
+    match /townTemplates/{id} { allow read: if canAccessGameData(); }
+    match /cards/{id}         { allow read: if canAccessGameData(); }
+    match /hazards/{id}       { allow read: if canAccessGameData(); }
   }
 }
