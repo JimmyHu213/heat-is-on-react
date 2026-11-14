@@ -10,6 +10,7 @@
     "emulators:fresh": "firebase emulators:start --project demo-heat-is-on",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test \"src/**/*.test.js\"",
     "preview": "vite preview"
   },
   "dependencies": {
