@@ -228,6 +228,8 @@ export function GameProvider({ children }) {
         setCurrentSession(null);
         setTowns([]);
         setRoundEvents({});
+        setRoundEventDocs([]);
+        setRoundStats([]);
         setTownCardPlays({});
       }
 

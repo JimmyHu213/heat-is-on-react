@@ -57,6 +57,7 @@ export default function StageBar({
 }) {
   const [playerDialogOpen, setPlayerDialogOpen] = useState(false);
   const [playerInput, setPlayerInput] = useState("");
+  const [playerError, setPlayerError] = useState(null);
 
   if (!session) return null;
 
@@ -82,12 +83,23 @@ export default function StageBar({
 
   const handleOpenPlayerDialog = () => {
     setPlayerInput(playerCount !== null ? String(playerCount) : "");
+    setPlayerError(null);
     setPlayerDialogOpen(true);
   };
 
   const handleSavePlayerCount = async () => {
+    setPlayerError(null);
     const trimmed = playerInput.trim();
     const parsed = trimmed === "" ? null : Number(trimmed);
+    if (
+      parsed !== null &&
+      (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_PLAYERS)
+    ) {
+      setPlayerError(
+        `Please enter a whole number between 1 and ${MAX_PLAYERS}, or leave blank.`
+      );
+      return;
+    }
     if (onUpdatePlayerCount) {
       const updated = await onUpdatePlayerCount(session.id, parsed);
       if (updated) {
@@ -353,11 +365,15 @@ export default function StageBar({
             label="Number of Players (1–200)"
             type="number"
             value={playerInput}
-            onChange={(e) => setPlayerInput(e.target.value)}
+            onChange={(e) => {
+              setPlayerInput(e.target.value);
+              if (playerError) setPlayerError(null);
+            }}
             fullWidth
             margin="normal"
             inputProps={{ min: 1, max: MAX_PLAYERS, step: 1 }}
-            helperText="Leave blank to clear"
+            error={Boolean(playerError)}
+            helperText={playerError || "Leave blank to clear"}
             autoFocus
           />
         </DialogContent>

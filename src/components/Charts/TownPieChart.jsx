@@ -17,7 +17,6 @@ import {
   heatwaveColor1,
   biohazardColor1,
   natureColor,
-  economyColor,
   societyColor,
   primaryColorLight,
   secondaryColor,

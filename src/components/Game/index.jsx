@@ -241,6 +241,7 @@ const Game = () => {
     try {
       const town = towns.find((t) => t.id === townId);
       const card = allCards.find((c) => c.id === cardId);
+      if (!town || !card) return;
 
       if (town.effortPoints < card.cost) {
         showNotification(
