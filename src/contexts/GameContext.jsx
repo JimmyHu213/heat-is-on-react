@@ -29,8 +29,11 @@ export function GameProvider({ children }) {
   const [currentRound, setCurrentRound] = useState(0);
   const [towns, setTowns] = useState([]);
   const [roundEvents, setRoundEvents] = useState({});
+  const [roundEventDocs, setRoundEventDocs] = useState([]);
+  const [roundStats, setRoundStats] = useState([]);
   const [townCardPlays, setTownCardPlays] = useState({});
   const [lastHazardImpact, setLastHazardImpact] = useState(null);
+  const [lastHazardId, setLastHazardId] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -41,8 +44,11 @@ export function GameProvider({ children }) {
       setCurrentSession(null);
       setTowns([]);
       setRoundEvents({});
+      setRoundEventDocs([]);
+      setRoundStats([]);
       setTownCardPlays({});
       setLastHazardImpact(null);
+      setLastHazardId(null);
     }
   }, [currentUser]);
 
@@ -175,6 +181,8 @@ export function GameProvider({ children }) {
         setCurrentSession(null);
         setTowns([]);
         setRoundEvents({});
+        setRoundEventDocs([]);
+        setRoundStats([]);
         setTownCardPlays({});
         setError("Game not found");
         return null;
@@ -184,8 +192,14 @@ export function GameProvider({ children }) {
       setCurrentRound(session.currentRound);
       setTowns(session.towns || []);
 
-      const events = await gameSessionService.getSessionRoundEvents(sessionId);
+      const [events, eventDocs, stats] = await Promise.all([
+        gameSessionService.getSessionRoundEvents(sessionId),
+        gameSessionService.getSessionRoundEventDocs(sessionId),
+        gameSessionService.getSessionRoundStats(sessionId),
+      ]);
       setRoundEvents(events);
+      setRoundEventDocs(eventDocs);
+      setRoundStats(stats);
 
       const cardPlays = {};
       for (const town of session.towns || []) {
@@ -300,7 +314,21 @@ export function GameProvider({ children }) {
       setCurrentSession(updatedSession);
       setCurrentRound(updatedSession.currentRound);
       setTowns(updatedSession.towns || []);
-      setError(null);
+
+      try {
+        const [stats, eventDocs] = await Promise.all([
+          gameSessionService.getSessionRoundStats(currentSession.id),
+          gameSessionService.getSessionRoundEventDocs(currentSession.id),
+        ]);
+        setRoundStats(stats);
+        setRoundEventDocs(eventDocs);
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Round settled, but stats re-read failed:", refreshErr);
+        setError(REFRESH_WARNING);
+        return { ...updatedSession, refreshFailed: true };
+      }
+
       return updatedSession;
     } catch (err) {
       console.error("Error settling round:", err);
@@ -381,12 +409,15 @@ export function GameProvider({ children }) {
       setCurrentSession((prev) => ({ ...prev, ...result.session }));
       setTowns(result.towns);
       setLastHazardImpact(result.impact);
+      setLastHazardId(hazardId);
 
       try {
-        const events = await gameSessionService.getSessionRoundEvents(
-          currentSession.id
-        );
+        const [events, eventDocs] = await Promise.all([
+          gameSessionService.getSessionRoundEvents(currentSession.id),
+          gameSessionService.getSessionRoundEventDocs(currentSession.id),
+        ]);
         setRoundEvents(events);
+        setRoundEventDocs(eventDocs);
         setError(null);
       } catch (refreshErr) {
         console.warn("Hazard saved, but events re-read failed:", refreshErr);
@@ -519,12 +550,15 @@ export function GameProvider({ children }) {
       setCurrentSession((prev) => ({ ...prev, ...result.session }));
       setTowns(result.towns);
       setLastHazardImpact(null);
+      setLastHazardId(null);
 
       try {
-        const events = await gameSessionService.getSessionRoundEvents(
-          currentSession.id
-        );
+        const [events, eventDocs] = await Promise.all([
+          gameSessionService.getSessionRoundEvents(currentSession.id),
+          gameSessionService.getSessionRoundEventDocs(currentSession.id),
+        ]);
         setRoundEvents(events);
+        setRoundEventDocs(eventDocs);
 
         const cardPlays = {};
         for (const town of result.towns || []) {
@@ -571,8 +605,11 @@ export function GameProvider({ children }) {
     currentStage,
     towns,
     roundEvents,
+    roundEventDocs,
+    roundStats,
     townCardPlays,
     lastHazardImpact,
+    lastHazardId,
     canRevert,
 
     fetchUserSessions,
@@ -593,6 +630,10 @@ export function GameProvider({ children }) {
     updateTownName,
     updateTownBudget,
     revertToPreviousState,
+    clearLastHazardImpact: () => {
+      setLastHazardImpact(null);
+      setLastHazardId(null);
+    },
 
     clearError: () => setError(null),
   };
