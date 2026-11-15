@@ -4,19 +4,10 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
   Grid,
   Tooltip,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   Alert,
   Chip,
-  Link,
 } from "@mui/material";
 import { hazards } from "../../../constants/hazards";
 import {
@@ -27,10 +18,7 @@ import {
   biohazardColor1,
 } from "../../../constants/palette";
 import { MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
-import {
-  MEDIA_CONFIG,
-  getEventGifPath,
-} from "../../../constants/mediaConfig.js";
+import { WHEEL_SLICES } from "../../../game/wheel.js";
 import HazardIcon from "../../common/HazardIcon";
 import HazardWheel from "./HazardWheel";
 
@@ -50,9 +38,7 @@ const HazardControls = ({
   digitalWheelEnabled = true,
   hazardCountThisRound = 0,
 }) => {
-  const [selectedHazard, setSelectedHazard] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [failedGifUrl, setFailedGifUrl] = useState(null);
+  const [mysteryBanner, setMysteryBanner] = useState(false);
 
   const isHazardStage = currentStage === "hazard";
   const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
@@ -61,25 +47,14 @@ const HazardControls = ({
   const getHazardColor = (hazardId) => HAZARD_COLORS[hazardId] || "grey.500";
 
   const handleHazardSelect = (hazard) => {
-    setSelectedHazard(hazard);
-    setDialogOpen(true);
-  };
-
-  const handleConfirmHazard = () => {
-    if (selectedHazard) {
-      onApplyHazard(selectedHazard.id);
+    if (!hazard) return;
+    if (hazard.isMystery || hazard.id === "mystery") {
+      setMysteryBanner(true);
+      return;
     }
-    setDialogOpen(false);
+    setMysteryBanner(false);
+    onApplyHazard(hazard.id);
   };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-
-  const selectedGifUrl = selectedHazard
-    ? getEventGifPath(selectedHazard.id)
-    : null;
-  const attribution = MEDIA_CONFIG.eventGifAttribution;
 
   return (
     <Box>
@@ -92,14 +67,25 @@ const HazardControls = ({
         }}
       >
         <Typography variant="subtitle1" fontWeight="bold">
-          2. Event Stage: Apply Hazard
+          Event: Climate Hazard
         </Typography>
         <Chip
-          label={`${hazardCountThisRound} / ${MAX_HAZARDS_PER_ROUND} this round`}
+          label={`${hazardCountThisRound} / ${MAX_HAZARDS_PER_ROUND} this year`}
           size="small"
           color={hazardCountThisRound > 0 ? "warning" : "default"}
         />
       </Box>
+
+      {mysteryBanner && (
+        <Alert
+          severity="info"
+          onClose={() => setMysteryBanner(false)}
+          sx={{ mb: 1.5 }}
+        >
+          Mystery event (<strong>?</strong>) — no automatic hazard applied.
+          Facilitator may discuss or choose a hazard manually.
+        </Alert>
+      )}
 
       {!isHazardStage ? (
         <Alert severity="info" sx={{ mb: 1.5 }}>
@@ -107,20 +93,20 @@ const HazardControls = ({
         </Alert>
       ) : limitReached ? (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
-          Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Round{" "}
-          {currentRound}. Proceed to Review.
+          Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Year{" "}
+          {2050 + currentRound}. Proceed to Review.
         </Alert>
       ) : (
         <Typography variant="body2" color="text.secondary" gutterBottom>
           {digitalWheelEnabled !== false
-            ? "Spin the wheel to randomly select a hazard, or choose one below."
-            : "Select the hazard landed on your physical wheel to apply to all towns."}
+            ? "Spin the wheel or choose a hazard below to apply immediately."
+            : "Select the hazard landed on your physical wheel to apply immediately."}
         </Typography>
       )}
 
       {digitalWheelEnabled !== false && (
         <HazardWheel
-          hazards={hazards}
+          hazards={WHEEL_SLICES}
           disabled={controlsDisabled}
           onSelectHazard={handleHazardSelect}
         />
@@ -143,7 +129,7 @@ const HazardControls = ({
 
           return (
             <Grid item xs={6} key={hazard.id}>
-              <Tooltip title={`Select ${hazard.name} hazard`}>
+              <Tooltip title={`Apply ${hazard.name} hazard`}>
                 <span>
                   <Button
                     variant="outlined"
@@ -185,132 +171,6 @@ const HazardControls = ({
         Note: Applying a hazard reduces town resilience scores and triggers a
         -10 penalty across all hazards for any aspect already at or below 20.
       </Typography>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          {selectedHazard && (
-            <HazardIcon hazardId={selectedHazard.id} size={26} />
-          )}
-          <span>Confirm {selectedHazard?.name} Hazard</span>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Apply the <strong>{selectedHazard?.name}</strong> hazard to all 6
-            towns in Round {currentRound}?
-          </DialogContentText>
-
-          {selectedHazard && (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                mt: 2,
-              }}
-            >
-              {selectedGifUrl && failedGifUrl !== selectedGifUrl ? (
-                <Box
-                  component="img"
-                  src={selectedGifUrl}
-                  alt={`${selectedHazard.name} event animation`}
-                  onError={() => setFailedGifUrl(selectedGifUrl)}
-                  sx={{ width: 112, height: 112, objectFit: "contain" }}
-                />
-              ) : (
-                <HazardIcon hazardId={selectedHazard.id} size={64} />
-              )}
-              {selectedGifUrl &&
-                failedGifUrl !== selectedGifUrl &&
-                attribution && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    <Link
-                      href={attribution.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      color="inherit"
-                      underline="hover"
-                    >
-                      {attribution.label}
-                    </Link>
-                    {" · "}
-                    <Link
-                      href={attribution.licenseUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      color="inherit"
-                      underline="hover"
-                    >
-                      {attribution.licenseLabel}
-                    </Link>
-                  </Typography>
-                )}
-            </Box>
-          )}
-
-          {selectedHazard && (
-            <Card
-              variant="outlined"
-              sx={{
-                mt: 2,
-                borderColor: getHazardColor(selectedHazard.id),
-                borderWidth: 5,
-                borderRadius: 2,
-              }}
-            >
-              <CardContent>
-                <Typography variant="subtitle2" gutterBottom>
-                  Hazard Effects:
-                </Typography>
-                <Grid container spacing={1}>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Nature: -{selectedHazard.nature}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Economy: -{selectedHazard.economy}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Society: -{selectedHazard.society}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <Typography variant="body2">
-                      Health: -{selectedHazard.health}
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="body2" color="error">
-                  <strong>Warning - cascading impacts:</strong> Any town with a
-                  segment at or below 20% in an aspect receives a -10% penalty
-                  to that aspect across all hazard types before this hazard
-                  hits.
-                </Typography>
-              </CardContent>
-            </Card>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={handleConfirmHazard}
-            color="warning"
-            variant="contained"
-            disabled={controlsDisabled}
-          >
-            Confirm & Apply Hazard
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

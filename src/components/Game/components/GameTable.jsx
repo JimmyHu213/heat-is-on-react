@@ -1,5 +1,5 @@
 // src/components/Game/components/GameTable.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   Paper,
   Table,
@@ -10,8 +10,13 @@ import {
   Typography,
   Box,
   Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  Tooltip,
   useTheme,
 } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import {
   bushfireColor1,
   floodColor1,
@@ -19,16 +24,43 @@ import {
   heatwaveColor1,
   biohazardColor1,
 } from "../../../constants/palette";
+import { allCards } from "../../../constants/cards";
+import { cardEffectiveRounds } from "../../../game/cards.js";
 import HazardIcon from "../../common/HazardIcon";
+
+const sortedCards = [...allCards].sort((a, b) => a.name.localeCompare(b.name));
 
 const GameTable = ({
   towns,
   roundEvents,
   townCardPlays,
+  townCardPlayDocs = {},
   currentRound,
   totalRounds = 5,
+  onRemoveCardPlay,
+  onAddCardPlayAtRound,
+  loading = false,
 }) => {
   const theme = useTheme();
+  const [addAnchorEl, setAddAnchorEl] = useState(null);
+  const [addTarget, setAddTarget] = useState(null);
+
+  const handleOpenAddMenu = (event, townId, round) => {
+    setAddAnchorEl(event.currentTarget);
+    setAddTarget({ townId, round });
+  };
+
+  const handleCloseAddMenu = () => {
+    setAddAnchorEl(null);
+    setAddTarget(null);
+  };
+
+  const handleSelectAddCard = async (cardId) => {
+    if (addTarget && onAddCardPlayAtRound) {
+      await onAddCardPlayAtRound(addTarget.townId, cardId, addTarget.round);
+    }
+    handleCloseAddMenu();
+  };
 
   if (!towns || towns.length === 0) {
     return (
@@ -151,7 +183,7 @@ const GameTable = ({
               </TableCell>
             ))}
             <TableCell align="center" sx={{ fontWeight: "bold" }}>
-              <Typography variant="subtitle2">Budget</Typography>
+              <Typography variant="subtitle2">Effort Points</Typography>
             </TableCell>
           </TableRow>
         </TableHead>
@@ -207,26 +239,51 @@ const GameTable = ({
             <TableCell />
           </TableRow>
 
-          {/* Town Rows (including Bludgeton comparison town) */}
+          {/* Town Rows */}
           {towns.map((town) => (
             <TableRow
               key={town.id}
               sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
             >
               <TableCell>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <Typography variant="subtitle2">{town.name}</Typography>
-                  {town.isComparisonTown && (
-                    <Chip
-                      label="Comparison"
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
-                </Box>
+                <Typography variant="subtitle2">{town.name}</Typography>
               </TableCell>
               {rounds.map((round) => {
-                const cards = townCardPlays[town.id]?.[round] || [];
+                const playDocs = townCardPlayDocs[town.id];
+                const docEntries = Array.isArray(playDocs)
+                  ? playDocs
+                      .map((play) => {
+                        const card = allCards.find((c) => c.id === play.cardId);
+                        if (!card) return null;
+                        const roundsList =
+                          play.effectiveRounds ??
+                          cardEffectiveRounds(play.playedAtRound, card.duration);
+                        if (!roundsList.includes(round)) return null;
+                        let displayName = card.name;
+                        if (card.duration > 1) {
+                          if (round === play.playedAtRound) {
+                            displayName = `${card.name} (${card.duration} yrs)`;
+                          } else {
+                            displayName = `${card.name} (${
+                              round - play.playedAtRound + 1
+                            }/${card.duration})`;
+                          }
+                        }
+                        return {
+                          id: play.id,
+                          displayName,
+                          isOriginRound: play.playedAtRound === round,
+                        };
+                      })
+                      .filter(Boolean)
+                  : null;
+
+                const fallbackCards = townCardPlays[town.id]?.[round] || [];
+                const canEditRound =
+                  !town.isComparisonTown &&
+                  !loading &&
+                  round >= 1 &&
+                  round <= currentRound;
 
                 return (
                   <TableCell key={round} align="center" sx={{ p: 1 }}>
@@ -234,29 +291,68 @@ const GameTable = ({
                       sx={{
                         display: "flex",
                         flexDirection: "column",
+                        alignItems: "center",
                         gap: 0.5,
                       }}
                     >
-                      {cards.map((cardName, index) => {
-                        const chipProps = getCardChipProps(cardName);
-
-                        return (
-                          <Chip
-                            key={index}
-                            label={cardName}
+                      {docEntries
+                        ? docEntries.map((entry) => {
+                            const chipProps = getCardChipProps(entry.displayName);
+                            return (
+                              <Chip
+                                key={`${entry.id}-${round}`}
+                                label={entry.displayName}
+                                size="small"
+                                variant="outlined"
+                                onDelete={
+                                  canEditRound &&
+                                  entry.isOriginRound &&
+                                  onRemoveCardPlay
+                                    ? () => onRemoveCardPlay(entry.id)
+                                    : undefined
+                                }
+                                sx={{
+                                  fontSize: "0.7rem",
+                                  height: "auto",
+                                  py: 0.5,
+                                  bgcolor: chipProps.bgcolor,
+                                  borderColor: chipProps.borderColor,
+                                  color: chipProps.color,
+                                }}
+                              />
+                            );
+                          })
+                        : fallbackCards.map((cardName, index) => {
+                            const chipProps = getCardChipProps(cardName);
+                            return (
+                              <Chip
+                                key={index}
+                                label={cardName}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  fontSize: "0.7rem",
+                                  height: "auto",
+                                  py: 0.5,
+                                  bgcolor: chipProps.bgcolor,
+                                  borderColor: chipProps.borderColor,
+                                  color: chipProps.color,
+                                }}
+                              />
+                            );
+                          })}
+                      {canEditRound && onAddCardPlayAtRound && (
+                        <Tooltip title={`Add card to ${town.name} (Year ${2050 + round})`}>
+                          <IconButton
                             size="small"
-                            variant="outlined"
-                            sx={{
-                              fontSize: "0.7rem",
-                              height: "auto",
-                              py: 0.5,
-                              bgcolor: chipProps.bgcolor,
-                              borderColor: chipProps.borderColor,
-                              color: chipProps.color,
-                            }}
-                          />
-                        );
-                      })}
+                            color="primary"
+                            onClick={(e) => handleOpenAddMenu(e, town.id, round)}
+                            sx={{ p: 0.25 }}
+                          >
+                            <AddCircleOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </Box>
                   </TableCell>
                 );
@@ -270,6 +366,19 @@ const GameTable = ({
           ))}
         </TableBody>
       </Table>
+
+      <Menu
+        anchorEl={addAnchorEl}
+        open={Boolean(addAnchorEl)}
+        onClose={handleCloseAddMenu}
+        PaperProps={{ style: { maxHeight: 320 } }}
+      >
+        {sortedCards.map((card) => (
+          <MenuItem key={card.id} onClick={() => handleSelectAddCard(card.id)}>
+            {card.name} ({card.cost} EP)
+          </MenuItem>
+        ))}
+      </Menu>
     </Paper>
   );
 };

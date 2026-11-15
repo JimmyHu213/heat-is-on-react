@@ -54,11 +54,11 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
     }, 2200);
   };
 
-  const count = hazards.length || 5;
+  const count = hazards.length || 6;
   const sliceAngle = 360 / count;
-  const cx = 120;
-  const cy = 120;
-  const radius = 105;
+  const cx = 170;
+  const cy = 170;
+  const radius = 152;
 
   return (
     <Box
@@ -66,7 +66,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        my: 1.5,
+        my: 1,
       }}
     >
       {/* Pointer indicator at top (12 o'clock) */}
@@ -74,9 +74,9 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
         sx={{
           width: 0,
           height: 0,
-          borderLeft: "12px solid transparent",
-          borderRight: "12px solid transparent",
-          borderTop: "18px solid #222",
+          borderLeft: "14px solid transparent",
+          borderRight: "14px solid transparent",
+          borderTop: "20px solid #222",
           mb: -0.5,
           zIndex: 2,
         }}
@@ -84,8 +84,9 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
 
       <Box
         sx={{
-          width: 240,
-          height: 240,
+          width: 340,
+          height: 340,
+          maxWidth: "100%",
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -93,9 +94,9 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
         }}
       >
         <svg
-          width="240"
-          height="240"
-          viewBox="0 0 240 240"
+          width="340"
+          height="340"
+          viewBox="0 0 340 340"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning
@@ -126,7 +127,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
             const labelRadius = radius * 0.62;
             const lx = cx + labelRadius * Math.cos(midRad);
             const ly = cy + labelRadius * Math.sin(midRad);
-            const color = HAZARD_COLORS[hazard.id] || "#666";
+            const color = hazard.color || HAZARD_COLORS[hazard.id] || "#666";
 
             return (
               <g key={hazard.id}>
@@ -140,7 +141,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
                   x={lx}
                   y={ly}
                   fill="#ffffff"
-                  fontSize="11"
+                  fontSize={hazard.isMystery ? "26" : "14"}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -154,7 +155,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
           <circle
             cx={cx}
             cy={cy}
-            r={22}
+            r={28}
             fill="#ffffff"
             stroke="#333333"
             strokeWidth="2"
@@ -168,12 +169,12 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
         startIcon={<CasinoIcon />}
         onClick={handleSpin}
         disabled={disabled || isSpinning}
-        sx={{ mt: 1.5, fontWeight: "bold" }}
+        sx={{ mt: 1, fontWeight: "bold" }}
       >
         {isSpinning ? "Spinning..." : "Spin Hazard Wheel"}
       </Button>
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-        Spinning selects a hazard; you will confirm before applying it.
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, textAlign: "center" }}>
+        Landing on a hazard applies it live; landing on ? triggers a mystery pause.
       </Typography>
     </Box>
   );
