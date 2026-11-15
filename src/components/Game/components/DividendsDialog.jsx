@@ -13,7 +13,6 @@ import {
   TableCell,
   Typography,
   Alert,
-  Chip,
 } from "@mui/material";
 import { calculateDividend } from "../../../game/settlement.js";
 
@@ -38,18 +37,18 @@ export default function DividendsDialog({
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        Round {currentRound} Dividends & Settlement
+        Round {currentRound} Reward for effort & Settlement
       </DialogTitle>
       <DialogContent dividers>
         {alreadyAwarded ? (
           <Alert severity="info" sx={{ mb: 2 }}>
-            Dividends for Round {currentRound} have already been awarded.
+            Reward for effort for Round {currentRound} has already been awarded.
           </Alert>
         ) : (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Each town earns <strong>5 Effort Points (EP)</strong> for every
             resilience segment at <strong>100%</strong> at the close of Round{" "}
-            {currentRound}. Confirming awards these dividends and{" "}
+            {currentRound}. Confirming awards these Effort Points and{" "}
             {isFinalRound
               ? "completes the game."
               : `advances to Round ${currentRound + 1}.`}
@@ -61,16 +60,16 @@ export default function DividendsDialog({
             <TableRow>
               <TableCell sx={{ fontWeight: "bold" }}>Town</TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                Current Budget
+                Current Effort Points
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
                 Segments at 100%
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                Dividend Earned
+                Reward for effort
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                New Budget
+                New Effort Points
               </TableCell>
             </TableRow>
           </TableHead>
@@ -83,14 +82,6 @@ export default function DividendsDialog({
                     <Typography variant="body2" fontWeight="bold" component="span">
                       {town.name}
                     </Typography>
-                    {town.isComparisonTown && (
-                      <Chip
-                        label="Comparison"
-                        size="small"
-                        variant="outlined"
-                        sx={{ ml: 1 }}
-                      />
-                    )}
                   </TableCell>
                   <TableCell align="right">{town.effortPoints} EP</TableCell>
                   <TableCell align="right">{segments} / 20</TableCell>
@@ -126,7 +117,7 @@ export default function DividendsDialog({
             {loading
               ? "Settling..."
               : isFinalRound
-              ? "Award Dividends & Finish Game"
+              ? "Award Reward & Finish Game"
               : `Confirm & Start Round ${currentRound + 1}`}
           </Button>
         )}

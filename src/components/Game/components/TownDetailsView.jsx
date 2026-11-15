@@ -5,74 +5,22 @@ import {
   Card,
   CardContent,
   Typography,
-  Divider,
   Box,
-  LinearProgress,
   useTheme,
   TextField,
   IconButton,
   Tooltip,
-  Chip,
 } from "@mui/material";
-import {
-  bushfireColor1,
-  floodColor1,
-  stormSurgeColor1,
-  heatwaveColor1,
-  biohazardColor1,
-} from "../../../constants/palette";
 import { MAX_MANUAL_BUDGET } from "../../../game/options.js";
 
-// Icons for hazards
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
-import FloodIcon from "@mui/icons-material/Flood";
-import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import BugReportIcon from "@mui/icons-material/BugReport";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import LockIcon from "@mui/icons-material/Lock";
 
 const TownDetailsView = ({ towns, onUpdateTownName, disabled = false }) => {
   const theme = useTheme();
   const [editState, setEditState] = useState({});
-
-  const hazardTypes = [
-    {
-      id: "bushfire",
-      name: "Bushfire",
-      color: bushfireColor1,
-      icon: <LocalFireDepartmentIcon />,
-    },
-    { id: "flood", name: "Flood", color: floodColor1, icon: <FloodIcon /> },
-    {
-      id: "stormSurge",
-      name: "Storm Surge",
-      color: stormSurgeColor1,
-      icon: <ThunderstormIcon />,
-    },
-    {
-      id: "heatwave",
-      name: "Heatwave",
-      color: heatwaveColor1,
-      icon: <WbSunnyIcon />,
-    },
-    {
-      id: "biohazard",
-      name: "Biohazard",
-      color: biohazardColor1,
-      icon: <BugReportIcon />,
-    },
-  ];
-
-  const aspects = [
-    { id: "nature", name: "Nature" },
-    { id: "economy", name: "Economy" },
-    { id: "society", name: "Society" },
-    { id: "health", name: "Health" },
-  ];
 
   const handleStartEdit = (townId, currentName) => {
     setEditState({
@@ -275,18 +223,7 @@ const TownDetailsView = ({ towns, onUpdateTownName, disabled = false }) => {
                     <Typography variant="h6" fontWeight="bold">
                       {town.name}
                     </Typography>
-                    {isLockedComparison ? (
-                      <Chip
-                        icon={<LockIcon sx={{ color: "white !important" }} />}
-                        label="Comparison (Locked)"
-                        size="small"
-                        sx={{
-                          color: "white",
-                          borderColor: "rgba(255,255,255,0.6)",
-                        }}
-                        variant="outlined"
-                      />
-                    ) : (
+                    {!isLockedComparison && (
                       <Tooltip title="Edit Town Name">
                         <IconButton
                           size="small"
@@ -329,7 +266,7 @@ const TownDetailsView = ({ towns, onUpdateTownName, disabled = false }) => {
                         variant="outlined"
                         size="small"
                         type="number"
-                        label={`Budget Points (0–${MAX_MANUAL_BUDGET})`}
+                        label={`Effort Points (0–${MAX_MANUAL_BUDGET})`}
                         InputProps={{
                           inputProps: { min: 0, max: MAX_MANUAL_BUDGET },
                         }}
@@ -365,11 +302,11 @@ const TownDetailsView = ({ towns, onUpdateTownName, disabled = false }) => {
                           sx={{ mr: 1, color: theme.palette.primary.main }}
                         />
                         <Typography variant="body2">
-                          <strong>Budget Points:</strong> {town.effortPoints}
+                          <strong>Effort Points:</strong> {town.effortPoints}
                         </Typography>
                       </Box>
                       {!isLockedComparison && !disabled && (
-                        <Tooltip title="Edit Budget Points (0–999)">
+                        <Tooltip title="Edit Effort Points (0–999)">
                           <IconButton
                             size="small"
                             onClick={() =>
@@ -384,50 +321,6 @@ const TownDetailsView = ({ towns, onUpdateTownName, disabled = false }) => {
                     </>
                   )}
                 </Box>
-
-                <Divider sx={{ mb: 2 }} />
-
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                  Hazard Resilience Levels
-                </Typography>
-
-                {hazardTypes.map((hazard) => (
-                  <Box key={hazard.id} sx={{ mb: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                      <Box sx={{ mr: 1, color: hazard.color }}>
-                        {hazard.icon}
-                      </Box>
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        {hazard.name}
-                      </Typography>
-                    </Box>
-
-                    <Grid container spacing={2}>
-                      {aspects.map((aspect) => (
-                        <Grid item xs={6} key={aspect.id}>
-                          <Box sx={{ mb: 1 }}>
-                            <Typography variant="body2" gutterBottom>
-                              {aspect.name}: {town[hazard.id][aspect.id]}
-                            </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={town[hazard.id][aspect.id]}
-                              sx={{
-                                height: 8,
-                                borderRadius: 4,
-                                bgcolor: "rgba(0,0,0,0.1)",
-                                "& .MuiLinearProgress-bar": {
-                                  bgcolor: hazard.color,
-                                  borderRadius: 4,
-                                },
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                ))}
               </CardContent>
             </Card>
           </Grid>
