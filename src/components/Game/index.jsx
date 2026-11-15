@@ -44,6 +44,8 @@ import HazardImpactDialog from "./components/HazardImpactDialog";
 import DividendsDialog from "./components/DividendsDialog";
 import EndEarlyDialog from "./components/EndEarlyDialog";
 import GameSummaryDialog from "./components/GameSummaryDialog";
+import IntroVideo from "./components/IntroVideo";
+import TrainingLink from "../common/TrainingLink";
 import { primaryColor } from "../../constants/palette";
 import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
@@ -349,6 +351,21 @@ const Game = () => {
               : `Year ${2050 + currentRound} (Round ${currentRound}/${totalRounds})`}
           </Typography>
 
+          <TrainingLink
+            color="inherit"
+            variant="outlined"
+            size="small"
+            sx={{
+              mr: 1.5,
+              borderColor: "white",
+              color: "white",
+              "&:hover": {
+                borderColor: "white",
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          />
+
           {/* Undo button */}
           <Button
             variant="outlined"
@@ -557,6 +574,10 @@ const Game = () => {
                   segment at 100% and advance to the next round.
                 </li>
               </ul>
+              <IntroVideo
+                onStartGame={handleStartGame}
+                loading={loading}
+              />
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" color="text.secondary">
                 <strong>Warning - cascading impacts:</strong> If any town's
