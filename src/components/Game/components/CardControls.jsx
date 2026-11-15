@@ -1,5 +1,4 @@
 // src/components/Game/components/CardControls.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -21,77 +20,64 @@ import {
   Tabs,
   Tab,
   FormHelperText,
+  Alert,
 } from "@mui/material";
 import { cards, allAbilityCards } from "../../../constants/cards";
 
-/**
- * Component for adaptation card controls
- */
-const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
-  // State
+const CardControls = ({
+  towns,
+  onPlayCard,
+  disabled,
+  currentStage = "adaptation",
+}) => {
   const [selectedTown, setSelectedTown] = useState("");
   const [selectedCard, setSelectedCard] = useState("");
-  const [cardCategory, setCardCategory] = useState(0); // 0 = Hazard specific, 1 = All-aspect
+  const [cardCategory, setCardCategory] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [availableCards, setAvailableCards] = useState([]);
 
-  // Set initial available cards
+  const isAdaptStage = currentStage === "adaptation";
+  const controlsDisabled = disabled || !isAdaptStage;
+
   useEffect(() => {
-    // Start with hazard cards by default
     setAvailableCards(cards);
   }, []);
 
-  // Handle card category change
   const handleCategoryChange = (event, newValue) => {
     setCardCategory(newValue);
     setSelectedCard("");
-
-    // Simply switch between the two card lists
-    if (newValue === 0) {
-      setAvailableCards(cards);
-    } else {
-      setAvailableCards(allAbilityCards);
-    }
+    setAvailableCards(newValue === 0 ? cards : allAbilityCards);
   };
 
-  // Handle town selection
   const handleTownChange = (event) => {
     setSelectedTown(event.target.value);
   };
 
-  // Handle card selection
   const handleCardChange = (event) => {
-    console.log("Selected card:", event.target.value);
     setSelectedCard(event.target.value);
   };
 
-  // Handle apply card
   const handleApplyCard = () => {
     setDialogOpen(true);
   };
 
-  // Handle confirm card play
   const handleConfirmCard = () => {
     if (selectedTown && selectedCard) {
       onPlayCard(selectedTown, selectedCard);
-      // Reset selections
       setSelectedCard("");
     }
     setDialogOpen(false);
   };
 
-  // Handle dialog close
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
 
-  // Find card by ID
   const findCard = (cardId) => {
     const allCards = [...cards, ...allAbilityCards];
     return allCards.find((card) => card.id === cardId);
   };
 
-  // Get card color based on type
   const getCardColor = (cardType) => {
     switch (cardType) {
       case "bushfire":
@@ -119,12 +105,20 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
 
   return (
     <Box>
-      <Typography variant="subtitle1" gutterBottom>
-        Play Adaptation Cards
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        1. Adapt Stage: Play Adaptation Cards
       </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Select a town and play adaptation cards to improve resilience.
-      </Typography>
+
+      {!isAdaptStage ? (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          Adaptation cards can only be purchased during the <strong>Adapt</strong> stage.
+        </Alert>
+      ) : (
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Select a town and play adaptation cards to improve resilience.
+          Bludgeton is locked as the comparison town.
+        </Typography>
+      )}
 
       {/* Town Selection */}
       <FormControl fullWidth margin="normal" size="small">
@@ -135,13 +129,13 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           value={selectedTown}
           label="Select Town"
           onChange={handleTownChange}
-          disabled={disabled}
+          disabled={controlsDisabled}
         >
           {towns
             .filter((town) => !town.isComparisonTown)
             .map((town) => (
               <MenuItem key={town.id} value={town.id}>
-                {town.name}
+                {town.name} ({town.effortPoints} EP)
               </MenuItem>
             ))}
         </Select>
@@ -153,7 +147,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           value={cardCategory}
           onChange={handleCategoryChange}
           variant="fullWidth"
-          disabled={disabled}
+          disabled={controlsDisabled}
         >
           <Tab label="Hazard Cards" />
           <Tab label="All-Aspect Cards" />
@@ -169,15 +163,15 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           value={selectedCard}
           label="Select Card"
           onChange={handleCardChange}
-          disabled={disabled || !selectedTown}
+          disabled={controlsDisabled || !selectedTown}
         >
-          {availableCards
+          {[...availableCards]
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((card) => (
               <MenuItem key={card.id} value={card.id}>
                 {card.type === "stormSurge"
-                  ? card.name + " (storm surge)"
-                  : card.name + " (" + card.type + ")"}
+                  ? `${card.name} (storm surge · ${card.cost} EP)`
+                  : `${card.name} (${card.type} · ${card.cost} EP)`}
               </MenuItem>
             ))}
         </Select>
@@ -193,7 +187,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
         variant="contained"
         color="primary"
         fullWidth
-        disabled={disabled || !selectedTown || !selectedCard}
+        disabled={controlsDisabled || !selectedTown || !selectedCard}
         onClick={handleApplyCard}
         sx={{ mt: 2 }}
       >
@@ -209,77 +203,75 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
           </DialogContentText>
 
           {selectedTown && selectedCard && (
-            <>
-              <Card
-                variant="outlined"
-                sx={{
-                  borderColor: getCardColor(findCard(selectedCard)?.type || ""),
-                  borderWidth: 5,
-                  borderRadius: 2,
-                }}
-              >
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {findCard(selectedCard)?.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    Type: {findCard(selectedCard)?.type}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    Duration: {findCard(selectedCard)?.duration || 1} round(s)
-                  </Typography>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" gutterBottom>
-                    Card Effects:
-                  </Typography>
-                  <Grid container spacing={1}>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Nature: +{findCard(selectedCard)?.nature}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Economy: +{findCard(selectedCard)?.economy}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Society: +{findCard(selectedCard)?.society}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={3}>
-                      <Typography variant="body2">
-                        Health: +{findCard(selectedCard)?.health}
-                      </Typography>
-                    </Grid>
+            <Card
+              variant="outlined"
+              sx={{
+                borderColor: getCardColor(findCard(selectedCard)?.type || ""),
+                borderWidth: 5,
+                borderRadius: 2,
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {findCard(selectedCard)?.name}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  Type: {findCard(selectedCard)?.type}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  Duration: {findCard(selectedCard)?.duration || 1} round(s)
+                </Typography>
+                <Divider sx={{ my: 1 }} />
+                <Typography variant="subtitle2" gutterBottom>
+                  Card Effects:
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">
+                      Nature: +{findCard(selectedCard)?.nature}
+                    </Typography>
                   </Grid>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 1,
-                      fontWeight: "bold",
-                      color:
-                        towns.find((t) => t.id === selectedTown)?.effortPoints <
-                        findCard(selectedCard)?.cost
-                          ? "error.main"
-                          : "success.main",
-                    }}
-                  >
-                    Cost: {findCard(selectedCard)?.cost} points (Available:{" "}
-                    {towns.find((t) => t.id === selectedTown)?.effortPoints})
-                  </Typography>
-                </CardContent>
-              </Card>
-            </>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">
+                      Economy: +{findCard(selectedCard)?.economy}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">
+                      Society: +{findCard(selectedCard)?.society}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">
+                      Health: +{findCard(selectedCard)?.health}
+                    </Typography>
+                  </Grid>
+                </Grid>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mt: 1,
+                    fontWeight: "bold",
+                    color:
+                      towns.find((t) => t.id === selectedTown)?.effortPoints <
+                      findCard(selectedCard)?.cost
+                        ? "error.main"
+                        : "success.main",
+                  }}
+                >
+                  Cost: {findCard(selectedCard)?.cost} points (Available:{" "}
+                  {towns.find((t) => t.id === selectedTown)?.effortPoints})
+                </Typography>
+              </CardContent>
+            </Card>
           )}
         </DialogContent>
         <DialogActions>
@@ -288,6 +280,7 @@ const CardControls = ({ towns, onPlayCard, disabled, currentRound }) => {
             onClick={handleConfirmCard}
             color="primary"
             variant="contained"
+            disabled={controlsDisabled}
           >
             Apply Card
           </Button>

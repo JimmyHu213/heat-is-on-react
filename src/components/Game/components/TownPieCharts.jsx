@@ -1,15 +1,11 @@
 // src/components/Game/components/TownPieCharts.jsx
-import React from "react";
-import { Box, Grid, Typography, useTheme } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Grid, Typography, Button } from "@mui/material";
+import FlipCameraAndroidIcon from "@mui/icons-material/FlipCameraAndroid";
 import TownPieChart from "../../Charts/TownPieChart";
 
-// SVG-based pie chart for better control
-const TownPieCharts = ({ towns }) => {
-  const theme = useTheme();
-
-  const regularTowns = towns
-    ? towns.filter((town) => !town.isComparisonTown)
-    : [];
+const TownPieCharts = ({ towns, currentStage }) => {
+  const [flippedMap, setFlippedMap] = useState({});
 
   if (!towns || towns.length === 0) {
     return (
@@ -19,37 +15,53 @@ const TownPieCharts = ({ towns }) => {
     );
   }
 
-  // Aspect legend
-  const aspectLegend = (
-    <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-      {[
-        { id: "nature", label: "N - Nature" },
-        { id: "economy", label: "E - Economy" },
-        { id: "society", label: "S - Society" },
-        { id: "health", label: "H - Health" },
-      ].map((aspect) => (
-        <Box
-          key={aspect.id}
-          sx={{ mx: 2, display: "flex", alignItems: "center" }}
-        >
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              bgcolor: "grey.400",
-              mr: 1,
-            }}
-          />
-          <Typography variant="body2">{aspect.label}</Typography>
-        </Box>
-      ))}
-    </Box>
-  );
+  const allFlipped =
+    towns.length > 0 && towns.every((town) => Boolean(flippedMap[town.id]));
+
+  const handleToggleAll = () => {
+    const nextState = !allFlipped;
+    const nextMap = {};
+    for (const town of towns) {
+      nextMap[town.id] = nextState;
+    }
+    setFlippedMap(nextMap);
+  };
+
+  const handleToggleTown = (townId) => {
+    setFlippedMap((prev) => ({
+      ...prev,
+      [townId]: !prev[townId],
+    }));
+  };
 
   return (
     <>
-      {/* {aspectLegend} */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          mb: 2,
+          gap: 1,
+        }}
+      >
+        <Typography variant="body2" sx={{ color: "white" }}>
+          {currentStage === "review"
+            ? "Review Stage: Click any town card (or Flip All) to compare dimension averages and dividend readiness."
+            : "Click any town card to flip between its 20-segment radial chart and dimension averages."}
+        </Typography>
+        <Button
+          variant="contained"
+          color="secondary"
+          size="small"
+          startIcon={<FlipCameraAndroidIcon />}
+          onClick={handleToggleAll}
+        >
+          {allFlipped ? "Flip All to Charts" : "Flip All to Averages"}
+        </Button>
+      </Box>
+
       <Grid
         container
         spacing={3}
@@ -62,9 +74,13 @@ const TownPieCharts = ({ towns }) => {
             sm={6}
             md={4}
             key={town.id}
-            sx={{ display: "flex", justifyContent: "top" }}
+            sx={{ display: "flex", justifyContent: "center" }}
           >
-            <TownPieChart town={town} />
+            <TownPieChart
+              town={town}
+              flipped={Boolean(flippedMap[town.id])}
+              onToggleFlip={() => handleToggleTown(town.id)}
+            />
           </Grid>
         ))}
       </Grid>

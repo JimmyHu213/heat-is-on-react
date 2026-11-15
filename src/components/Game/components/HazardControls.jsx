@@ -14,6 +14,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Alert,
+  Chip,
 } from "@mui/material";
 import { hazards } from "../../../constants/hazards";
 import {
@@ -23,23 +25,31 @@ import {
   heatwaveColor1,
   biohazardColor1,
 } from "../../../constants/palette";
+import { MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
+import HazardWheel from "./HazardWheel";
 
 // Icons for hazards
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment"; // Bushfire
-import FloodIcon from "@mui/icons-material/Flood"; // Flood
-import ThunderstormIcon from "@mui/icons-material/Thunderstorm"; // Storm Surge
-import WbSunnyIcon from "@mui/icons-material/WbSunny"; // Heatwave
-import BugReportIcon from "@mui/icons-material/BugReport"; // Biohazard
+import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
+import FloodIcon from "@mui/icons-material/Flood";
+import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
+import WbSunnyIcon from "@mui/icons-material/WbSunny";
+import BugReportIcon from "@mui/icons-material/BugReport";
 
-/**
- * Component for hazard control buttons
- */
-const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
-  // State for selected hazard and dialog
+const HazardControls = ({
+  onApplyHazard,
+  disabled,
+  currentRound,
+  currentStage = "hazard",
+  digitalWheelEnabled = true,
+  hazardCountThisRound = 0,
+}) => {
   const [selectedHazard, setSelectedHazard] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Get icon and color for a hazard
+  const isHazardStage = currentStage === "hazard";
+  const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
+  const controlsDisabled = disabled || !isHazardStage || limitReached;
+
   const getHazardIconAndColor = (hazardId) => {
     switch (hazardId) {
       case "bushfire":
@@ -57,13 +67,11 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
     }
   };
 
-  // Handle click on hazard button
-  const handleHazardClick = (hazard) => {
+  const handleHazardSelect = (hazard) => {
     setSelectedHazard(hazard);
     setDialogOpen(true);
   };
 
-  // Handle confirm applying hazard
   const handleConfirmHazard = () => {
     if (selectedHazard) {
       onApplyHazard(selectedHazard.id);
@@ -71,46 +79,86 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
     setDialogOpen(false);
   };
 
-  // Handle dialog close
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
 
   return (
     <Box>
-      <Typography variant="subtitle1" gutterBottom>
-        Apply Hazard
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Select a hazard to apply to all towns in the current round.
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 1,
+        }}
+      >
+        <Typography variant="subtitle1" fontWeight="bold">
+          2. Event Stage: Apply Hazard
+        </Typography>
+        <Chip
+          label={`${hazardCountThisRound} / ${MAX_HAZARDS_PER_ROUND} this round`}
+          size="small"
+          color={hazardCountThisRound > 0 ? "warning" : "default"}
+        />
+      </Box>
+
+      {!isHazardStage ? (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          Hazards can only be applied during the <strong>Event</strong> stage.
+        </Alert>
+      ) : limitReached ? (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Round {currentRound}. Proceed to Review.
+        </Alert>
+      ) : (
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {digitalWheelEnabled !== false
+            ? "Spin the wheel to randomly select a hazard, or choose one below."
+            : "Select the hazard landed on your physical wheel to apply to all towns."}
+        </Typography>
+      )}
+
+      {digitalWheelEnabled !== false && (
+        <HazardWheel
+          hazards={hazards}
+          disabled={controlsDisabled}
+          onSelectHazard={handleHazardSelect}
+        />
+      )}
+
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+        {digitalWheelEnabled !== false ? "Or select hazard manually:" : "Select hazard:"}
       </Typography>
 
-      <Grid container spacing={1} sx={{ mt: 1 }}>
+      <Grid container spacing={1} sx={{ mt: 0.5 }}>
         {hazards.map((hazard) => {
           const { icon, color } = getHazardIconAndColor(hazard.id);
 
           return (
             <Grid item xs={6} key={hazard.id}>
-              <Tooltip title={`Apply ${hazard.name} hazard to all towns`}>
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  disabled={disabled}
-                  startIcon={icon}
-                  onClick={() => handleHazardClick(hazard)}
-                  sx={{
-                    borderColor: color,
-                    color: color,
-                    "&:hover": {
+              <Tooltip title={`Select ${hazard.name} hazard`}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    disabled={controlsDisabled}
+                    startIcon={icon}
+                    onClick={() => handleHazardSelect(hazard)}
+                    sx={{
                       borderColor: color,
-                      backgroundColor: `${color}10`,
-                    },
-                    justifyContent: "flex-start",
-                    textTransform: "none",
-                  }}
-                >
-                  {hazard.name}
-                </Button>
+                      color: color,
+                      "&:hover": {
+                        borderColor: color,
+                        backgroundColor: `${color}10`,
+                      },
+                      justifyContent: "flex-start",
+                      textTransform: "none",
+                    }}
+                  >
+                    {hazard.name}
+                  </Button>
+                </span>
               </Tooltip>
             </Grid>
           );
@@ -122,17 +170,17 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
         color="text.secondary"
         sx={{ mt: 2, fontStyle: "italic" }}
       >
-        Note: Applying a hazard will reduce town resilience scores and may
-        trigger penalties if any score drops below 20.
+        Note: Applying a hazard reduces town resilience scores and triggers a -10
+        penalty across all hazards for any aspect already at or below 20.
       </Typography>
 
       {/* Confirmation Dialog */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
-        <DialogTitle>Apply {selectedHazard?.name} Hazard</DialogTitle>
+        <DialogTitle>Confirm {selectedHazard?.name} Hazard</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to apply the {selectedHazard?.name} hazard to
-            all towns in round {currentRound}?
+            Apply the <strong>{selectedHazard?.name}</strong> hazard to all 6 towns in
+            Round {currentRound}?
           </DialogContentText>
 
           {selectedHazard && (
@@ -173,9 +221,9 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
                 </Grid>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="body2" color="error">
-                  <strong>Warning - cascading impacts:</strong> If any town's
-                  resilience is below 20% in any segment, all other segments for
-                  that aspect of resilience will receive a -10% penalty.
+                  <strong>Warning - cascading impacts:</strong> Any town with a
+                  segment at or below 20% in an aspect receives a -10% penalty to
+                  that aspect across all hazard types before this hazard hits.
                 </Typography>
               </CardContent>
             </Card>
@@ -185,10 +233,11 @@ const HazardControls = ({ onApplyHazard, disabled, currentRound }) => {
           <Button onClick={handleCloseDialog}>Cancel</Button>
           <Button
             onClick={handleConfirmHazard}
-            color="primary"
+            color="warning"
             variant="contained"
+            disabled={controlsDisabled}
           >
-            Apply Hazard
+            Confirm & Apply Hazard
           </Button>
         </DialogActions>
       </Dialog>

@@ -45,6 +45,16 @@ import DownloadIcon from "@mui/icons-material/Download";
 import exportService from "../../services/exportService";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import NewGameDialog from "./NewGameDialog";
+import { getPlayerCount, getTotalRounds } from "../../game/options";
+
+const STAGE_LABELS = {
+  setup: "Setup",
+  adaptation: "Adapt",
+  hazard: "Event",
+  review: "Review",
+  complete: "Completed",
+};
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -64,6 +74,7 @@ export default function Dashboard() {
 
   // Local state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [downloadMenu, setDownloadMenu] = useState({
@@ -101,11 +112,12 @@ export default function Dashboard() {
   }
 
   // Handle create game
-  async function handleCreateGame() {
+  async function handleCreateGame(name, options) {
     setIsCreating(true);
     try {
-      const session = await createNewSession();
+      const session = await createNewSession(name, options);
       if (session) {
+        setIsNewGameDialogOpen(false);
         navigate(`/game/${session.id}`);
       }
     } catch (error) {
@@ -365,7 +377,7 @@ export default function Dashboard() {
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
-                    onClick={handleCreateGame}
+                    onClick={() => setIsNewGameDialogOpen(true)}
                     disabled={isCreating || activeSessions.length >= 3}
                   >
                     {isCreating
@@ -480,10 +492,28 @@ export default function Dashboard() {
                                     </IconButton>
                                   </Tooltip>
                                 </Typography>
-                                {!session.isActive && (
+                                {session.isActive ? (
                                   <Chip
-                                    label="Completed"
-                                    color="success"
+                                    label={
+                                      session.currentRound === 0
+                                        ? "Setup"
+                                        : STAGE_LABELS[session.stage] || "Adapt"
+                                    }
+                                    color="info"
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{ ml: 1 }}
+                                  />
+                                ) : (
+                                  <Chip
+                                    label={
+                                      session.endedEarly
+                                        ? "Ended Early"
+                                        : "Completed"
+                                    }
+                                    color={
+                                      session.endedEarly ? "warning" : "success"
+                                    }
                                     size="small"
                                     sx={{ ml: 1 }}
                                   />
@@ -499,14 +529,36 @@ export default function Dashboard() {
                             <strong>Created:</strong>{" "}
                             {formatDate(session.createdAt)}
                           </Typography>
-                          {session.isActive && (
+                          {session.isActive ? (
                             <Typography
                               variant="body2"
                               color="text.secondary"
                               gutterBottom
                             >
-                              <strong>Current Round:</strong>{" "}
-                              {session.currentRound}
+                              <strong>Progress:</strong>{" "}
+                              {session.currentRound === 0
+                                ? `Setup (0 of ${getTotalRounds(session)} rounds)`
+                                : `Round ${session.currentRound} of ${getTotalRounds(session)}`}
+                            </Typography>
+                          ) : (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              <strong>Rounds Played:</strong>{" "}
+                              {Math.max(0, (session.currentRound ?? 1) - 1)} of{" "}
+                              {getTotalRounds(session)}
+                            </Typography>
+                          )}
+                          {getPlayerCount(session) !== null && (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              <strong>Players:</strong>{" "}
+                              {getPlayerCount(session)}
                             </Typography>
                           )}
 
@@ -613,6 +665,13 @@ export default function Dashboard() {
           Download as Excel
         </MenuItem>
       </Menu>
+
+      <NewGameDialog
+        open={isNewGameDialogOpen}
+        onClose={() => setIsNewGameDialogOpen(false)}
+        onCreate={handleCreateGame}
+        loading={isCreating}
+      />
     </Box>
   );
 }

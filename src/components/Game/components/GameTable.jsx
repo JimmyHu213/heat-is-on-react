@@ -27,13 +27,15 @@ import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import BugReportIcon from "@mui/icons-material/BugReport";
 
-/**
- * Component to display a table of game events and cards played
- */
-const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
+const GameTable = ({
+  towns,
+  roundEvents,
+  townCardPlays,
+  currentRound,
+  totalRounds = 5,
+}) => {
   const theme = useTheme();
 
-  // If no towns, show a message
   if (!towns || towns.length === 0) {
     return (
       <Typography variant="body1" align="center">
@@ -42,7 +44,11 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
     );
   }
 
-  // Get hazard icon based on hazard ID
+  const rounds = Array.from(
+    { length: Math.max(1, totalRounds) },
+    (_, i) => i + 1
+  );
+
   const getHazardIcon = (hazardId) => {
     switch (hazardId) {
       case "bushfire":
@@ -60,11 +66,10 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
     }
   };
 
-  // Get background color based on hazard ID
   const getHazardColor = (hazardId) => {
     switch (hazardId) {
       case "bushfire":
-        return `${bushfireColor1}20`; // 20% opacity
+        return `${bushfireColor1}20`;
       case "flood":
         return `${floodColor1}20`;
       case "stormSurge":
@@ -78,13 +83,9 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
     }
   };
 
-  // Get chip color based on card name
   const getCardChipProps = (cardName) => {
-    //TODO Map the card through the cards array to get the color
-    // Make sure cardName is a string
     cardName = String(cardName || "");
 
-    // Based on card name, determine type/color
     if (
       cardName.includes("LANDSCAPING") ||
       cardName.includes("FIRE-RESILIENT") ||
@@ -93,7 +94,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${bushfireColor1}15`,
         borderColor: bushfireColor1,
-        color: "#000000", // Black text
+        color: "#000000",
       };
     } else if (
       cardName.includes("FLOOD") ||
@@ -103,7 +104,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${floodColor1}15`,
         borderColor: floodColor1,
-        color: "#000000", // Black text
+        color: "#000000",
       };
     } else if (
       cardName.includes("STORM") ||
@@ -113,7 +114,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${stormSurgeColor1}15`,
         borderColor: stormSurgeColor1,
-        color: "#000000", // Black text
+        color: "#000000",
       };
     } else if (
       cardName.includes("GREE") ||
@@ -123,7 +124,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${heatwaveColor1}15`,
         borderColor: heatwaveColor1,
-        color: "#000000", // Black text
+        color: "#000000",
       };
     } else if (
       cardName.includes("BIO") ||
@@ -133,25 +134,24 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
       return {
         bgcolor: `${biohazardColor1}15`,
         borderColor: biohazardColor1,
-        color: "#000000", // Black text
+        color: "#000000",
       };
     } else {
-      // Default/aspect cards
       return {
         bgcolor: "rgba(0, 0, 0, 0.05)",
         borderColor: "rgba(0, 0, 0, 0.2)",
-        color: "#000000", // Black text
+        color: "#000000",
       };
     }
   };
 
   return (
-    <Paper sx={{ borderRadius: 2, overflow: "hidden", boxShadow: 1 }}>
+    <Paper sx={{ borderRadius: 2, overflow: "auto", boxShadow: 1 }}>
       <Table size="medium" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.grey[200] }}>
-            <TableCell sx={{ fontWeight: "bold" }}></TableCell>
-            {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => (
+            <TableCell sx={{ fontWeight: "bold" }}>Town</TableCell>
+            {rounds.map((round) => (
               <TableCell
                 key={round}
                 align="center"
@@ -180,7 +180,7 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
             <TableCell sx={{ fontWeight: "bold" }}>
               <Typography variant="subtitle2">Events</Typography>
             </TableCell>
-            {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
+            {rounds.map((round) => {
               const hazards = roundEvents[round] || [];
 
               return (
@@ -226,60 +226,67 @@ const GameTable = ({ towns, roundEvents, townCardPlays, currentRound }) => {
             <TableCell />
           </TableRow>
 
-          {/* Town Rows */}
-          {towns
-            .filter((town) => !town.isComparisonTown)
-            .map((town) => (
-              <TableRow
-                key={town.id}
-                sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
-              >
-                <TableCell>
+          {/* Town Rows (including Bludgeton comparison town) */}
+          {towns.map((town) => (
+            <TableRow
+              key={town.id}
+              sx={{ "&:hover": { bgcolor: "rgba(0, 0, 0, 0.04)" } }}
+            >
+              <TableCell>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <Typography variant="subtitle2">{town.name}</Typography>
-                </TableCell>
-                {Array.from({ length: 5 }, (_, i) => i + 1).map((round) => {
-                  const cards = townCardPlays[town.id]?.[round] || [];
+                  {town.isComparisonTown && (
+                    <Chip
+                      label="Comparison"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              </TableCell>
+              {rounds.map((round) => {
+                const cards = townCardPlays[town.id]?.[round] || [];
 
-                  return (
-                    <TableCell key={round} align="center" sx={{ p: 1 }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 0.5,
-                        }}
-                      >
-                        {cards.map((cardName, index) => {
-                          const chipProps = getCardChipProps(cardName);
+                return (
+                  <TableCell key={round} align="center" sx={{ p: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                      }}
+                    >
+                      {cards.map((cardName, index) => {
+                        const chipProps = getCardChipProps(cardName);
 
-                          return (
-                            <Chip
-                              key={index}
-                              label={cardName}
-                              size="small"
-                              variant="outlined"
-                              sx={{
-                                fontSize: "0.7rem",
-                                height: "auto",
-                                py: 0.5,
-                                bgcolor: chipProps.bgcolor,
-                                borderColor: chipProps.borderColor,
-                                color: chipProps.color,
-                              }}
-                            />
-                          );
-                        })}
-                      </Box>
-                    </TableCell>
-                  );
-                })}
-                <TableCell align="center">
-                  <Typography variant="body2" fontWeight="bold">
-                    {town.effortPoints}
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ))}
+                        return (
+                          <Chip
+                            key={index}
+                            label={cardName}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              fontSize: "0.7rem",
+                              height: "auto",
+                              py: 0.5,
+                              bgcolor: chipProps.bgcolor,
+                              borderColor: chipProps.borderColor,
+                              color: chipProps.color,
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </TableCell>
+                );
+              })}
+              <TableCell align="center">
+                <Typography variant="body2" fontWeight="bold">
+                  {town.effortPoints}
+                </Typography>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </Paper>

@@ -29,6 +29,7 @@ import {
 } from "../game/stages.js";
 import { buildCardUndo, buildHazardUndo, planUndo } from "../game/undo.js";
 import firestoreService from "./firestoreService.js";
+import { onGameCompleted, onGameCreated } from "./gameLifecycle.js";
 
 function assertRevision(session, expectedRevision) {
   const current = session.revision ?? 0;
@@ -108,10 +109,12 @@ class GameSessionService {
 
       const sessionTowns = await this.createTownsForSession(session.id);
 
-      return {
+      const createdSession = {
         ...session,
         towns: sessionTowns,
       };
+      await onGameCreated(createdSession);
+      return createdSession;
     } catch (error) {
       console.error("Error creating game session:", error);
       throw error;
@@ -720,7 +723,7 @@ class GameSessionService {
 
     const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
 
-    return await runTransaction(db, async (tx) => {
+    const committed = await runTransaction(db, async (tx) => {
       const sessionSnap = await tx.get(sessionRef);
       if (!sessionSnap.exists()) {
         throw new GameRuleError("not-found", "Game not found");
@@ -839,6 +842,12 @@ class GameSessionService {
         dividends: plan.dividends,
       };
     });
+
+    if (!committed.isActive) {
+      await onGameCompleted(committed);
+    }
+
+    return committed;
   }
 
   /**
