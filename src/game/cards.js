@@ -20,6 +20,26 @@ export function applyCardEffects(town, card) {
   return updated;
 }
 
+export function revertCardEffects(town, card) {
+  const updated = {
+    ...town,
+    effortPoints: Math.max(0, (town.effortPoints ?? 0) + (card.cost ?? 0)),
+  };
+  if (HAZARD_IDS.includes(card.type)) {
+    updated[card.type] = Object.fromEntries(
+      ASPECTS.map((aspect) => [aspect, clampScore(town[card.type][aspect] - card[aspect])])
+    );
+  } else if (ASPECTS.includes(card.type)) {
+    for (const hazard of HAZARD_IDS) {
+      updated[hazard] = {
+        ...town[hazard],
+        [card.type]: clampScore(town[hazard][card.type] - card[card.type]),
+      };
+    }
+  }
+  return updated;
+}
+
 export function cardEffectiveRounds(playedAtRound, duration = 1) {
   return Array.from({ length: duration }, (_, i) => playedAtRound + i);
 }

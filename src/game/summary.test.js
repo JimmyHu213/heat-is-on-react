@@ -91,3 +91,28 @@ test("legacy sessions report 5 rounds and are not marked as ended early", () => 
   assert.equal(summary.roundsPlayed, 5);
   assert.equal(summary.endedEarly, false);
 });
+
+test("summary reports totalCardsPlayed, mostPopularCards (with ties), and eventsTimeline by year", () => {
+  const events = [
+    { roundNumber: 2, hazardIds: ["bushfire", "heatwave"], impactPoints: { a: 5, b: 5, cmp: 0 } },
+    { roundNumber: 1, hazardIds: ["flood"], impactPoints: { a: 10, b: 5, cmp: 0 } },
+  ];
+  const cardPlays = [
+    { cardId: "bushfire1" },
+    { cardId: "allNature" },
+    { cardId: "bushfire1" },
+    { cardId: "allNature" },
+    { cardId: "flood1" },
+  ];
+  const summary = buildGameSummary({ session, towns, events, roundStats: [], cardPlays });
+  assert.equal(summary.totalCardsPlayed, 5);
+  assert.deepEqual(
+    summary.mostPopularCards.map((c) => c.cardId).sort(),
+    ["allNature", "bushfire1"]
+  );
+  assert.equal(summary.mostPopularCards[0].count, 2);
+  assert.deepEqual(summary.eventsTimeline, [
+    { round: 1, year: 2051, hazards: ["flood"] },
+    { round: 2, year: 2052, hazards: ["bushfire", "heatwave"] },
+  ]);
+});

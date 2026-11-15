@@ -7,7 +7,7 @@ export const primaryColor = "#4D8E8B";
 export const natureColor = "#527334";
 export const economyColor = "#C8D2BE";
 export const societyColor = "#E38A6C";
-export const healthColor = "#FFFFFF";
+export const healthColor = "#1B365D";
 
 export const town1Color = "#FF9F78";
 export const town2Color = "#B2A7D6";
