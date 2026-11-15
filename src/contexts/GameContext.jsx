@@ -32,6 +32,7 @@ export function GameProvider({ children }) {
   const [roundEventDocs, setRoundEventDocs] = useState([]);
   const [roundStats, setRoundStats] = useState([]);
   const [townCardPlays, setTownCardPlays] = useState({});
+  const [townCardPlayDocs, setTownCardPlayDocs] = useState({});
   const [lastHazardImpact, setLastHazardImpact] = useState(null);
   const [lastHazardId, setLastHazardId] = useState(null);
 
@@ -184,6 +185,7 @@ export function GameProvider({ children }) {
         setRoundEventDocs([]);
         setRoundStats([]);
         setTownCardPlays({});
+        setTownCardPlayDocs({});
         setError("Game not found");
         return null;
       }
@@ -202,11 +204,17 @@ export function GameProvider({ children }) {
       setRoundStats(stats);
 
       const cardPlays = {};
+      const cardPlayDocs = {};
       for (const town of session.towns || []) {
-        const townCards = await gameSessionService.getTownCardPlays(town.id);
+        const [townCards, townPlayDocs] = await Promise.all([
+          gameSessionService.getTownCardPlays(town.id),
+          gameSessionService.getTownCardPlayDocs(town.id),
+        ]);
         cardPlays[town.id] = townCards;
+        cardPlayDocs[town.id] = townPlayDocs;
       }
       setTownCardPlays(cardPlays);
+      setTownCardPlayDocs(cardPlayDocs);
 
       setError(null);
       return session;
@@ -231,6 +239,7 @@ export function GameProvider({ children }) {
         setRoundEventDocs([]);
         setRoundStats([]);
         setTownCardPlays({});
+        setTownCardPlayDocs({});
       }
 
       try {
@@ -372,10 +381,17 @@ export function GameProvider({ children }) {
       );
 
       try {
-        const townCards = await gameSessionService.getTownCardPlays(townId);
+        const [townCards, townPlayDocs] = await Promise.all([
+          gameSessionService.getTownCardPlays(townId),
+          gameSessionService.getTownCardPlayDocs(townId),
+        ]);
         setTownCardPlays((prev) => ({
           ...prev,
           [townId]: townCards,
+        }));
+        setTownCardPlayDocs((prev) => ({
+          ...prev,
+          [townId]: townPlayDocs,
         }));
         setError(null);
       } catch (refreshErr) {
@@ -389,6 +405,107 @@ export function GameProvider({ children }) {
       console.error("Error playing card:", err);
       setError(
         formatMoveError(err, "Failed to play the card. Please try again.")
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addCardPlayAtRound = async (townId, cardId, targetRound) => {
+    if (!currentSession || currentRound === 0) return null;
+
+    setLoading(true);
+    try {
+      const result = await gameSessionService.applyCardToTown(
+        townId,
+        cardId,
+        currentRound,
+        {
+          expectedRevision: currentSession.revision,
+          targetRound,
+          allowAnyStage: true,
+        }
+      );
+
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
+      setTowns((prevTowns) =>
+        prevTowns.map((t) => (t.id === result.town.id ? result.town : t))
+      );
+
+      try {
+        const [townCards, townPlayDocs] = await Promise.all([
+          gameSessionService.getTownCardPlays(townId),
+          gameSessionService.getTownCardPlayDocs(townId),
+        ]);
+        setTownCardPlays((prev) => ({
+          ...prev,
+          [townId]: townCards,
+        }));
+        setTownCardPlayDocs((prev) => ({
+          ...prev,
+          [townId]: townPlayDocs,
+        }));
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Card saved, but card plays re-read failed:", refreshErr);
+        setError(REFRESH_WARNING);
+        return { ...result, refreshFailed: true };
+      }
+
+      return result;
+    } catch (err) {
+      console.error("Error adding card play:", err);
+      setError(
+        formatMoveError(err, "Failed to add the card. Please try again.")
+      );
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeCardPlay = async (cardPlayId) => {
+    if (!currentSession || !cardPlayId) return null;
+
+    setLoading(true);
+    try {
+      const result = await gameSessionService.removeCardPlay(
+        currentSession.id,
+        cardPlayId,
+        { expectedRevision: currentSession.revision }
+      );
+
+      setCurrentSession((prev) => ({ ...prev, ...result.session }));
+      setTowns((prevTowns) =>
+        prevTowns.map((t) => (t.id === result.town.id ? result.town : t))
+      );
+
+      try {
+        const [townCards, townPlayDocs] = await Promise.all([
+          gameSessionService.getTownCardPlays(result.townId),
+          gameSessionService.getTownCardPlayDocs(result.townId),
+        ]);
+        setTownCardPlays((prev) => ({
+          ...prev,
+          [result.townId]: townCards,
+        }));
+        setTownCardPlayDocs((prev) => ({
+          ...prev,
+          [result.townId]: townPlayDocs,
+        }));
+        setError(null);
+      } catch (refreshErr) {
+        console.warn("Card removed, but card plays re-read failed:", refreshErr);
+        setError(REFRESH_WARNING);
+        return { ...result, refreshFailed: true };
+      }
+
+      return result;
+    } catch (err) {
+      console.error("Error removing card play:", err);
+      setError(
+        formatMoveError(err, "Failed to remove the card. Please try again.")
       );
       return null;
     } finally {
@@ -610,6 +727,7 @@ export function GameProvider({ children }) {
     roundEventDocs,
     roundStats,
     townCardPlays,
+    townCardPlayDocs,
     lastHazardImpact,
     lastHazardId,
     canRevert,
@@ -625,6 +743,8 @@ export function GameProvider({ children }) {
     settleRound,
     advanceRound,
     playCard,
+    addCardPlayAtRound,
+    removeCardPlay,
     applyHazard,
     refreshSessionData,
     getTownById,
