@@ -28,13 +28,7 @@ import {
   neshAverages,
   overallResilience,
 } from "../../game/scores.js";
-
-// Icons
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
-import FloodIcon from "@mui/icons-material/Flood";
-import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import BugReportIcon from "@mui/icons-material/BugReport";
+import HazardIcon from "../common/HazardIcon";
 
 const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
   const hazards = [
@@ -42,35 +36,30 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
       id: "bushfire",
       name: "Bushfire",
       color: bushfireColor1,
-      icon: <LocalFireDepartmentIcon />,
       startAngle: 0,
     },
     {
       id: "flood",
       name: "Flood",
       color: floodColor1,
-      icon: <FloodIcon />,
       startAngle: 72,
     },
     {
       id: "stormSurge",
       name: "Storm Surge",
       color: stormSurgeColor1,
-      icon: <ThunderstormIcon />,
       startAngle: 144,
     },
     {
       id: "heatwave",
       name: "Heatwave",
       color: heatwaveColor1,
-      icon: <WbSunnyIcon />,
       startAngle: 216,
     },
     {
       id: "biohazard",
       name: "Biohazard",
       color: biohazardColor1,
-      icon: <BugReportIcon />,
       startAngle: 288,
     },
   ];
@@ -277,12 +266,10 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
 
             <g>
               <foreignObject x={220} y={20} width={30} height={30}>
-                <LocalFireDepartmentIcon
-                  style={{ color: bushfireColor1, fontSize: 24 }}
-                />
+                <HazardIcon hazardId="bushfire" color={bushfireColor1} size={24} />
               </foreignObject>
               <foreignObject x={250} y={centerY} width={30} height={30}>
-                <FloodIcon style={{ color: floodColor1, fontSize: 24 }} />
+                <HazardIcon hazardId="flood" color={floodColor1} size={24} />
               </foreignObject>
               <foreignObject
                 x={centerX - 15}
@@ -290,17 +277,13 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
                 width={30}
                 height={30}
               >
-                <ThunderstormIcon
-                  style={{ color: stormSurgeColor1, fontSize: 24 }}
-                />
+                <HazardIcon hazardId="stormSurge" color={stormSurgeColor1} size={24} />
               </foreignObject>
               <foreignObject x={10} y={centerY} width={30} height={30}>
-                <WbSunnyIcon style={{ color: heatwaveColor1, fontSize: 24 }} />
+                <HazardIcon hazardId="heatwave" color={heatwaveColor1} size={24} />
               </foreignObject>
               <foreignObject x={40} y={20} width={30} height={30}>
-                <BugReportIcon
-                  style={{ color: biohazardColor1, fontSize: 24 }}
-                />
+                <HazardIcon hazardId="biohazard" color={biohazardColor1} size={24} />
               </foreignObject>
             </g>
           </svg>
