@@ -46,6 +46,7 @@ import exportService from "../../services/exportService";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import NewGameDialog from "./NewGameDialog";
+import TrainingLink from "../common/TrainingLink";
 import { getPlayerCount, getTotalRounds } from "../../game/options";
 
 const STAGE_LABELS = {
@@ -333,6 +334,7 @@ export default function Dashboard() {
               <Typography variant="body2" gutterBottom>
                 <strong>User ID:</strong> {currentUser.uid}
               </Typography>
+              <TrainingLink fullWidth sx={{ mt: 1.5 }} />
               <Button
                 color="primary"
                 variant="contained"

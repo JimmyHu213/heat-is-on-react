@@ -19,13 +19,7 @@ import {
   heatwaveColor1,
   biohazardColor1,
 } from "../../../constants/palette";
-
-// Icons for hazards
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
-import FloodIcon from "@mui/icons-material/Flood";
-import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import BugReportIcon from "@mui/icons-material/BugReport";
+import HazardIcon from "../../common/HazardIcon";
 
 const GameTable = ({
   towns,
@@ -49,22 +43,9 @@ const GameTable = ({
     (_, i) => i + 1
   );
 
-  const getHazardIcon = (hazardId) => {
-    switch (hazardId) {
-      case "bushfire":
-        return <LocalFireDepartmentIcon sx={{ color: bushfireColor1 }} />;
-      case "flood":
-        return <FloodIcon sx={{ color: floodColor1 }} />;
-      case "stormSurge":
-        return <ThunderstormIcon sx={{ color: stormSurgeColor1 }} />;
-      case "heatwave":
-        return <WbSunnyIcon sx={{ color: heatwaveColor1 }} />;
-      case "biohazard":
-        return <BugReportIcon sx={{ color: biohazardColor1 }} />;
-      default:
-        return null;
-    }
-  };
+  const getHazardIcon = (hazardId) => (
+    <HazardIcon hazardId={hazardId} size={18} sx={{ ml: 0.5 }} />
+  );
 
   const getHazardColor = (hazardId) => {
     switch (hazardId) {

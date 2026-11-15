@@ -1,5 +1,5 @@
 // src/components/Game/components/HazardImpactDialog.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,8 +13,15 @@ import {
   TableCell,
   Typography,
   Chip,
+  Box,
+  Link,
 } from "@mui/material";
 import { hazards } from "../../../constants/hazards";
+import {
+  MEDIA_CONFIG,
+  getEventGifPath,
+} from "../../../constants/mediaConfig.js";
+import HazardIcon from "../../common/HazardIcon";
 
 export default function HazardImpactDialog({
   open,
@@ -23,17 +30,73 @@ export default function HazardImpactDialog({
   towns = [],
   hazardId,
 }) {
+  const [failedGifUrl, setFailedGifUrl] = useState(null);
+
   if (!impact || impact.length === 0) return null;
 
   const hazard = hazards.find((h) => h.id === hazardId);
   const hazardName = hazard ? hazard.name : hazardId || "Hazard";
+  const gifUrl = getEventGifPath(hazardId);
+  const attribution = MEDIA_CONFIG.eventGifAttribution;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        Hazard Impact Report: {hazardName}
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <HazardIcon hazardId={hazardId} size={28} />
+        <span>Hazard Impact Report: {hazardName}</span>
       </DialogTitle>
       <DialogContent dividers>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            mb: 2,
+            p: 1.5,
+            bgcolor: "grey.50",
+            borderRadius: 2,
+          }}
+        >
+          {gifUrl && failedGifUrl !== gifUrl ? (
+            <Box
+              component="img"
+              src={gifUrl}
+              alt={`${hazardName} event animation`}
+              onError={() => setFailedGifUrl(gifUrl)}
+              sx={{ width: 120, height: 120, objectFit: "contain" }}
+            />
+          ) : (
+            <HazardIcon hazardId={hazardId} size={72} />
+          )}
+          {gifUrl && failedGifUrl !== gifUrl && attribution && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 0.5 }}
+            >
+              <Link
+                href={attribution.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="inherit"
+                underline="hover"
+              >
+                {attribution.label}
+              </Link>
+              {" · "}
+              <Link
+                href={attribution.licenseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="inherit"
+                underline="hover"
+              >
+                {attribution.licenseLabel}
+              </Link>
+            </Typography>
+          )}
+        </Box>
+
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Points lost per dimension (summed across all hazard types, including any
           cascading penalties for segments at or below 20%) and overall town

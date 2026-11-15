@@ -16,6 +16,7 @@ import {
   DialogActions,
   Alert,
   Chip,
+  Link,
 } from "@mui/material";
 import { hazards } from "../../../constants/hazards";
 import {
@@ -26,14 +27,20 @@ import {
   biohazardColor1,
 } from "../../../constants/palette";
 import { MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
+import {
+  MEDIA_CONFIG,
+  getEventGifPath,
+} from "../../../constants/mediaConfig.js";
+import HazardIcon from "../../common/HazardIcon";
 import HazardWheel from "./HazardWheel";
 
-// Icons for hazards
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
-import FloodIcon from "@mui/icons-material/Flood";
-import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
-import WbSunnyIcon from "@mui/icons-material/WbSunny";
-import BugReportIcon from "@mui/icons-material/BugReport";
+const HAZARD_COLORS = {
+  bushfire: bushfireColor1,
+  flood: floodColor1,
+  stormSurge: stormSurgeColor1,
+  heatwave: heatwaveColor1,
+  biohazard: biohazardColor1,
+};
 
 const HazardControls = ({
   onApplyHazard,
@@ -45,27 +52,13 @@ const HazardControls = ({
 }) => {
   const [selectedHazard, setSelectedHazard] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [failedGifUrl, setFailedGifUrl] = useState(null);
 
   const isHazardStage = currentStage === "hazard";
   const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
   const controlsDisabled = disabled || !isHazardStage || limitReached;
 
-  const getHazardIconAndColor = (hazardId) => {
-    switch (hazardId) {
-      case "bushfire":
-        return { icon: <LocalFireDepartmentIcon />, color: bushfireColor1 };
-      case "flood":
-        return { icon: <FloodIcon />, color: floodColor1 };
-      case "stormSurge":
-        return { icon: <ThunderstormIcon />, color: stormSurgeColor1 };
-      case "heatwave":
-        return { icon: <WbSunnyIcon />, color: heatwaveColor1 };
-      case "biohazard":
-        return { icon: <BugReportIcon />, color: biohazardColor1 };
-      default:
-        return { icon: null, color: "grey.500" };
-    }
-  };
+  const getHazardColor = (hazardId) => HAZARD_COLORS[hazardId] || "grey.500";
 
   const handleHazardSelect = (hazard) => {
     setSelectedHazard(hazard);
@@ -82,6 +75,11 @@ const HazardControls = ({
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
+
+  const selectedGifUrl = selectedHazard
+    ? getEventGifPath(selectedHazard.id)
+    : null;
+  const attribution = MEDIA_CONFIG.eventGifAttribution;
 
   return (
     <Box>
@@ -109,7 +107,8 @@ const HazardControls = ({
         </Alert>
       ) : limitReached ? (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
-          Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Round {currentRound}. Proceed to Review.
+          Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Round{" "}
+          {currentRound}. Proceed to Review.
         </Alert>
       ) : (
         <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -127,13 +126,20 @@ const HazardControls = ({
         />
       )}
 
-      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-        {digitalWheelEnabled !== false ? "Or select hazard manually:" : "Select hazard:"}
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        display="block"
+        sx={{ mt: 1 }}
+      >
+        {digitalWheelEnabled !== false
+          ? "Or select hazard manually:"
+          : "Select hazard:"}
       </Typography>
 
       <Grid container spacing={1} sx={{ mt: 0.5 }}>
         {hazards.map((hazard) => {
-          const { icon, color } = getHazardIconAndColor(hazard.id);
+          const color = getHazardColor(hazard.id);
 
           return (
             <Grid item xs={6} key={hazard.id}>
@@ -143,7 +149,13 @@ const HazardControls = ({
                     variant="outlined"
                     fullWidth
                     disabled={controlsDisabled}
-                    startIcon={icon}
+                    startIcon={
+                      <HazardIcon
+                        hazardId={hazard.id}
+                        color={color}
+                        size={22}
+                      />
+                    }
                     onClick={() => handleHazardSelect(hazard)}
                     sx={{
                       borderColor: color,
@@ -170,25 +182,82 @@ const HazardControls = ({
         color="text.secondary"
         sx={{ mt: 2, fontStyle: "italic" }}
       >
-        Note: Applying a hazard reduces town resilience scores and triggers a -10
-        penalty across all hazards for any aspect already at or below 20.
+        Note: Applying a hazard reduces town resilience scores and triggers a
+        -10 penalty across all hazards for any aspect already at or below 20.
       </Typography>
 
       {/* Confirmation Dialog */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog}>
-        <DialogTitle>Confirm {selectedHazard?.name} Hazard</DialogTitle>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {selectedHazard && (
+            <HazardIcon hazardId={selectedHazard.id} size={26} />
+          )}
+          <span>Confirm {selectedHazard?.name} Hazard</span>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Apply the <strong>{selectedHazard?.name}</strong> hazard to all 6 towns in
-            Round {currentRound}?
+            Apply the <strong>{selectedHazard?.name}</strong> hazard to all 6
+            towns in Round {currentRound}?
           </DialogContentText>
+
+          {selectedHazard && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                mt: 2,
+              }}
+            >
+              {selectedGifUrl && failedGifUrl !== selectedGifUrl ? (
+                <Box
+                  component="img"
+                  src={selectedGifUrl}
+                  alt={`${selectedHazard.name} event animation`}
+                  onError={() => setFailedGifUrl(selectedGifUrl)}
+                  sx={{ width: 112, height: 112, objectFit: "contain" }}
+                />
+              ) : (
+                <HazardIcon hazardId={selectedHazard.id} size={64} />
+              )}
+              {selectedGifUrl &&
+                failedGifUrl !== selectedGifUrl &&
+                attribution && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    <Link
+                      href={attribution.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="inherit"
+                      underline="hover"
+                    >
+                      {attribution.label}
+                    </Link>
+                    {" · "}
+                    <Link
+                      href={attribution.licenseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      color="inherit"
+                      underline="hover"
+                    >
+                      {attribution.licenseLabel}
+                    </Link>
+                  </Typography>
+                )}
+            </Box>
+          )}
 
           {selectedHazard && (
             <Card
               variant="outlined"
               sx={{
                 mt: 2,
-                borderColor: getHazardIconAndColor(selectedHazard.id).color,
+                borderColor: getHazardColor(selectedHazard.id),
                 borderWidth: 5,
                 borderRadius: 2,
               }}
@@ -222,8 +291,9 @@ const HazardControls = ({
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="body2" color="error">
                   <strong>Warning - cascading impacts:</strong> Any town with a
-                  segment at or below 20% in an aspect receives a -10% penalty to
-                  that aspect across all hazard types before this hazard hits.
+                  segment at or below 20% in an aspect receives a -10% penalty
+                  to that aspect across all hazard types before this hazard
+                  hits.
                 </Typography>
               </CardContent>
             </Card>
