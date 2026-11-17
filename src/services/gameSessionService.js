@@ -971,6 +971,7 @@ class GameSessionService {
       const cardPlays = await firestoreService.getDocuments(
         this.CARD_PLAYS_COLLECTION,
         [
+          ["sessionId", "==", sessionId],
           ["townId", "==", town.id],
           ["isActive", "==", true],
         ]
@@ -1083,11 +1084,22 @@ class GameSessionService {
   /**
    * Get card plays for a town grouped by round
    */
-  async getTownCardPlays(townId) {
+  async getTownCardPlays(townId, sessionId = null) {
     try {
+      const effectiveSessionId =
+        sessionId ||
+        (typeof townId === "string" && townId.includes("_town_")
+          ? townId.split("_town_")[0]
+          : null);
+      const filters = effectiveSessionId
+        ? [
+            ["sessionId", "==", effectiveSessionId],
+            ["townId", "==", townId],
+          ]
+        : [["townId", "==", townId]];
       const cardPlays = await firestoreService.getDocuments(
         this.CARD_PLAYS_COLLECTION,
-        [["townId", "==", townId]]
+        filters
       );
 
       const cardsByRound = {};
@@ -1186,17 +1198,38 @@ class GameSessionService {
     );
   }
 
-  async getTownCardPlaysForRound(townId, round) {
-    return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, [
-      ["townId", "==", townId],
-      ["playedAtRound", "==", round],
-    ]);
+  async getTownCardPlaysForRound(townId, round, sessionId = null) {
+    const effectiveSessionId =
+      sessionId ||
+      (typeof townId === "string" && townId.includes("_town_")
+        ? townId.split("_town_")[0]
+        : null);
+    const filters = effectiveSessionId
+      ? [
+          ["sessionId", "==", effectiveSessionId],
+          ["townId", "==", townId],
+          ["playedAtRound", "==", round],
+        ]
+      : [
+          ["townId", "==", townId],
+          ["playedAtRound", "==", round],
+        ];
+    return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, filters);
   }
 
-  async getTownCardPlayDocs(townId) {
-    return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, [
-      ["townId", "==", townId],
-    ]);
+  async getTownCardPlayDocs(townId, sessionId = null) {
+    const effectiveSessionId =
+      sessionId ||
+      (typeof townId === "string" && townId.includes("_town_")
+        ? townId.split("_town_")[0]
+        : null);
+    const filters = effectiveSessionId
+      ? [
+          ["sessionId", "==", effectiveSessionId],
+          ["townId", "==", townId],
+        ]
+      : [["townId", "==", townId]];
+    return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, filters);
   }
 
   async removeCardPlay(sessionId, cardPlayId, { expectedRevision } = {}) {
