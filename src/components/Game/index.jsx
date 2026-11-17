@@ -781,15 +781,6 @@ const Game = () => {
 
               <Fab
                 variant="extended"
-                color={
-                  floatingControlsOpen
-                    ? "default"
-                    : currentStage === "hazard"
-                    ? "warning"
-                    : currentStage === "review"
-                    ? "success"
-                    : "primary"
-                }
                 onClick={() => setFloatingControlsOpen((prev) => !prev)}
                 sx={{
                   position: "fixed",
@@ -797,6 +788,11 @@ const Game = () => {
                   right: 24,
                   zIndex: theme.zIndex.drawer + 1,
                   fontWeight: "bold",
+                  bgcolor: floatingControlsOpen ? "#424242" : "#E38A6C",
+                  color: "#fff",
+                  "&:hover": {
+                    bgcolor: floatingControlsOpen ? "#303030" : "#d47555",
+                  },
                 }}
               >
                 {floatingControlsOpen ? (
