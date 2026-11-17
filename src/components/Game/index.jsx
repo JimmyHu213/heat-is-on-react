@@ -26,6 +26,7 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  Fab,
 } from "@mui/material";
 
 // Icons
@@ -43,6 +44,9 @@ import HomeIcon from "@mui/icons-material/Home";
 import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 import PublicIcon from "@mui/icons-material/Public";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import StyleIcon from "@mui/icons-material/Style";
+import CasinoIcon from "@mui/icons-material/Casino";
+import CloseIcon from "@mui/icons-material/Close";
 
 // Components
 import TownPieCharts from "./components/TownPieCharts";
@@ -121,6 +125,7 @@ const Game = () => {
   const [endEarlyDialogOpen, setEndEarlyDialogOpen] = useState(false);
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
   const [showOpeningScreen, setShowOpeningScreen] = useState(false);
+  const [floatingControlsOpen, setFloatingControlsOpen] = useState(false);
   const [videoModal, setVideoModal] = useState({ open: false, title: "", src: "" });
   const [videoError, setVideoError] = useState(false);
 
@@ -690,74 +695,127 @@ const Game = () => {
             </Paper>
           ) : (
             <>
-              {/* 16:9 Live Projection Layout: 6 Town NESH wheels always visible beside active stage controls */}
-              <Grid container spacing={2} alignItems="flex-start">
-                <Grid item xs={12} md={8}>
-                  <TownPieCharts towns={towns} currentStage={currentStage} />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, borderRadius: 2, boxShadow: 2 }}>
-                    {currentStage === "adaptation" && (
-                      <CardControls
-                        towns={towns}
-                        onPlayCard={handlePlayCard}
-                        disabled={loading || !currentSession?.isActive}
-                        currentRound={currentRound}
-                        currentStage={currentStage}
-                        townCardPlayDocs={townCardPlayDocs}
-                        onRemoveCardPlay={removeCardPlay}
-                      />
-                    )}
-                    {currentStage === "hazard" && (
-                      <HazardControls
-                        onApplyHazard={handleApplyHazard}
-                        disabled={loading || !currentSession?.isActive}
-                        currentRound={currentRound}
-                        currentStage={currentStage}
-                        digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
-                        hazardCountThisRound={hazardCountThisRound}
-                      />
-                    )}
-                    {currentStage === "review" && (
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                          Review: How resilient is Adaptania now?
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          Flip the town cards to inspect NESH resilience bars and compare across towns.
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          color="success"
-                          fullWidth
-                          onClick={() => setDividendsDialogOpen(true)}
-                          disabled={loading}
-                        >
-                          Proceed to Reward for effort
-                        </Button>
-                      </Box>
-                    )}
-                    {currentStage === "complete" && (
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                          Workshop Complete
-                        </Typography>
-                        <Button
-                          variant="contained"
-                          color="secondary"
-                          fullWidth
-                          startIcon={<AssessmentIcon />}
-                          onClick={() => setSummaryDialogOpen(true)}
-                        >
-                          Open Workshop Reflection
-                        </Button>
-                      </Box>
-                    )}
-                  </Paper>
-                </Grid>
-              </Grid>
-
+              <TownPieCharts towns={towns} currentStage={currentStage} />
               <BarChartsView towns={towns} />
+
+              {/* Floating expandable stage controls panel */}
+              {floatingControlsOpen && (
+                <Paper
+                  elevation={8}
+                  sx={{
+                    position: "fixed",
+                    bottom: 88,
+                    right: 24,
+                    width: { xs: "calc(100vw - 32px)", sm: 400 },
+                    maxHeight: "75vh",
+                    overflowY: "auto",
+                    p: 2,
+                    borderRadius: 3,
+                    zIndex: theme.zIndex.drawer + 1,
+                  }}
+                >
+                  {currentStage === "adaptation" && (
+                    <CardControls
+                      towns={towns}
+                      onPlayCard={handlePlayCard}
+                      disabled={loading || !currentSession?.isActive}
+                      currentRound={currentRound}
+                      currentStage={currentStage}
+                      townCardPlayDocs={townCardPlayDocs}
+                      onRemoveCardPlay={removeCardPlay}
+                    />
+                  )}
+                  {currentStage === "hazard" && (
+                    <HazardControls
+                      onApplyHazard={handleApplyHazard}
+                      disabled={loading || !currentSession?.isActive}
+                      currentRound={currentRound}
+                      currentStage={currentStage}
+                      digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
+                      hazardCountThisRound={hazardCountThisRound}
+                    />
+                  )}
+                  {currentStage === "review" && (
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                        Review: How resilient is Adaptania now?
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Flip the town cards to inspect NESH resilience bars and compare across towns.
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        fullWidth
+                        onClick={() => {
+                          setFloatingControlsOpen(false);
+                          setDividendsDialogOpen(true);
+                        }}
+                        disabled={loading}
+                      >
+                        Proceed to Reward for effort
+                      </Button>
+                    </Box>
+                  )}
+                  {currentStage === "complete" && (
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                        Workshop Complete
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        fullWidth
+                        startIcon={<AssessmentIcon />}
+                        onClick={() => {
+                          setFloatingControlsOpen(false);
+                          setSummaryDialogOpen(true);
+                        }}
+                      >
+                        Open Workshop Reflection
+                      </Button>
+                    </Box>
+                  )}
+                </Paper>
+              )}
+
+              <Fab
+                variant="extended"
+                color={
+                  floatingControlsOpen
+                    ? "default"
+                    : currentStage === "hazard"
+                    ? "warning"
+                    : currentStage === "review"
+                    ? "success"
+                    : "primary"
+                }
+                onClick={() => setFloatingControlsOpen((prev) => !prev)}
+                sx={{
+                  position: "fixed",
+                  bottom: 24,
+                  right: 24,
+                  zIndex: theme.zIndex.drawer + 1,
+                  fontWeight: "bold",
+                }}
+              >
+                {floatingControlsOpen ? (
+                  <CloseIcon sx={{ mr: 1 }} />
+                ) : currentStage === "hazard" ? (
+                  <CasinoIcon sx={{ mr: 1 }} />
+                ) : (
+                  <StyleIcon sx={{ mr: 1 }} />
+                )}
+                {floatingControlsOpen
+                  ? "Close"
+                  : currentStage === "adaptation"
+                  ? "Play Cards"
+                  : currentStage === "hazard"
+                  ? "Hazard Wheel"
+                  : currentStage === "review"
+                  ? "Reward for effort"
+                  : "Summary"}
+              </Fab>
             </>
           )}
         </TabPanel>
