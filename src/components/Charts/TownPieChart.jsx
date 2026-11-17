@@ -17,7 +17,9 @@ import {
   heatwaveColor1,
   biohazardColor1,
   natureColor,
+  economyColor,
   societyColor,
+  healthColor,
   primaryColorLight,
   secondaryColor,
 } from "../../constants/palette";
@@ -76,9 +78,9 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
 
   const aspectBars = [
     { key: "nature", label: "Nature", color: natureColor },
-    { key: "economy", label: "Economy", color: "#5C6BC0" },
+    { key: "economy", label: "Economy", color: economyColor },
     { key: "society", label: "Society", color: societyColor },
-    { key: "health", label: "Health", color: "#26A69A" },
+    { key: "health", label: "Health", color: healthColor },
   ];
 
   return (
@@ -88,13 +90,14 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         bgcolor: "grey.200",
         borderRadius: 2,
         boxShadow: 2,
-        p: 2,
-        minHeight: "420px",
+        p: 1.25,
+        minHeight: "265px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "space-between",
-        width: "300px",
+        width: "100%",
+        maxWidth: "255px",
         cursor: onToggleFlip ? "pointer" : "default",
         position: "relative",
         transition: "transform 0.2s, box-shadow 0.2s",
@@ -103,34 +106,24 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         },
       }}
     >
-      {/* Top Bar: EP Badge, Comparison Chip, Flip Button */}
+      {/* Top Bar: EP Badge, Flip Button */}
       <Box
         sx={{
           width: "100%",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          mb: 0.5,
+          mb: 0.25,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Chip
-            label={`${town.effortPoints} EP`}
-            size="small"
-            color="primary"
-            sx={{ fontWeight: "bold" }}
-          />
-          {town.isComparisonTown && (
-            <Chip
-              label="Comparison"
-              size="small"
-              variant="outlined"
-              color="default"
-            />
-          )}
-        </Box>
+        <Chip
+          label={`${town.effortPoints} EP`}
+          size="small"
+          color="primary"
+          sx={{ fontWeight: "bold", height: 22 }}
+        />
         {onToggleFlip && (
-          <Tooltip title={flipped ? "Show Radial Chart" : "Flip for Dimension Averages"}>
+          <Tooltip title={flipped ? "Show Radial Chart" : "Flip for NESH Averages"}>
             <IconButton
               size="small"
               onClick={(e) => {
@@ -149,11 +142,11 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         <Box
           sx={{
             position: "relative",
-            width: 280,
-            height: 280,
+            width: 190,
+            height: 190,
           }}
         >
-          <svg width="280" height="280" viewBox="0 0 280 280">
+          <svg width="100%" height="100%" viewBox="0 0 280 280">
             {hazards.map((hazard) => {
               return aspects.map((aspect, aspectIndex) => {
                 const value = town[hazard.id]?.[aspect];
@@ -289,33 +282,30 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
           </svg>
         </Box>
       ) : (
-        /* Back: Dimension Averages & Resilience Summary */
+        /* Back: Chunky NESH Averages & Resilience Summary */
         <Box
           sx={{
             width: "100%",
-            height: 280,
+            height: 190,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            px: 1,
-            py: 0.5,
+            px: 0.5,
+            py: 0.25,
           }}
         >
-          <Box sx={{ textAlign: "center" }}>
-            <Typography variant="caption" color="text.secondary">
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <Typography variant="caption" color="text.secondary" fontWeight="bold">
               Overall Resilience
             </Typography>
-            <Typography variant="h4" fontWeight="bold" color="primary.main">
-              {avgResilience.toFixed(1)}%
+            <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
+              {avgResilience.toFixed(0)}%
             </Typography>
           </Box>
 
           <Divider />
 
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <Typography variant="caption" fontWeight="bold" color="text.secondary">
-              Dimension Averages (across 5 hazards):
-            </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.6 }}>
             {aspectBars.map((item) => {
               const avg = nesh[item.key] || 0;
               return (
@@ -324,26 +314,26 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
                     sx={{
                       display: "flex",
                       justifyContent: "space-between",
-                      mb: 0.25,
+                      mb: 0.15,
                     }}
                   >
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="caption" fontWeight="bold">
                       {item.label}
                     </Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      {avg.toFixed(1)}%
+                    <Typography variant="caption" fontWeight="bold">
+                      {avg.toFixed(0)}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
                     value={avg}
                     sx={{
-                      height: 8,
-                      borderRadius: 4,
+                      height: 14,
+                      borderRadius: 1,
                       bgcolor: "rgba(0,0,0,0.12)",
                       "& .MuiLinearProgress-bar": {
                         bgcolor: item.color,
-                        borderRadius: 4,
+                        borderRadius: 1,
                       },
                     }}
                   />
@@ -351,8 +341,6 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
               );
             })}
           </Box>
-
-          <Divider />
 
           <Box
             sx={{
@@ -373,7 +361,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
               color={segmentsAt100 > 0 ? "success.main" : "text.secondary"}
               fontWeight={segmentsAt100 > 0 ? "bold" : "normal"}
             >
-              At 100%: {segmentsAt100} (+{segmentsAt100 * 5} EP)
+              100%: {segmentsAt100} (+{segmentsAt100 * 5} EP)
             </Typography>
           </Box>
         </Box>

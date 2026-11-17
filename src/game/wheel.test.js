@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HAZARD_IDS } from "./scores.js";
-import { pickRandomIndex, spinHazardWheel } from "./wheel.js";
+import { WHEEL_SLICES, pickRandomIndex, spinHazardWheel } from "./wheel.js";
 
 test("pickRandomIndex rejects biased top values and maps 0..count-1 uniformly", () => {
   // For count = 5, 2^32 = 4294967296; limit = 4294967295 (4294967295 % 5 === 0)
@@ -35,4 +35,13 @@ test("spinHazardWheel selects a hazard and computes target rotation degrees", ()
   assert.equal(fromObjects.index, 0);
   assert.equal(fromObjects.hazardId, "bushfire");
   assert.equal(fromObjects.rotationDegrees, 2124);
+});
+
+test("WHEEL_SLICES includes 5 hazards plus the mystery ? slice", () => {
+  assert.equal(WHEEL_SLICES.length, 6);
+  const mystery = WHEEL_SLICES.find((s) => s.id === "mystery");
+  assert.deepEqual(mystery, { id: "mystery", name: "?", color: "#546E7A", isMystery: true });
+  const result = spinHazardWheel(WHEEL_SLICES, () => 5);
+  assert.equal(result.index, 5);
+  assert.equal(result.hazardId, "mystery");
 });

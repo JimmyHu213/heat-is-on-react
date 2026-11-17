@@ -18,6 +18,15 @@ import {
   Snackbar,
   useTheme,
   Tooltip,
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardActionArea,
+  CardContent,
+  Fab,
 } from "@mui/material";
 
 // Icons
@@ -31,6 +40,13 @@ import LocationCityIcon from "@mui/icons-material/LocationCity";
 import HistoryIcon from "@mui/icons-material/History";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import HomeIcon from "@mui/icons-material/Home";
+import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
+import PublicIcon from "@mui/icons-material/Public";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import StyleIcon from "@mui/icons-material/Style";
+import CasinoIcon from "@mui/icons-material/Casino";
+import CloseIcon from "@mui/icons-material/Close";
 
 // Components
 import TownPieCharts from "./components/TownPieCharts";
@@ -40,12 +56,11 @@ import TownDetailsView from "./components/TownDetailsView";
 import HazardControls from "./components/HazardControls";
 import CardControls from "./components/CardControls";
 import StageBar from "./components/StageBar";
-import HazardImpactDialog from "./components/HazardImpactDialog";
 import DividendsDialog from "./components/DividendsDialog";
 import EndEarlyDialog from "./components/EndEarlyDialog";
 import GameSummaryDialog from "./components/GameSummaryDialog";
-import IntroVideo from "./components/IntroVideo";
 import TrainingLink from "../common/TrainingLink";
+import { MEDIA_CONFIG } from "../../constants/mediaConfig";
 import { primaryColor } from "../../constants/palette";
 import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
@@ -84,17 +99,17 @@ const Game = () => {
     roundEventDocs,
     roundStats,
     townCardPlays,
-    lastHazardImpact,
-    lastHazardId,
+    townCardPlayDocs,
     loadSession,
     startGame,
     changeStage,
     settleRound,
     applyHazard,
     playCard,
+    addCardPlayAtRound,
+    removeCardPlay,
     updatePlayerCount,
     clearError,
-    clearLastHazardImpact,
     updateTown,
     revertToPreviousState,
     canRevert,
@@ -109,6 +124,10 @@ const Game = () => {
   const [dividendsDialogOpen, setDividendsDialogOpen] = useState(false);
   const [endEarlyDialogOpen, setEndEarlyDialogOpen] = useState(false);
   const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [showOpeningScreen, setShowOpeningScreen] = useState(false);
+  const [floatingControlsOpen, setFloatingControlsOpen] = useState(false);
+  const [videoModal, setVideoModal] = useState({ open: false, title: "", src: "" });
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
     loadSession(sessionId);
@@ -351,6 +370,54 @@ const Game = () => {
               : `Year ${2050 + currentRound} (Round ${currentRound}/${totalRounds})`}
           </Typography>
 
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            startIcon={<HomeIcon />}
+            onClick={() => {
+              setShowOpeningScreen(true);
+              setActiveTab(0);
+            }}
+            sx={{
+              mr: 1.5,
+              borderColor: "white",
+              color: "white",
+              "&:hover": {
+                borderColor: "white",
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            Opening Screen
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="inherit"
+            size="small"
+            startIcon={<OndemandVideoIcon />}
+            onClick={() => {
+              setVideoError(false);
+              setVideoModal({
+                open: true,
+                title: "NESH Explainer",
+                src: MEDIA_CONFIG.neshExplainerVideo,
+              });
+            }}
+            sx={{
+              mr: 1.5,
+              borderColor: "white",
+              color: "white",
+              "&:hover": {
+                borderColor: "white",
+                bgcolor: "rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            NESH Explainer
+          </Button>
+
           <TrainingLink
             color="inherit"
             variant="outlined"
@@ -462,6 +529,8 @@ const Game = () => {
             disabled={loading || currentRound === 0 || !currentSession?.isActive}
             currentRound={currentRound}
             currentStage={currentStage}
+            townCardPlayDocs={townCardPlayDocs}
+            onRemoveCardPlay={removeCardPlay}
           />
 
           <Divider sx={{ my: 2 }} />
@@ -544,52 +613,234 @@ const Game = () => {
 
         {/* Tab Panels */}
         <TabPanel value={activeTab} index={0}>
-          {currentRound === 0 ? (
-            <Paper sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="h5" gutterBottom fontWeight="bold">
+          {currentRound === 0 || showOpeningScreen ? (
+            <Paper sx={{ p: 4, borderRadius: 2, maxWidth: 960, mx: "auto" }}>
+              <Typography variant="h4" gutterBottom fontWeight="bold" align="center">
                 Welcome to The Heat Is On!
               </Typography>
-              <Typography variant="body1" paragraph>
-                In this workshop, groups manage 5 towns (plus Bludgeton as a
-                comparison town) facing climate hazards over {totalRounds}{" "}
-                round{totalRounds === 1 ? "" : "s"}. Each round moves through
-                four guided stages:
+              <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
+                Manage your towns across {totalRounds} {totalRounds === 1 ? "year" : "years"} of climate hazards and adaptations.
               </Typography>
-              <ul>
-                <li>
-                  <strong>1. Adapt:</strong> Groups discuss and purchase
-                  adaptation cards for their towns.
-                </li>
-                <li>
-                  <strong>2. Event:</strong> Spin the hazard wheel (or enter the
-                  physical wheel result) to apply climate hazards and view the
-                  impact report.
-                </li>
-                <li>
-                  <strong>3. Review:</strong> Flip town cards to compare
-                  dimension averages and overall resilience against Bludgeton.
-                </li>
-                <li>
-                  <strong>4. Dividends:</strong> Award 5 Effort Points for every
-                  segment at 100% and advance to the next round.
-                </li>
-              </ul>
-              <IntroVideo
-                onStartGame={handleStartGame}
-                loading={loading}
-              />
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="body2" color="text.secondary">
-                <strong>Warning - cascading impacts:</strong> If any town's
-                resilience is at or below 20% in any segment, all other segments
-                for that aspect of resilience will receive a -10% penalty when a
-                hazard strikes.
-              </Typography>
+
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6}>
+                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardActionArea
+                      onClick={() => {
+                        setVideoError(false);
+                        setVideoModal({
+                          open: true,
+                          title: "Time Machine",
+                          src: MEDIA_CONFIG.timeMachineVideo,
+                        });
+                      }}
+                      sx={{ p: 3, textAlign: "center" }}
+                    >
+                      <CardContent>
+                        <AccessTimeIcon sx={{ fontSize: 56, color: "primary.main", mb: 1 }} />
+                        <Typography variant="h6" fontWeight="bold">
+                          Time Machine
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardActionArea
+                      onClick={() => {
+                        setVideoError(false);
+                        setVideoModal({
+                          open: true,
+                          title: "Global Scenario",
+                          src: MEDIA_CONFIG.globalScenarioVideo,
+                        });
+                      }}
+                      sx={{ p: 3, textAlign: "center" }}
+                    >
+                      <CardContent>
+                        <PublicIcon sx={{ fontSize: 56, color: "secondary.main", mb: 1 }} />
+                        <Typography variant="h6" fontWeight="bold">
+                          Global Scenario
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                {currentRound === 0 ? (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    startIcon={<PlayArrowIcon />}
+                    onClick={handleStartGame}
+                    disabled={loading}
+                  >
+                    Start Game (Year 2051)
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    onClick={() => setShowOpeningScreen(false)}
+                  >
+                    Return to Live Dashboard
+                  </Button>
+                )}
+              </Box>
             </Paper>
           ) : (
             <>
               <TownPieCharts towns={towns} currentStage={currentStage} />
               <BarChartsView towns={towns} />
+
+              {/* Floating expandable stage controls panel (non-hazard stages) */}
+              {floatingControlsOpen && currentStage !== "hazard" && (
+                <Paper
+                  elevation={8}
+                  sx={{
+                    position: "fixed",
+                    bottom: 88,
+                    right: 24,
+                    width: { xs: "calc(100vw - 32px)", sm: 400 },
+                    maxHeight: "75vh",
+                    overflowY: "auto",
+                    p: 2,
+                    borderRadius: 3,
+                    zIndex: theme.zIndex.drawer + 1,
+                  }}
+                >
+                  {currentStage === "adaptation" && (
+                    <CardControls
+                      towns={towns}
+                      onPlayCard={handlePlayCard}
+                      disabled={loading || !currentSession?.isActive}
+                      currentRound={currentRound}
+                      currentStage={currentStage}
+                      townCardPlayDocs={townCardPlayDocs}
+                      onRemoveCardPlay={removeCardPlay}
+                    />
+                  )}
+                  {currentStage === "review" && (
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                        Review: How resilient is Adaptania now?
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Flip the town cards to inspect NESH resilience bars and compare across towns.
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        fullWidth
+                        onClick={() => {
+                          setFloatingControlsOpen(false);
+                          setDividendsDialogOpen(true);
+                        }}
+                        disabled={loading}
+                      >
+                        Proceed to Reward for effort
+                      </Button>
+                    </Box>
+                  )}
+                  {currentStage === "complete" && (
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                        Workshop Complete
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        fullWidth
+                        startIcon={<AssessmentIcon />}
+                        onClick={() => {
+                          setFloatingControlsOpen(false);
+                          setSummaryDialogOpen(true);
+                        }}
+                      >
+                        Open Workshop Reflection
+                      </Button>
+                    </Box>
+                  )}
+                </Paper>
+              )}
+
+              {/* Large centered Hazard Wheel modal (no scrollbars) */}
+              <Dialog
+                open={floatingControlsOpen && currentStage === "hazard"}
+                onClose={() => setFloatingControlsOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    width: "min(760px, 94vw)",
+                    maxHeight: "94vh",
+                    overflow: "hidden",
+                    borderRadius: 3,
+                  },
+                }}
+              >
+                <DialogContent sx={{ p: 2.5, overflow: "hidden", position: "relative" }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setFloatingControlsOpen(false)}
+                    sx={{ position: "absolute", top: 10, right: 10 }}
+                    aria-label="Close hazard wheel"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                  <HazardControls
+                    onApplyHazard={handleApplyHazard}
+                    disabled={loading || !currentSession?.isActive}
+                    currentRound={currentRound}
+                    currentStage={currentStage}
+                    digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
+                    hazardCountThisRound={hazardCountThisRound}
+                  />
+                </DialogContent>
+              </Dialog>
+
+              <Fab
+                variant="extended"
+                color={
+                  floatingControlsOpen
+                    ? "default"
+                    : currentStage === "hazard"
+                    ? "warning"
+                    : currentStage === "review"
+                    ? "success"
+                    : "primary"
+                }
+                onClick={() => setFloatingControlsOpen((prev) => !prev)}
+                sx={{
+                  position: "fixed",
+                  bottom: 24,
+                  right: 24,
+                  zIndex: theme.zIndex.drawer + 1,
+                  fontWeight: "bold",
+                }}
+              >
+                {floatingControlsOpen ? (
+                  <CloseIcon sx={{ mr: 1 }} />
+                ) : currentStage === "hazard" ? (
+                  <CasinoIcon sx={{ mr: 1 }} />
+                ) : (
+                  <StyleIcon sx={{ mr: 1 }} />
+                )}
+                {floatingControlsOpen
+                  ? "Close"
+                  : currentStage === "adaptation"
+                  ? "Play Cards"
+                  : currentStage === "hazard"
+                  ? "Hazard Wheel"
+                  : currentStage === "review"
+                  ? "Reward for effort"
+                  : "Summary"}
+              </Fab>
             </>
           )}
         </TabPanel>
@@ -607,22 +858,49 @@ const Game = () => {
             towns={towns}
             roundEvents={roundEvents}
             townCardPlays={townCardPlays}
+            townCardPlayDocs={townCardPlayDocs}
             currentRound={currentRound}
             totalRounds={totalRounds}
+            onRemoveCardPlay={removeCardPlay}
+            onAddCardPlayAtRound={addCardPlayAtRound}
+            loading={loading}
           />
         </TabPanel>
       </Box>
 
-      {/* Post-Hazard Impact Dialog */}
-      <HazardImpactDialog
-        open={Boolean(lastHazardImpact)}
-        onClose={clearLastHazardImpact}
-        impact={lastHazardImpact}
-        towns={towns}
-        hazardId={lastHazardId}
-      />
+      {/* Video Player Modal (Time Machine / Global Scenario / NESH Explainer) */}
+      <Dialog
+        open={videoModal.open}
+        onClose={() => setVideoModal({ open: false, title: "", src: "" })}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>{videoModal.title}</DialogTitle>
+        <DialogContent dividers>
+          {videoError ? (
+            <Alert severity="info">
+              Video placeholder configured at <code>{videoModal.src}</code>. Drop the video file into <code>public{videoModal.src}</code> when ready.
+            </Alert>
+          ) : (
+            <Box sx={{ width: "100%", textAlign: "center" }}>
+              <video
+                src={videoModal.src}
+                controls
+                autoPlay
+                onError={() => setVideoError(true)}
+                style={{ width: "100%", maxHeight: "65vh", borderRadius: 8 }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVideoModal({ open: false, title: "", src: "" })}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Round Settlement / Dividends Dialog */}
+      {/* Round Settlement / Reward for effort Dialog */}
       <DividendsDialog
         open={dividendsDialogOpen}
         onClose={() => setDividendsDialogOpen(false)}
@@ -654,6 +932,7 @@ const Game = () => {
         towns={towns}
         roundEventDocs={roundEventDocs}
         roundStats={roundStats}
+        townCardPlayDocs={townCardPlayDocs}
       />
 
       {/* Notification Snackbar */}

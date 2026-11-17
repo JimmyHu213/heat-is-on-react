@@ -42,14 +42,14 @@ const TownPieCharts = ({ towns, currentStage }) => {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          mb: 2,
+          mb: 1,
           gap: 1,
         }}
       >
-        <Typography variant="body2" sx={{ color: "white" }}>
+        <Typography variant="caption" sx={{ color: "white" }}>
           {currentStage === "review"
-            ? "Review Stage: Click any town card (or Flip All) to compare dimension averages and dividend readiness."
-            : "Click any town card to flip between its 20-segment radial chart and dimension averages."}
+            ? "Review Stage: Click any town card (or Flip All) to compare NESH resilience."
+            : "Click any town card to flip between its NESH wheel and NESH bars."}
         </Typography>
         <Button
           variant="contained"
@@ -58,14 +58,14 @@ const TownPieCharts = ({ towns, currentStage }) => {
           startIcon={<FlipCameraAndroidIcon />}
           onClick={handleToggleAll}
         >
-          {allFlipped ? "Flip All to Charts" : "Flip All to Averages"}
+          {allFlipped ? "Flip All to Charts" : "Flip All to NESH"}
         </Button>
       </Box>
 
       <Grid
         container
-        spacing={3}
-        sx={{ mb: 3, display: "flex", justifyContent: "space-evenly" }}
+        spacing={1.5}
+        sx={{ mb: 1, display: "flex", justifyContent: "space-evenly" }}
       >
         {towns.map((town) => (
           <Grid

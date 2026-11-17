@@ -1,5 +1,14 @@
 import { HAZARD_IDS } from "./scores.js";
 
+export const WHEEL_SLICES = Object.freeze([
+  { id: "bushfire", name: "Bushfire", color: "#FF7939" },
+  { id: "flood", name: "Flood", color: "#6954AE" },
+  { id: "stormSurge", name: "Storm Surge", color: "#34908B" },
+  { id: "heatwave", name: "Heatwave", color: "#FF3B53" },
+  { id: "biohazard", name: "Biohazard", color: "#BA6CD5" },
+  { id: "mystery", name: "?", color: "#546E7A", isMystery: true },
+]);
+
 const UINT32_RANGE = 0x100000000;
 
 function defaultGetRandomUint32() {

@@ -23,6 +23,12 @@ const envTrainingUrl =
 
 export const MEDIA_CONFIG = Object.freeze({
   introVideo: "/media/introduction-en.mp4",
+  timeMachineVideo: "/media/time-machine.mp4",
+  globalScenarioVideo: "/media/global-scenario.mp4",
+  neshExplainerVideo: "/media/nesh-explainer.mp4",
+  inspiringTasmaniaLogo: "/media/logos/inspiring-tasmania-placeholder.svg",
+  utasLogo: "/media/logos/utas-placeholder.svg",
+  copyrightText: "© University of Tasmania · The Heat Is On",
   eventGifs: Object.freeze({
     bushfire: "/media/events/bushfire.gif",
     flood: "/media/events/flood.gif",

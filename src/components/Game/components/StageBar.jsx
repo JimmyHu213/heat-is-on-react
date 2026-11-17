@@ -27,10 +27,10 @@ import { getPlayerCount, getTotalRounds, MAX_PLAYERS } from "../../../game/optio
 import { canChangeStage, MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
 
 const STAGE_STEPS = [
-  { key: "adaptation", label: "1. Adapt", description: "Groups buy adaptation cards" },
-  { key: "hazard", label: "2. Event", description: "Spin or select climate hazard" },
-  { key: "review", label: "3. Review", description: "Flip cards & compare towns" },
-  { key: "dividends", label: "4. Dividends", description: "Award 5 EP per segment at 100" },
+  { key: "adaptation", label: "What adaptations will you choose for your town?" },
+  { key: "hazard", label: "Will Adaptania face a climate hazard this year?" },
+  { key: "review", label: "How resilient is Adaptania now?" },
+  { key: "dividends", label: "Reward for effort" },
 ];
 
 function getActiveStepIndex(currentStage) {
@@ -297,8 +297,8 @@ export default function StageBar({
                 disabled={loading}
               >
                 {currentRound >= totalRounds
-                  ? "Settle Final Round & Dividends"
-                  : "Settle Round & Dividends"}
+                  ? "Settle Final Round & Reward for effort"
+                  : "Settle Round & Reward for effort"}
               </Button>
             </>
           )}
@@ -338,15 +338,7 @@ export default function StageBar({
         >
           {STAGE_STEPS.map((step) => (
             <Step key={step.key}>
-              <StepLabel
-                optional={
-                  <Typography variant="caption" color="text.secondary">
-                    {step.description}
-                  </Typography>
-                }
-              >
-                {step.label}
-              </StepLabel>
+              <StepLabel>{step.label}</StepLabel>
             </Step>
           ))}
         </Stepper>

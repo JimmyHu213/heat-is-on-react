@@ -16,6 +16,18 @@ test("MEDIA_CONFIG defines English intro video, all 5 event GIFs, and all 5 haza
   }
 });
 
+test("MEDIA_CONFIG defines placeholder video, logo, and copyright properties", () => {
+  assert.equal(MEDIA_CONFIG.timeMachineVideo, "/media/time-machine.mp4");
+  assert.equal(MEDIA_CONFIG.globalScenarioVideo, "/media/global-scenario.mp4");
+  assert.equal(MEDIA_CONFIG.neshExplainerVideo, "/media/nesh-explainer.mp4");
+  assert.equal(
+    MEDIA_CONFIG.inspiringTasmaniaLogo,
+    "/media/logos/inspiring-tasmania-placeholder.svg"
+  );
+  assert.equal(MEDIA_CONFIG.utasLogo, "/media/logos/utas-placeholder.svg");
+  assert.equal(MEDIA_CONFIG.copyrightText, "© University of Tasmania · The Heat Is On");
+});
+
 test("getValidTrainingUrl accepts https/http URLs and rejects empty, relative, or javascript: URLs", () => {
   assert.equal(
     getValidTrainingUrl("  https://ccs.utas.edu.au/training/heat-is-on  "),

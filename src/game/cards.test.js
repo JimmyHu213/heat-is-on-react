@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { town1 } from "../constants/towns.js";
 import { bushfire1, bushfire3, allNature } from "../constants/cards.js";
-import { applyCardEffects, cardEffectiveRounds, playCard } from "./cards.js";
+import { applyCardEffects, cardEffectiveRounds, playCard, revertCardEffects } from "./cards.js";
 
 const makeTown = (overrides = {}) => ({
   id: "t1",
@@ -65,4 +65,25 @@ test("a town without enough effort points cannot play a card", () => {
   assert.throws(() => playCard(makeTown({ effortPoints: 10 }), bushfire1, 1), {
     code: "insufficient-effort-points",
   });
+});
+
+test("revertCardEffects subtracts hazard-type effects and refunds cost without mutating input", () => {
+  const town = makeTown({ effortPoints: 80 });
+  const applied = applyCardEffects(town, bushfire1);
+  const before = structuredClone(applied);
+  const reverted = revertCardEffects(applied, bushfire1);
+  assert.deepEqual(reverted.bushfire, town.bushfire);
+  assert.equal(reverted.effortPoints, 80 + bushfire1.cost);
+  assert.deepEqual(applied, before);
+});
+
+test("revertCardEffects subtracts aspect-type effects across all hazards and clamps at 0", () => {
+  const lowTown = makeTown({
+    effortPoints: 10,
+    bushfire: { nature: 5, economy: 50, society: 50, health: 50 },
+  });
+  const reverted = revertCardEffects(lowTown, allNature);
+  assert.equal(reverted.bushfire.nature, 0);
+  assert.equal(reverted.flood.nature, 65);
+  assert.equal(reverted.effortPoints, 10 + allNature.cost);
 });

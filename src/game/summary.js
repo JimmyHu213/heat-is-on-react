@@ -1,3 +1,4 @@
+import { allCards } from "../constants/cards.js";
 import { getTotalRounds } from "./options.js";
 import { WEAK_SEGMENT_MAX, countSegments, neshAverages, overallResilience } from "./scores.js";
 
@@ -9,7 +10,26 @@ function leaders(rows, key) {
   return candidates.filter((row) => row[key] === best).map((row) => row.id);
 }
 
-export function buildGameSummary({ session, towns, events, roundStats }) {
+function computeMostPopularCards(cardPlays) {
+  if (!Array.isArray(cardPlays) || cardPlays.length === 0) return [];
+  const counts = new Map();
+  for (const play of cardPlays) {
+    if (!play?.cardId) continue;
+    counts.set(play.cardId, (counts.get(play.cardId) ?? 0) + 1);
+  }
+  if (counts.size === 0) return [];
+  const maxCount = Math.max(...counts.values());
+  const cardById = new Map(allCards.map((c) => [c.id, c.name]));
+  return Array.from(counts.entries())
+    .filter(([, count]) => count === maxCount)
+    .map(([cardId, count]) => ({
+      cardId,
+      name: cardById.get(cardId) ?? cardId,
+      count,
+    }));
+}
+
+export function buildGameSummary({ session, towns, events, roundStats, cardPlays = [] }) {
   const roundsPlayed = Math.max(0, session.currentRound - 1);
   const playedEvents = events.filter((event) => event.roundNumber <= roundsPlayed);
   const playedStats = roundStats.filter((stats) => stats.roundNumber <= roundsPlayed);
@@ -31,6 +51,14 @@ export function buildGameSummary({ session, towns, events, roundStats }) {
     effortPoints: town.effortPoints,
   }));
 
+  const eventsTimeline = [...playedEvents]
+    .sort((a, b) => a.roundNumber - b.roundNumber)
+    .map((event) => ({
+      round: event.roundNumber,
+      year: 2050 + event.roundNumber,
+      hazards: event.hazardIds ?? [],
+    }));
+
   return {
     name: session.name,
     totalRounds: getTotalRounds(session),
@@ -40,5 +68,8 @@ export function buildGameSummary({ session, towns, events, roundStats }) {
     mostResilient: leaders(rows, "resilience"),
     mostImpacted: hasCompleteImpacts ? leaders(rows, "eventLoss") : [],
     hasCompleteImpacts,
+    totalCardsPlayed: Array.isArray(cardPlays) ? cardPlays.length : 0,
+    mostPopularCards: computeMostPopularCards(cardPlays),
+    eventsTimeline,
   };
 }
