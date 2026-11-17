@@ -51,7 +51,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
       if (onSelectHazard && chosenHazard) {
         onSelectHazard(chosenHazard);
       }
-    }, 2200);
+    }, 4500);
   };
 
   const count = hazards.length || 6;
@@ -100,7 +100,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning
-              ? "transform 2.1s cubic-bezier(0.15, 0.85, 0.25, 1)"
+              ? "transform 4.4s cubic-bezier(0.12, 0.88, 0.22, 1)"
               : "none",
           }}
         >
