@@ -4,7 +4,6 @@ import {
   Box,
   Typography,
   Button,
-  Grid,
   Tooltip,
   Alert,
   Chip,
@@ -63,6 +62,7 @@ const HazardControls = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          pr: 4,
           mb: 1,
         }}
       >
@@ -123,45 +123,44 @@ const HazardControls = ({
           : "Select hazard:"}
       </Typography>
 
-      <Grid container spacing={1} sx={{ mt: 0.5 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 0.75 }}>
         {hazards.map((hazard) => {
           const color = getHazardColor(hazard.id);
 
           return (
-            <Grid item xs={6} key={hazard.id}>
-              <Tooltip title={`Apply ${hazard.name} hazard`}>
-                <span>
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    disabled={controlsDisabled}
-                    startIcon={
-                      <HazardIcon
-                        hazardId={hazard.id}
-                        color={color}
-                        size={22}
-                      />
-                    }
-                    onClick={() => handleHazardSelect(hazard)}
-                    sx={{
+            <Tooltip key={hazard.id} title={`Apply ${hazard.name} hazard`}>
+              <span style={{ flex: "1 1 110px" }}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  size="small"
+                  disabled={controlsDisabled}
+                  startIcon={
+                    <HazardIcon
+                      hazardId={hazard.id}
+                      color={color}
+                      size={20}
+                    />
+                  }
+                  onClick={() => handleHazardSelect(hazard)}
+                  sx={{
+                    borderColor: color,
+                    color: color,
+                    "&:hover": {
                       borderColor: color,
-                      color: color,
-                      "&:hover": {
-                        borderColor: color,
-                        backgroundColor: `${color}10`,
-                      },
-                      justifyContent: "flex-start",
-                      textTransform: "none",
-                    }}
-                  >
-                    {hazard.name}
-                  </Button>
-                </span>
-              </Tooltip>
-            </Grid>
+                      backgroundColor: `${color}10`,
+                    },
+                    justifyContent: "center",
+                    textTransform: "none",
+                  }}
+                >
+                  {hazard.name}
+                </Button>
+              </span>
+            </Tooltip>
           );
         })}
-      </Grid>
+      </Box>
 
       <Typography
         variant="body2"

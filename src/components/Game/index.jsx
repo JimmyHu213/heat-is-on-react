@@ -698,8 +698,8 @@ const Game = () => {
               <TownPieCharts towns={towns} currentStage={currentStage} />
               <BarChartsView towns={towns} />
 
-              {/* Floating expandable stage controls panel */}
-              {floatingControlsOpen && (
+              {/* Floating expandable stage controls panel (non-hazard stages) */}
+              {floatingControlsOpen && currentStage !== "hazard" && (
                 <Paper
                   elevation={8}
                   sx={{
@@ -723,16 +723,6 @@ const Game = () => {
                       currentStage={currentStage}
                       townCardPlayDocs={townCardPlayDocs}
                       onRemoveCardPlay={removeCardPlay}
-                    />
-                  )}
-                  {currentStage === "hazard" && (
-                    <HazardControls
-                      onApplyHazard={handleApplyHazard}
-                      disabled={loading || !currentSession?.isActive}
-                      currentRound={currentRound}
-                      currentStage={currentStage}
-                      digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
-                      hazardCountThisRound={hazardCountThisRound}
                     />
                   )}
                   {currentStage === "review" && (
@@ -779,8 +769,52 @@ const Game = () => {
                 </Paper>
               )}
 
+              {/* Large centered Hazard Wheel modal (no scrollbars) */}
+              <Dialog
+                open={floatingControlsOpen && currentStage === "hazard"}
+                onClose={() => setFloatingControlsOpen(false)}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    width: "min(760px, 94vw)",
+                    maxHeight: "94vh",
+                    overflow: "hidden",
+                    borderRadius: 3,
+                  },
+                }}
+              >
+                <DialogContent sx={{ p: 2.5, overflow: "hidden", position: "relative" }}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setFloatingControlsOpen(false)}
+                    sx={{ position: "absolute", top: 10, right: 10 }}
+                    aria-label="Close hazard wheel"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                  <HazardControls
+                    onApplyHazard={handleApplyHazard}
+                    disabled={loading || !currentSession?.isActive}
+                    currentRound={currentRound}
+                    currentStage={currentStage}
+                    digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
+                    hazardCountThisRound={hazardCountThisRound}
+                  />
+                </DialogContent>
+              </Dialog>
+
               <Fab
                 variant="extended"
+                color={
+                  floatingControlsOpen
+                    ? "default"
+                    : currentStage === "hazard"
+                    ? "warning"
+                    : currentStage === "review"
+                    ? "success"
+                    : "primary"
+                }
                 onClick={() => setFloatingControlsOpen((prev) => !prev)}
                 sx={{
                   position: "fixed",
@@ -788,11 +822,6 @@ const Game = () => {
                   right: 24,
                   zIndex: theme.zIndex.drawer + 1,
                   fontWeight: "bold",
-                  bgcolor: floatingControlsOpen ? "#424242" : "#E38A6C",
-                  color: "#fff",
-                  "&:hover": {
-                    bgcolor: floatingControlsOpen ? "#303030" : "#d47555",
-                  },
                 }}
               >
                 {floatingControlsOpen ? (

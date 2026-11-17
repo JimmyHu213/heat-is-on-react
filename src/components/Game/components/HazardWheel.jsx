@@ -84,8 +84,8 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
 
       <Box
         sx={{
-          width: 340,
-          height: 340,
+          width: "min(440px, 52vh)",
+          height: "min(440px, 52vh)",
           maxWidth: "100%",
           position: "relative",
           display: "flex",
@@ -94,8 +94,8 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
         }}
       >
         <svg
-          width="340"
-          height="340"
+          width="100%"
+          height="100%"
           viewBox="0 0 340 340"
           style={{
             transform: `rotate(${rotation}deg)`,
