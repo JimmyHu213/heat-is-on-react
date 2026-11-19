@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import {
-  onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -22,6 +22,10 @@ import {
   updateUserDocument,
 } from "../services/userService";
 
+import { accessDeadline } from "./ccsAccess";
+
+import { ccsOnly } from "./ccsSession";
+
 const AuthContext = createContext();
 
 export function useAuth() {
@@ -31,6 +35,8 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [deadline, setDeadline] = useState(0);
+  const [expired, setExpired] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function signup(email, password, additionalData = {}) {
@@ -101,23 +107,6 @@ export function AuthProvider({ children }) {
     await updatePassword(user, newPassword);
   }
 
-  // Fetch the user's profile from Firestore
-  const fetchUserProfile = useCallback(async (user) => {
-    if (user) {
-      try {
-        const userDoc = await getUserDocument(user.uid);
-        setUserProfile(userDoc);
-        return userDoc;
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        return null;
-      }
-    } else {
-      setUserProfile(null);
-      return null;
-    }
-  }, []);
-
   // Memoize the updateProfile function to avoid unnecessary re-creations
   const updateProfile = useCallback(
     async (data) => {
@@ -136,24 +125,68 @@ export function AuthProvider({ children }) {
     [currentUser, userProfile]
   );
 
-  // Add loading state initialization on mount
   useEffect(() => {
-    // This ensures loading is initially true until auth state is determined
-    setLoading(true);
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-
-      if (user) {
-        // When a user logs in, try to fetch their Firestore profile
-        await fetchUserProfile(user);
+    let generation = 0;
+    let timer;
+    let until = 0;
+    let activeUser;
+    let previousUid;
+    const checkExpiry = () => {
+      if (activeUser && activeUser === auth.currentUser && Date.now() >= until) {
+        setExpired(true);
+        setCurrentUser(null);
+        setUserProfile(null);
+        void signOut(auth);
       }
-
-      setLoading(false);
+    };
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
+      const version = ++generation;
+      clearTimeout(timer);
+      if (user && user.uid !== previousUid) {
+        setCurrentUser(null);
+        setUserProfile(null);
+        setLoading(true);
+      }
+      previousUid = user?.uid;
+      activeUser = null;
+      if (!user) {
+        setCurrentUser(null);
+        setUserProfile(null);
+        setDeadline(0);
+        setLoading(false);
+        return;
+      }
+      try {
+        const { claims } = await user.getIdTokenResult();
+        if (version !== generation || auth.currentUser !== user) return;
+        until = accessDeadline(user.uid, claims, ccsOnly);
+        activeUser = user;
+        if (until <= Date.now()) return checkExpiry();
+        if (Number.isFinite(until)) timer = setTimeout(checkExpiry, until - Date.now());
+        const profile = await getUserDocument(user.uid);
+        if (version !== generation || auth.currentUser !== user) return;
+        if (until <= Date.now()) return checkExpiry();
+        setExpired(false);
+        setDeadline(until);
+        setUserProfile(profile);
+        setCurrentUser(user);
+        setLoading(false);
+      } catch {
+        if (version !== generation || auth.currentUser !== user) return;
+        setExpired(true);
+        await signOut(auth);
+      }
     });
-
-    return unsubscribe;
-  }, [fetchUserProfile]);
+    window.addEventListener("focus", checkExpiry);
+    document.addEventListener("visibilitychange", checkExpiry);
+    return () => {
+      generation++;
+      unsubscribe();
+      clearTimeout(timer);
+      window.removeEventListener("focus", checkExpiry);
+      document.removeEventListener("visibilitychange", checkExpiry);
+    };
+  }, []);
 
   const value = {
     currentUser,
@@ -163,7 +196,9 @@ export function AuthProvider({ children }) {
     logout,
     resetPassword,
     changePassword,
-    fetchUserProfile,
+    deadline,
+    expired,
+    isCcs: Number.isFinite(deadline) && deadline > 0,
     updateProfile,
   };
 

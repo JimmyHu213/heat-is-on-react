@@ -8,10 +8,28 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Single gate for all game data. CCS integration adds its subscription
-    // and session-age check here in one place.
+    function legacyPasswordAllowed() {
+      return true; // CCS password transition
+    }
+
+    function recentSignIn() {
+      return request.auth.token.auth_time is int
+        && request.time.toMillis() < (request.auth.token.auth_time + 86400) * 1000;
+    }
+
     function canAccessGameData() {
-      return signedIn();
+      return signedIn() && request.auth.uid != 'ccs-reporter' && (
+        (legacyPasswordAllowed() && request.auth.token.firebase.sign_in_provider == 'password')
+        || (request.auth.token.firebase.sign_in_provider == 'custom'
+          && request.auth.token.sub_expires is int
+          && request.time.toMillis() < request.auth.token.sub_expires * 1000
+          && recentSignIn()));
+    }
+
+    function reporter() {
+      return signedIn() && request.auth.uid == 'ccs-reporter'
+        && request.auth.token.firebase.sign_in_provider == 'custom'
+        && request.auth.token.role == 'reporter' && recentSignIn();
     }
 
     function ownsSession(sessionId) {
@@ -65,7 +83,34 @@ service cloud.firestore {
     // A user's own profile document (keyed by auth uid).
     // Does not require request.auth.token.email so custom-token CCS users work.
     match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read: if canAccessGameData() && request.auth.uid == uid;
+      allow create, update: if canAccessGameData() && request.auth.uid == uid
+        && (request.auth.token.firebase.sign_in_provider == 'password' || (
+          request.resource.data.email == request.auth.token.ccs_email
+          && request.resource.data.email is string && request.resource.data.email.size() <= 320
+          && request.resource.data.get('displayName', '') is string
+          && request.resource.data.get('displayName', '').size() <= 100));
+      allow delete: if canAccessGameData() && request.auth.uid == uid;
+    }
+
+    match /game_runs/{gameId} {
+      function matchesGame(d) {
+        let game = getAfter(/databases/$(database)/documents/game_sessions/$(gameId)).data;
+        return d.keys().hasOnly(['gameId', 'uid', 'startedAt', 'lastActivityAt', 'completed',
+            'completedAt', 'roundsPlayed', 'townCount', 'playerCount', 'totalRounds', 'endedEarly'])
+          && d.gameId == gameId && d.uid == request.auth.uid && game.userId == d.uid
+          && d.startedAt is timestamp && d.startedAt == game.createdAt && d.lastActivityAt == request.time
+          && d.completed == !game.isActive && d.completedAt == game.get('completedAt', null)
+          && d.roundsPlayed == (game.currentRound == 0 ? 0 : game.currentRound - 1)
+          && d.townCount is int && d.townCount >= 0 && d.townCount <= 6
+          && d.playerCount == game.get('playerCount', null) && validPlayerCount(d)
+          && d.totalRounds == game.get('totalRounds', 5) && d.endedEarly == game.get('endedEarly', false);
+      }
+      allow read: if reporter() || (canAccessGameData() && resource.data.uid == request.auth.uid);
+      allow create: if canAccessGameData() && matchesGame(request.resource.data);
+      allow update: if canAccessGameData() && resource.data.uid == request.auth.uid
+        && !resource.data.completed && resource.data.startedAt == request.resource.data.startedAt
+        && matchesGame(request.resource.data);
     }
 
     // Game sessions belong to the user in their `userId` field.
@@ -127,7 +172,8 @@ service cloud.firestore {
       allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
       allow delete: if ownsSession(resource.data.sessionId);
 
-      allow create: if ownsSession(request.resource.data.sessionId)
+      allow create: if canAccessGameData()
+        && getAfter(/databases/$(database)/documents/game_sessions/$(request.resource.data.sessionId)).data.userId == request.auth.uid
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 1
         && request.resource.data.name.size() <= 80

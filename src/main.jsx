@@ -2,10 +2,29 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
-import Contexts from "./contexts/index.jsx";
+import { takeHandoff } from "./contexts/ccsAccess";
+import { exchangeCcsToken } from "./contexts/ccsSession";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const root = ReactDOM.createRoot(document.getElementById("root"));
+let handoff = Promise.resolve();
+
+function renderApp(handoffUid) {
+  root.render(<React.StrictMode><App handoffUid={handoffUid} /></React.StrictMode>);
+}
+
+function handleHandoff() {
+  const token = takeHandoff(window.location, window.history);
+  if (token === null) return false;
+  root.render(<p role="status">Signing in through CCS…</p>);
+  const pending = handoff.then(() => exchangeCcsToken(token)).catch(() => null);
+  handoff = pending;
+  pending.then(uid => {
+    if (handoff === pending) renderApp(uid);
+  });
+  return true;
+}
+
+window.addEventListener("hashchange", () => {
+  if (window.location.hash) handleHandoff();
+});
+if (!handleHandoff()) renderApp(null);

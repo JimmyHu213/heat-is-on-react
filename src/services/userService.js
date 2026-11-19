@@ -11,6 +11,7 @@ import {
   getDocs,
   deleteDoc,
   serverTimestamp,
+  runTransaction,
 } from "firebase/firestore";
 
 /**
@@ -140,4 +141,22 @@ export async function queryUsersByField(field, value) {
     console.error("Error querying users", error);
     throw error;
   }
+}
+
+// Preserve existing profile fields (including the facilitator's avatar) on hand-off.
+export async function syncCcsProfile(uid, claims) {
+  const email = claims.ccs_email;
+  const name = claims.ccs_name;
+  if (typeof email !== "string" || !email.trim() || email.length > 320 ||
+      (name !== undefined && (typeof name !== "string" || name.length > 100))) {
+    throw new Error("Invalid CCS profile claims");
+  }
+  const ref = doc(db, "users", uid);
+  await runTransaction(db, async (tx) => {
+    const existing = await tx.get(ref);
+    const patch = { userId: uid, email, lastLogin: serverTimestamp() };
+    if (name !== undefined) patch.displayName = name;
+    if (!existing.exists()) patch.createdAt = serverTimestamp();
+    tx.set(ref, patch, { merge: true });
+  });
 }
