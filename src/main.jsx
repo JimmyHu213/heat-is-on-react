@@ -15,7 +15,7 @@ function renderApp(handoffUid) {
 function handleHandoff() {
   const token = takeHandoff(window.location, window.history);
   if (token === null) return false;
-  root.render(<p role="status">Signing in through CCS…</p>);
+  root.render(null);
   const pending = handoff.then(() => exchangeCcsToken(token)).catch(() => null);
   handoff = pending;
   pending.then(uid => {

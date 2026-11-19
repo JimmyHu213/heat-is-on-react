@@ -17,17 +17,23 @@ import {
 import AppProviders from "./contexts";
 
 // Components
-import Dashboard from "./components/Dashboard";
-import Account from "./components/Account";
 import CcsAccess from "./components/auth/CcsAccess";
 import { ccsOnly } from "./contexts/ccsSession";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import ForgotPassword from "./components/auth/ForgotPassword";
-import Game from "./components/Game";
 import PrivateRoute from "./components/common/PrivateRoute";
 import Footer from "./components/common/Footer";
 import { Box } from "@mui/material";
+
+const Account = React.lazy(() => import("./components/Account"));
+const Dashboard = React.lazy(() => import("./components/Dashboard"));
+const Game = React.lazy(() => import("./components/Game"));
+
+// The HTML splash stays visible while auth resolves or a route is suspended.
+function setReadyLayout(layout) {
+  document.getElementById("startup").hidden = Boolean(layout);
+}
 
 // Create a Material UI theme
 const heading = { fontFamily: "Fredoka, sans-serif", fontWeight: 600 };
@@ -78,41 +84,44 @@ function App({ handoffUid }) {
       <CssBaseline />
       <Router>
         <AppProviders>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              minHeight: "100vh", // This ensures the footer sticks to the bottom
-            }}
-          >
-            <Routes>
-              <Route path="/auth" element={<CcsAccess handoffUid={handoffUid} />} />
-              <Route path="/login" element={ccsOnly ? <CcsAccess /> : <Login />} />
-              <Route path="/signup" element={ccsOnly ? <CcsAccess /> : <Signup />} />
-              <Route path="/forgot-password" element={ccsOnly ? <CcsAccess /> : <ForgotPassword />} />
-              <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
-              <Route
-                path="/"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/game/:sessionId"
-                element={
-                  <PrivateRoute>
-                    <Game />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+          <React.Suspense fallback={null}>
+            <Box
+              ref={setReadyLayout}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                minHeight: "100vh", // This ensures the footer sticks to the bottom
+              }}
+            >
+              <Routes>
+                <Route path="/auth" element={<CcsAccess handoffUid={handoffUid} />} />
+                <Route path="/login" element={ccsOnly ? <CcsAccess /> : <Login />} />
+                <Route path="/signup" element={ccsOnly ? <CcsAccess /> : <Signup />} />
+                <Route path="/forgot-password" element={ccsOnly ? <CcsAccess /> : <ForgotPassword />} />
+                <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
+                <Route
+                  path="/"
+                  element={
+                    <PrivateRoute>
+                      <Dashboard />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/game/:sessionId"
+                  element={
+                    <PrivateRoute>
+                      <Game />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
 
-            {/* Add Footer here */}
-            <Footer />
-          </Box>
+              {/* Add Footer here */}
+              <Footer />
+            </Box>
+          </React.Suspense>
         </AppProviders>
       </Router>
     </ThemeProvider>
