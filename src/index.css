@@ -1,3 +1,17 @@
+@font-face {
+  font-family: Fredoka;
+  src: url("/media/fonts/fredoka.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Figtree;
+  src: url("/media/fonts/figtree.ttf") format("truetype");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -5,7 +19,7 @@
 }
 
 body {
-  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+  font-family: "Figtree", "Helvetica", "Arial", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

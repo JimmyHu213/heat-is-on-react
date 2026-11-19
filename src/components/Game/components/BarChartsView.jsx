@@ -149,10 +149,9 @@ const BarChartsView = ({ towns }) => {
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr)",
-        gridTemplateRows: { lg: "minmax(0, 9fr) minmax(0, 11fr)" },
-        gap: 0.75,
-        height: { lg: "100%" },
+        gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" },
+        gap: 2,
+        mb: 3,
         minHeight: 0,
       }}
     >
@@ -162,7 +161,7 @@ const BarChartsView = ({ towns }) => {
             p: { xs: 1.5, lg: 1 },
             borderRadius: 2,
             boxShadow: 2,
-            height: { xs: 612, lg: "auto" },
+            height: 320,
             minHeight: 0,
             width: "100%",
             minWidth: 0,
@@ -248,7 +247,7 @@ const BarChartsView = ({ towns }) => {
             p: { xs: 1.5, lg: 1 },
             borderRadius: 2,
             boxShadow: 2,
-            height: { xs: 612, lg: "auto" },
+            height: 320,
             minHeight: 0,
             width: "100%",
             minWidth: 0,

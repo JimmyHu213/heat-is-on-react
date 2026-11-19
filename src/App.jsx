@@ -28,6 +28,7 @@ import Footer from "./components/common/Footer";
 import { Box } from "@mui/material";
 
 // Create a Material UI theme
+const heading = { fontFamily: "Fredoka, sans-serif", fontWeight: 600 };
 const theme = createTheme({
   palette: {
     primary: {
@@ -43,7 +44,11 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: heading,
+    h2: heading,
+    h3: heading,
+    h4: heading,
+    fontFamily: '"Figtree", "Helvetica", "Arial", sans-serif',
   },
   components: {
     MuiButton: {

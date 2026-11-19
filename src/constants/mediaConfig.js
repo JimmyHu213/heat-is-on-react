@@ -25,8 +25,9 @@ export const MEDIA_CONFIG = Object.freeze({
   introVideo: "/media/introduction-en.mp4",
   timeMachineVideo: "/media/time-machine.mp4",
   neshExplainerVideo: "/media/nesh-explainer.mp4",
-  inspiringTasmaniaLogo: "/media/logos/inspiring-tasmania-placeholder.svg",
-  utasLogo: "/media/logos/utas-placeholder.svg",
+  inspiringTasmaniaLogo: "/media/logos/inspiring-tasmania.png",
+  utasLogo: "/media/logos/utas-climate-rankings-2026.png",
+  loginCover: "/media/adaptania-map.jpg",
   copyrightText: "© University of Tasmania · The Heat Is On",
   eventGifs: Object.freeze({
     bushfire: "/media/events/bushfire.gif",

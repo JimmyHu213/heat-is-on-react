@@ -215,7 +215,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
                       fontSize="10"
                       fontWeight="bold"
                     >
-                      {value}
+                      {Math.round(value)}
                     </text>
                     {value >= 20 && (
                       <g>

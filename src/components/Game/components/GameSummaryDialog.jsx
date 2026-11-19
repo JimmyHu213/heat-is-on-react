@@ -21,6 +21,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import StyleIcon from "@mui/icons-material/Style";
 import { getPlayerCount } from "../../../game/options.js";
+import BarChartsView from "./BarChartsView";
 import { buildGameSummary } from "../../../game/summary.js";
 
 export default function GameSummaryDialog({
@@ -93,6 +94,7 @@ export default function GameSummaryDialog({
       </DialogTitle>
 
       <DialogContent dividers>
+        {!session.isActive && <BarChartsView towns={towns} />}
         {/* Highlights */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} md={summary.hasCompleteImpacts ? 4 : 6}>

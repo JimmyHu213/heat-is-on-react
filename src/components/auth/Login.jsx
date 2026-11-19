@@ -1,3 +1,4 @@
+import { MEDIA_CONFIG } from "../../constants/mediaConfig";
 // src/components/auth/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -72,13 +73,10 @@ const Login = () => {
   return (
     <main className="login-page">
       <header className="login-hero">
-        <img src="/media/stanley-tasmania.webp" alt="The coastal town of Stanley and The Nut" />
+        <img src={MEDIA_CONFIG.loginCover} alt="Illustrated map of Adaptania" />
         <div className="login-hero-copy">
-          <h1>The Heat Is On</h1>
+          <h1>THE HEAT IS ON</h1>
           <p>Help your town adapt to a changing climate.</p>
-          <a href="https://commons.wikimedia.org/wiki/File:Stanley-20150411-009.jpg">
-            Stanley, Tasmania · Photo by Gary Houston
-          </a>
         </div>
       </header>
       <section className="login-panel" aria-labelledby="login-heading">

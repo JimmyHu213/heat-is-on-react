@@ -3,8 +3,23 @@ import React, { useLayoutEffect, useRef, useState } from "react";
 import { Box, Typography, Button } from "@mui/material";
 import FlipCameraAndroidIcon from "@mui/icons-material/FlipCameraAndroid";
 import TownPieChart from "../../Charts/TownPieChart";
+import { ASPECTS, HAZARD_IDS } from "../../../game/scores.js";
 
-const TownPieCharts = ({ towns, currentStage }) => {
+function displayedTown(town, before, after, progress) {
+  if (!before) return town;
+  if (!after || progress === 0) return before;
+
+  const scores = Object.fromEntries(HAZARD_IDS.map((hazard) => [
+    hazard,
+    Object.fromEntries(ASPECTS.map((aspect) => {
+      const start = before[hazard][aspect];
+      return [aspect, start + (after[hazard][aspect] - start) * progress];
+    })),
+  ]));
+  return { ...town, ...scores };
+}
+
+const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress }) => {
   const [flippedMap, setFlippedMap] = useState({});
   const gridRef = useRef(null);
   const [availableHeight, setAvailableHeight] = useState(600);
@@ -38,9 +53,11 @@ const TownPieCharts = ({ towns, currentStage }) => {
 
   const cardGap = 6;
   const desktopRows = Math.ceil(towns.length / 3);
-  const enlargedCardSize = Math.ceil(
-    Math.max(200, (availableHeight - (desktopRows - 1) * cardGap) / desktopRows) * 1.8
+  const desktopCardSize = Math.max(
+    145, Math.floor((availableHeight - (desktopRows - 1) * cardGap) / desktopRows)
   );
+  const beforeById = new Map(hazardPresentation?.before.map((town) => [town.id, town]));
+  const afterById = new Map(hazardPresentation?.after?.map((town) => [town.id, town]));
   const allFlipped =
     towns.length > 0 && towns.every((town) => Boolean(flippedMap[town.id]));
 
@@ -64,8 +81,6 @@ const TownPieCharts = ({ towns, currentStage }) => {
     <>
       <Box
         sx={{
-          gridColumn: { lg: 1 },
-          gridRow: { lg: 1 },
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -92,10 +107,8 @@ const TownPieCharts = ({ towns, currentStage }) => {
 
       <Box
         ref={gridRef}
-        style={{ "--enlarged-town-card-size": `${enlargedCardSize}px` }}
+        style={{ "--desktop-town-card-size": `${desktopCardSize}px` }}
         sx={{
-          gridColumn: { lg: 1 },
-          gridRow: { lg: 2 },
           mb: 0.5,
           display: "grid",
           width: "100%",
@@ -104,7 +117,7 @@ const TownPieCharts = ({ towns, currentStage }) => {
             sm: `calc(2 * var(--town-card-size) + ${cardGap}px)`,
             md: `calc(3 * var(--town-card-size) + ${2 * cardGap}px)`,
           },
-          justifySelf: "center",
+          mx: "auto",
           gridTemplateColumns: {
             xs: "minmax(0, 1fr)",
             sm: "repeat(2, minmax(0, 1fr))",
@@ -116,14 +129,14 @@ const TownPieCharts = ({ towns, currentStage }) => {
           alignItems: "start",
           "--town-card-size": {
             xs: "756px",
-            md: "var(--enlarged-town-card-size)",
+            md: "var(--desktop-town-card-size)",
           },
         }}
       >
         {towns.map((town) => (
           <TownPieChart
             key={town.id}
-            town={town}
+            town={displayedTown(town, beforeById.get(town.id), afterById.get(town.id), hazardProgress)}
             flipped={Boolean(flippedMap[town.id])}
             onToggleFlip={() => handleToggleTown(town.id)}
           />

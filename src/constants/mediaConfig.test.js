@@ -17,14 +17,14 @@ test("MEDIA_CONFIG defines English intro video, all 5 event GIFs, and all 5 haza
   }
 });
 
-test("MEDIA_CONFIG defines placeholder video, logo, and copyright properties", () => {
+test("MEDIA_CONFIG defines workshop video, logo, and copyright properties", () => {
   assert.equal(MEDIA_CONFIG.timeMachineVideo, "/media/time-machine.mp4");
   assert.equal(MEDIA_CONFIG.neshExplainerVideo, "/media/nesh-explainer.mp4");
   assert.equal(
     MEDIA_CONFIG.inspiringTasmaniaLogo,
-    "/media/logos/inspiring-tasmania-placeholder.svg"
+    "/media/logos/inspiring-tasmania.png"
   );
-  assert.equal(MEDIA_CONFIG.utasLogo, "/media/logos/utas-placeholder.svg");
+  assert.equal(MEDIA_CONFIG.utasLogo, "/media/logos/utas-climate-rankings-2026.png");
   assert.equal(MEDIA_CONFIG.copyrightText, "© University of Tasmania · The Heat Is On");
 });
 
@@ -33,6 +33,9 @@ test("all configured workshop videos and hazard assets exist in the Hosting publ
     MEDIA_CONFIG.introVideo,
     MEDIA_CONFIG.timeMachineVideo,
     MEDIA_CONFIG.neshExplainerVideo,
+    MEDIA_CONFIG.inspiringTasmaniaLogo,
+    MEDIA_CONFIG.utasLogo,
+    MEDIA_CONFIG.loginCover,
     ...Object.values(MEDIA_CONFIG.eventGifs),
     ...Object.values(MEDIA_CONFIG.hazardIcons),
     ...Object.values(MEDIA_CONFIG.hazardIntroductions),

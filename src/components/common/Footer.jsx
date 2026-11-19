@@ -9,12 +9,11 @@ import "./Footer.css";
 import cmsLogo from "../../assets/images/cms.png";
 import cohLogo from "../../assets/images/coh.png";
 import estLogo from "../../assets/images/est.png";
-import utasLogo from "../../assets/images/utas.png";
 import tasgov from "../../assets/images/tasgov.png";
 
 const logos = [
   { src: MEDIA_CONFIG.inspiringTasmaniaLogo, alt: "Inspiring Tasmania", size: 60 },
-  { src: utasLogo, alt: "University of Tasmania", size: 60 },
+  { src: MEDIA_CONFIG.utasLogo, alt: "University of Tasmania", size: 60 },
   { src: cmsLogo, alt: "CMS", size: 50 },
   { src: tasgov, alt: "Tasmanian Government", size: 60 },
   { src: cohLogo, alt: "City of Hobart", size: 100 },
@@ -42,6 +41,7 @@ const LogoItem = ({ src, alt, size }) => {
       sx={{
         height: { xs: 40, sm: 50, md: size },
         maxWidth: "100%",
+        objectFit: "contain",
         filter: "grayscale(20%)",
         transition: "filter 0.3s, transform 0.3s",
         "&:hover": {

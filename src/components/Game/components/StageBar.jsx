@@ -30,14 +30,13 @@ const STAGE_STEPS = [
   { key: "adaptation", label: "What adaptations will you choose for your town?" },
   { key: "hazard", label: "Will Adaptania face a climate hazard this year?" },
   { key: "review", label: "How resilient is Adaptania now?" },
-  { key: "dividends", label: "Reward for effort" },
 ];
 
 function getActiveStepIndex(currentStage) {
   if (currentStage === "adaptation") return 0;
   if (currentStage === "hazard") return 1;
   if (currentStage === "review") return 2;
-  if (currentStage === "complete") return 4;
+  if (currentStage === "complete") return STAGE_STEPS.length;
   return -1;
 }
 
@@ -260,7 +259,7 @@ export default function StageBar({
                     onClick={() => onChangeStage("review")}
                     disabled={loading || !canMoveToReview}
                   >
-                    Next: Review Stage
+                    Next: How resilient is Adaptania now?
                   </Button>
                 </span>
               </Tooltip>
@@ -323,7 +322,7 @@ export default function StageBar({
               startIcon={<AssessmentIcon />}
               onClick={onOpenSummary}
             >
-              View Game Summary
+              View Summary
             </Button>
           )}
         </Box>

@@ -4,10 +4,10 @@ export const primaryColorLight = "#428E7A";
 export const secondaryColor = "#E6E6E6";
 export const primaryColor = "#4D8E8B";
 // Charts Colors
-export const natureColor = "#527334";
-export const economyColor = "#C8D2BE";
-export const societyColor = "#E38A6C";
-export const healthColor = "#1B365D";
+export const natureColor = "#43AE35";
+export const economyColor = "#F2C94C";
+export const societyColor = "#73C6D5";
+export const healthColor = "#2F5D8A";
 
 export const town1Color = "#FF9F78";
 export const town2Color = "#B2A7D6";

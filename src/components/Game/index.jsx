@@ -48,7 +48,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 // Components
 import TownPieCharts from "./components/TownPieCharts";
-import BarChartsView from "./components/BarChartsView";
+import HazardIcon from "../common/HazardIcon";
 import GameTable from "./components/GameTable";
 import TownDetailsView from "./components/TownDetailsView";
 import HazardControls from "./components/HazardControls";
@@ -61,14 +61,7 @@ import TrainingLink from "../common/TrainingLink";
 import HazardMedia from "./components/HazardMedia";
 import { hazards } from "../../constants/hazards";
 import { MEDIA_CONFIG } from "../../constants/mediaConfig";
-import {
-  floodColor1,
-  healthColor,
-  heatwaveColor1,
-  natureColor,
-  primaryColor,
-  stormSurgeColor1,
-} from "../../constants/palette";
+import { primaryColor } from "../../constants/palette";
 import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
 
@@ -142,21 +135,46 @@ const Game = () => {
   const [floatingControlsOpen, setFloatingControlsOpen] = useState(false);
   const [videoModal, setVideoModal] = useState({ open: false, title: "", src: "" });
   const [videoError, setVideoError] = useState(false);
+  const [selectedHazard, setSelectedHazard] = useState(null);
   const [hazardAnnouncement, setHazardAnnouncement] = useState(null);
+  const [hazardProgress, setHazardProgress] = useState(0);
 
   useEffect(() => {
     loadSession(sessionId);
   }, [sessionId]);
 
+  const presentation = hazardAnnouncement
+    && currentStage === "hazard"
+    && hazardAnnouncement.sessionId === sessionId
+    && hazardAnnouncement.round === currentRound
+    ? hazardAnnouncement
+    : null;
+
   useEffect(() => {
-    if (!hazardAnnouncement) return;
-    const timer = window.setTimeout(() => setHazardAnnouncement(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [hazardAnnouncement]);
+    if (presentation?.phase !== "animating") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setHazardAnnouncement(null);
+      return;
+    }
+
+    const startedAt = performance.now();
+    let frame;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / 1200);
+      if (progress >= 1) {
+        setHazardAnnouncement(null);
+        return;
+      }
+      setHazardProgress(1 - (1 - progress) ** 2);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [presentation]);
 
   const totalRounds = currentSession ? getTotalRounds(currentSession) : 5;
   const hazardCountThisRound = (roundEvents[currentRound] || []).length;
-  const announcedHazard = hazards.find((hazard) => hazard.id === hazardAnnouncement?.hazardId);
+  const announcedHazard = hazards.find((hazard) => hazard.id === presentation?.hazardId);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -274,13 +292,21 @@ const Game = () => {
   };
 
   const handleApplyHazard = async (hazardId) => {
+    if (presentation) return;
+    const pending = { sessionId, round: currentRound, hazardId, before: towns, phase: "saving" };
+    setHazardProgress(0);
+    setHazardAnnouncement(pending);
+
     const result = await applyHazard(hazardId);
     if (result) {
       setDrawerOpen(false);
       setFloatingControlsOpen(false);
-      setHazardAnnouncement({ hazardId, round: currentRound });
+      setActiveTab(0);
       showNotification("Applied hazard to all towns", "warning");
     }
+    setHazardAnnouncement((current) => current !== pending ? current : result
+      ? { ...pending, after: result.towns, phase: "playing" }
+      : null);
   };
 
   const handlePlayCard = async (townId, cardId) => {
@@ -566,7 +592,7 @@ const Game = () => {
 
           <HazardControls
             onApplyHazard={handleApplyHazard}
-            disabled={loading || currentRound === 0 || !currentSession?.isActive}
+            disabled={loading || Boolean(presentation) || currentRound === 0 || !currentSession?.isActive}
             currentRound={currentRound}
             currentStage={currentStage}
             digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
@@ -648,67 +674,52 @@ const Game = () => {
         <TabPanel value={isOpeningScreen ? 0 : activeTab} index={0}>
           {isOpeningScreen ? (
             <Paper sx={{ p: 4, borderRadius: 2, maxWidth: 960, mx: "auto" }}>
-              <Typography variant="h4" gutterBottom fontWeight="bold" align="center">
-                Welcome to{" "}
-                <Box component="span" sx={{ color: floodColor1 }}>The</Box>{" "}
-                <Box component="span" sx={{ color: heatwaveColor1 }}>Heat</Box>{" "}
-                <Box component="span" sx={{ color: natureColor }}>Is</Box>{" "}
-                <Box component="span" sx={{ color: stormSurgeColor1 }}>
-                  On<Box component="span" sx={{ color: healthColor }}>!</Box>
-                </Box>
+              <Typography component="h1" variant="h4" gutterBottom align="center">
+                THE HEAT IS ON
               </Typography>
               <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
                 Manage your towns across {totalRounds} {totalRounds === 1 ? "year" : "years"} of climate hazards and adaptations.
               </Typography>
 
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" }, gap: 3, width: "100%", maxWidth: 720, mx: "auto", mb: 4 }}>
-                <Box>
-                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: { xs: 1, sm: 3 },
+                  maxWidth: 720,
+                  mx: "auto",
+                  mb: 3,
+                }}
+              >
+                {[
+                  { title: "Time Machine", src: MEDIA_CONFIG.timeMachineVideo, Icon: AccessTimeIcon },
+                  { title: "NESH Explainer", src: MEDIA_CONFIG.neshExplainerVideo, Icon: OndemandVideoIcon },
+                ].map(({ title, src, Icon }) => (
+                  <Card variant="outlined" key={title}>
                     <CardActionArea
                       onClick={() => {
                         setVideoError(false);
-                        setVideoModal({ open: true, title: "Workshop Introduction", src: MEDIA_CONFIG.introVideo });
+                        setVideoModal({ open: true, title, src });
                       }}
-                      sx={{ p: 3, textAlign: "center" }}
+                      sx={{ height: "100%", textAlign: "center" }}
                     >
                       <CardContent>
-                        <OndemandVideoIcon sx={{ fontSize: 56, color: "primary.main", mb: 1 }} />
-                        <Typography variant="h6" fontWeight="bold">Workshop Introduction</Typography>
+                        <Icon sx={{ fontSize: 44, color: "primary.main", mb: 1 }} />
+                        <Typography fontWeight={600}>{title}</Typography>
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Box>
-                <Box>
-                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
-                    <CardActionArea
-                      onClick={() => {
-                        setVideoError(false);
-                        setVideoModal({
-                          open: true,
-                          title: "Time Machine",
-                          src: MEDIA_CONFIG.timeMachineVideo,
-                        });
-                      }}
-                      sx={{ p: 3, textAlign: "center" }}
-                    >
-                      <CardContent>
-                        <AccessTimeIcon sx={{ fontSize: 56, color: "primary.main", mb: 1 }} />
-                        <Typography variant="h6" fontWeight="bold">
-                          Time Machine
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Box>
+                ))}
               </Box>
 
-              <Box component="details" sx={{ mb: 3 }}>
-                <Box component="summary" sx={{ cursor: "pointer", fontWeight: "bold", p: 1 }}>
-                  Meet the five climate hazards
-                </Box>
-                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }, gap: 1 }}>
-                  {hazards.map((hazard) => <HazardMedia key={hazard.id} hazard={hazard} introduction />)}
-                </Box>
+              <Box sx={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, mb: 3 }}>
+                {hazards.map((hazard) => (
+                  <Tooltip title={hazard.name} key={hazard.id}>
+                    <IconButton aria-label={hazard.name} onClick={() => setSelectedHazard(hazard)}>
+                      <HazardIcon hazardId={hazard.id} size={32} />
+                    </IconButton>
+                  </Tooltip>
+                ))}
               </Box>
 
               <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
@@ -742,37 +753,12 @@ const Game = () => {
             </Paper>
           ) : (
             <>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "minmax(0, 1fr)",
-                    lg: "minmax(0, 11fr) minmax(0, 5fr)",
-                  },
-                  columnGap: 0.75,
-                  rowGap: { xs: 1, lg: 0 },
-                  alignItems: "start",
-                }}
-              >
-                <Box sx={{ minWidth: 0, display: { xs: "block", lg: "contents" } }}>
-                  <TownPieCharts towns={towns} currentStage={currentStage} />
-                </Box>
-                <Box
-                  sx={{
-                    minWidth: 0,
-                    minHeight: 0,
-                    gridColumn: { lg: 2 },
-                    gridRow: { lg: 2 },
-                    alignSelf: "stretch",
-                    mb: { lg: 0.5 },
-                    // The radar cards determine the row height.
-                    contain: { lg: "size" },
-                    overflow: { lg: "auto" },
-                  }}
-                >
-                  <BarChartsView towns={towns} />
-                </Box>
-              </Box>
+              <TownPieCharts
+                towns={towns}
+                currentStage={currentStage}
+                hazardPresentation={presentation}
+                hazardProgress={hazardProgress}
+              />
 
               {/* Floating expandable stage controls panel (non-hazard stages) */}
               {floatingControlsOpen && currentStage !== "hazard" && (
@@ -871,7 +857,7 @@ const Game = () => {
                   </IconButton>
                   <HazardControls
                     onApplyHazard={handleApplyHazard}
-                    disabled={loading || !currentSession?.isActive}
+                    disabled={loading || Boolean(presentation) || !currentSession?.isActive}
                     currentRound={currentRound}
                     currentStage={currentStage}
                     digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
@@ -945,15 +931,26 @@ const Game = () => {
       </Box>
 
       <Dialog
-        open={Boolean(announcedHazard) && currentStage === "hazard" && hazardAnnouncement?.round === currentRound}
-        onClose={() => setHazardAnnouncement(null)}
+        open={presentation?.phase === "playing"}
+        onClose={(_, reason) => {
+          if (reason !== "backdropClick") {
+            setHazardAnnouncement({ ...presentation, phase: "closing" });
+          }
+        }}
+        slotProps={{
+          transition: {
+            onExited: () => setHazardAnnouncement((current) => current?.phase === "closing"
+              ? { ...current, phase: "animating" }
+              : current),
+          },
+        }}
         maxWidth="md"
         fullWidth
         aria-labelledby="hazard-animation-title"
       >
         <DialogTitle id="hazard-animation-title" sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {HAZARD_HEADLINES[announcedHazard?.id] || announcedHazard?.name}
-          <IconButton aria-label="Close hazard animation" onClick={() => setHazardAnnouncement(null)}>
+          <IconButton aria-label="Close hazard animation" onClick={() => setHazardAnnouncement({ ...presentation, phase: "closing" })}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -962,7 +959,21 @@ const Game = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Video Player Modal (Workshop Introduction / Time Machine / NESH Explainer) */}
+      <Dialog
+        open={Boolean(selectedHazard)}
+        onClose={() => setSelectedHazard(null)}
+        aria-labelledby="hazard-icon-title"
+      >
+        <DialogTitle id="hazard-icon-title">{selectedHazard?.name}</DialogTitle>
+        <DialogContent sx={{ textAlign: "center" }}>
+          {selectedHazard && <HazardIcon hazardId={selectedHazard.id} size={144} />}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedHazard(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Video player */}
       <Dialog
         open={videoModal.open}
         onClose={() => setVideoModal({ open: false, title: "", src: "" })}

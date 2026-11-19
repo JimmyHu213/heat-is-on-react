@@ -72,3 +72,13 @@ npx firebase deploy --only hosting --project <project-id>
 本地构建逐字节验证了 19 个素材：三个视频、五个 GIF、六个 PNG 图标和五张介绍图；测试、lint 和构建通过，保留原有警告。此次环境没有可用浏览器，未重新验证视频解码、播放或页面居中效果。
 
 仓库使用 1920×1080 的 NESH 网页版（约 33.3 MiB，137.47 秒，H.264/AAC），包含原有音频。原始 1440p 视频仍保留在用户提供的 Downloads 目录。Firebase Hosting 单文件上限依据：[Firebase 官方说明](https://firebase.google.com/docs/hosting/faq-and-troubleshooting)。
+
+## 2026-11-19 品牌素材
+
+| 来源 | 项目路径 |
+| --- | --- |
+| `D:\Projects\heat_is_on\Adaptania-Map-nosigns.jpg` | `public/media/adaptania-map.jpg` |
+| `D:\Projects\heat_is_on\inspiring_tas_logo_500x500px (1).png` | `public/media/logos/inspiring-tasmania.png` |
+| `D:\Projects\heat_is_on\UTAS-#1-Climate_THE-Rankings-2026_HOR_MONO.png` | `public/media/logos/utas-climate-rankings-2026.png` |
+
+Fredoka 和 Figtree 来自 Google Fonts 的开源字库，字体和对应 OFL 许可随站点存放在 `public/media/fonts/`。欢迎页视频区按 Time Machine、NESH Explainer 的顺序展示。游戏顶部也提供 NESH Explainer 入口。

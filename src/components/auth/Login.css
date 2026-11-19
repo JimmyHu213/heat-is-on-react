@@ -42,18 +42,13 @@
 
 .login-hero-copy h1 {
   margin: 0;
-  font: 700 clamp(2.6rem, 5.5vw, 6rem)/1 Georgia, serif;
+  font: 600 clamp(2.6rem, 5.5vw, 6rem)/1 Fredoka, sans-serif;
   letter-spacing: -0.045em;
 }
 
 .login-hero-copy p {
   margin: 12px 0 20px;
   font-size: clamp(1rem, 1.6vw, 1.25rem);
-}
-
-.login-hero-copy a {
-  color: #e1ede8;
-  font-size: 0.75rem;
 }
 
 .login-panel {
