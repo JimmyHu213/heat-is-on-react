@@ -168,3 +168,4 @@ firebase-debug.log
 
 .emulator-data/
 *-debug.log
+firebase.ccs-only.generated.json

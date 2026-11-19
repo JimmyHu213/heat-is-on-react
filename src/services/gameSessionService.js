@@ -1,6 +1,8 @@
 // src/services/gameSessionService.js
 import {
   collection,
+  Timestamp,
+  writeBatch,
   doc,
   getDocs,
   query,
@@ -61,6 +63,19 @@ async function readTownsInTx(tx, sessionId) {
   return towns.sort((a, b) => a.townNumber - b.townNumber);
 }
 
+// Write the reporting record with the game change, including an older game's first move.
+function writeRun(writer, sessionRef, session, townCount = defaultTowns.length) {
+  const startedAt = session.createdAt ?? serverTimestamp();
+  if (!session.createdAt) writer.update(sessionRef, { createdAt: startedAt });
+  writer.set(doc(db, "game_runs", sessionRef.id), {
+    gameId: sessionRef.id, uid: session.userId, startedAt,
+    lastActivityAt: serverTimestamp(), completed: !session.isActive,
+    completedAt: session.completedAt ?? null, roundsPlayed: Math.max(0, session.currentRound - 1),
+    townCount, playerCount: session.playerCount ?? null,
+    totalRounds: getTotalRounds(session), endedEarly: session.endedEarly ?? false,
+  });
+}
+
 /**
  * Game Session Service
  * Handles CRUD and atomic transactions for game sessions, towns, and related entities
@@ -88,32 +103,42 @@ class GameSessionService {
         throw new Error("Maximum session limit reached (3)");
       }
 
-      const session = await firestoreService.createDocument(
-        this.SESSIONS_COLLECTION,
-        {
-          userId,
-          name: trimmedName,
-          currentRound: 0,
-          totalRounds: validated.totalRounds,
-          digitalWheelEnabled: validated.digitalWheelEnabled,
-          playerCount: validated.playerCount,
-          stage: "adaptation",
-          revision: 0,
-          isActive: true,
-          endedEarly: false,
-          completedAt: null,
-          lastSettlementRound: 0,
-          lastDividends: {},
-          lastUndo: null,
-        }
-      );
-
-      const sessionTowns = await this.createTownsForSession(session.id);
-
-      const createdSession = {
-        ...session,
-        towns: sessionTowns,
+      const ref = doc(collection(db, this.SESSIONS_COLLECTION));
+      const now = Timestamp.now();
+      const session = {
+        userId,
+        name: trimmedName,
+        currentRound: 0,
+        totalRounds: validated.totalRounds,
+        digitalWheelEnabled: validated.digitalWheelEnabled,
+        playerCount: validated.playerCount,
+        stage: "adaptation",
+        revision: 0,
+        isActive: true,
+        endedEarly: false,
+        completedAt: null,
+        lastSettlementRound: 0,
+        lastDividends: {},
+        lastUndo: null,
       };
+      const batch = writeBatch(db);
+      const timestamps = { createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+      batch.set(ref, { ...session, ...timestamps });
+      const towns = defaultTowns.map((template, index) => {
+        const townNumber = index + 1;
+        const townRef = doc(db, this.TOWNS_COLLECTION, ref.id + "_town_" + townNumber);
+        const town = {
+          sessionId: ref.id, townNumber, name: template.name, townTemplateId: template.id,
+          effortPoints: 100, currentRound: 0, currentStats: {},
+          ...structuredClone(template.baseStats),
+          isComparisonTown: template.name === "Bludgeton",
+        };
+        batch.set(townRef, { ...town, ...timestamps });
+        return { ...town, id: townRef.id, createdAt: now, updatedAt: now };
+      });
+      writeRun(batch, ref, { ...session, ...timestamps }, towns.length);
+      await batch.commit();
+      const createdSession = { ...session, id: ref.id, createdAt: now, updatedAt: now, towns };
       await onGameCreated(createdSession);
       return createdSession;
     } catch (error) {
@@ -165,7 +190,9 @@ class GameSessionService {
         playerCount: validated.playerCount,
         updatedAt: serverTimestamp(),
       });
-      return { ...session, playerCount: validated.playerCount };
+      const updated = { ...session, playerCount: validated.playerCount };
+      writeRun(tx, sessionRef, updated);
+      return updated;
     });
   }
 
@@ -232,52 +259,6 @@ class GameSessionService {
         `Error getting completed sessions for user ${userId}:`,
         error
       );
-      throw error;
-    }
-  }
-
-  /**
-   * Create towns for a game session with sequential IDs
-   */
-  async createTownsForSession(sessionId) {
-    try {
-      const towns = [];
-      const townTemplates = defaultTowns;
-
-      for (let i = 0; i < townTemplates.length; i++) {
-        const template = townTemplates[i];
-        const townNumber = i + 1;
-        const townId = `${sessionId}_town_${townNumber}`;
-        const isComparisonTown = template.name === "Bludgeton";
-
-        const townData = {
-          sessionId,
-          townNumber,
-          name: template.name,
-          townTemplateId: template.id,
-          effortPoints: 100,
-          currentRound: 0,
-          bushfire: structuredClone(template.baseStats.bushfire),
-          flood: structuredClone(template.baseStats.flood),
-          stormSurge: structuredClone(template.baseStats.stormSurge),
-          heatwave: structuredClone(template.baseStats.heatwave),
-          biohazard: structuredClone(template.baseStats.biohazard),
-          currentStats: {},
-          isComparisonTown,
-        };
-
-        const town = await firestoreService.createDocument(
-          this.TOWNS_COLLECTION,
-          townData,
-          townId
-        );
-
-        towns.push(town);
-      }
-
-      return towns;
-    } catch (error) {
-      console.error(`Error creating towns for session ${sessionId}:`, error);
       throw error;
     }
   }
@@ -411,6 +392,7 @@ class GameSessionService {
       };
       tx.update(sessionRef, sessionPatch);
 
+      writeRun(tx, sessionRef, { ...session, ...sessionPatch }, towns.length);
       const updatedTowns = towns.map((town) => {
         const ref = doc(db, this.TOWNS_COLLECTION, town.id);
         tx.update(ref, {
@@ -855,6 +837,7 @@ class GameSessionService {
         updatedAt: serverTimestamp(),
       };
       tx.update(sessionRef, sessionPatch);
+      writeRun(tx, sessionRef, { ...session, ...sessionPatch }, towns.length);
 
       return {
         ...session,

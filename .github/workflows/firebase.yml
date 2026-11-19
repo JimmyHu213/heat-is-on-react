@@ -30,6 +30,11 @@ jobs:
       - run: npm run build -- --mode emulator
       - run: npx --no-install firebase emulators:exec --only auth,firestore --project demo-heat-is-on "npm run test:emulator"
 
+      - name: Verify CCS-only cut-over rules
+        run: |
+          node scripts/ccs-only-config.mjs
+          VITE_USE_FIREBASE_EMULATOR=true npx --no-install firebase emulators:exec --only auth,firestore --config firebase.ccs-only.generated.json --project demo-heat-is-on "node --test --test-force-exit scripts/test-ccs-only.mjs"
+
   deploy:
     needs: verify
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -45,6 +50,7 @@ jobs:
       name: ${{ github.event_name == 'push' && 'staging' || 'production' }}
       url: ${{ github.event_name == 'push' && 'https://heat-is-on.web.app' || 'https://the-heat-is-on.web.app' }}
     env:
+      VITE_CCS_ONLY: ${{ vars.CCS_ONLY }}
       PROJECT: ${{ github.event_name == 'push' && 'heat-is-on' || 'the-heat-is-on' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -66,6 +72,7 @@ jobs:
             jq -e --arg sha "$GITHUB_SHA" '.sha == $sha and .project == "heat-is-on"'
       - name: Build for the selected Firebase project
         env:
+          VITE_CCS_COURSE_URL: ${{ vars.CCS_COURSE_URL }}
           VITE_TRAINING_COURSE_URL: ${{ vars.TRAINING_COURSE_URL }}
         run: |
           curl -fsS --retry 3 "https://$PROJECT.web.app/__/firebase/init.json" > "$RUNNER_TEMP/web.json"
@@ -94,7 +101,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
-          npx --no-install firebase deploy --only firestore:rules --project "$PROJECT" --non-interactive
+          rules_config=firebase.json
+          if [[ "$VITE_CCS_ONLY" == true ]]; then
+            node scripts/ccs-only-config.mjs
+            rules_config=firebase.ccs-only.generated.json
+          fi
+          npx --no-install firebase deploy --config "$rules_config" --only firestore:rules --project "$PROJECT" --non-interactive
           npx --no-install firebase deploy --only hosting --project "$PROJECT" --non-interactive -m "$GITHUB_SHA"
       - name: Verify the live build
         run: |

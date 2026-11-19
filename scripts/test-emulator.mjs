@@ -8,12 +8,19 @@ process.env.no_proxy = "127.0.0.1,localhost";
 
 import assert from "node:assert/strict";
 import test from "node:test";
+import { initializeApp, deleteApp } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithCustomToken,
   signOut,
 } from "firebase/auth";
 import {
+  connectFirestoreEmulator,
+  getFirestore,
+  collection,
+  deleteDoc,
+  getDocs,
   doc,
   getDoc,
   serverTimestamp,
@@ -567,4 +574,78 @@ test("town label color is optional, saved with the name, and validated by Firest
   const ref = doc(db, "towns", legacyTown.id);
   await assert.rejects(updateDoc(ref, { labelColor: "#FFFFFF" }), { code: "permission-denied" });
   assert.equal((await getDoc(ref)).data().labelColor, "#2F5D8A");
+});
+
+// Unsigned test fixtures are accepted only by the local Firebase Auth emulator.
+async function signInFromTestCcs(uid, claims) {
+  assert.ok(auth.emulatorConfig);
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = encode({ alg: "none", typ: "JWT" }) + "." + encode({ uid, claims, aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit" }) + ".";
+  return signInWithCustomToken(auth, token);
+}
+
+test("CCS preserves an existing UID, enforces expiry and gives the reporter read-only run history", async () => {
+  const existing = await signInFreshUser("ccs-existing");
+  const game = await gameSessionService.createSession(existing.uid, "Pre-handoff game");
+  const claims = { sub_expires: Math.floor(Date.now() / 1000) + 3600, ccs_email: existing.email, ccs_name: "Facilitator" };
+  await signOut(auth);
+  await signInFromTestCcs(existing.uid, claims);
+  assert.ok((await gameSessionService.getUserActiveSessions(existing.uid)).some(s => s.id === game.id));
+  const profile = doc(db, "users", existing.uid);
+  await setDoc(profile, { userId: existing.uid, email: existing.email, displayName: "Facilitator" });
+  await assert.rejects(updateDoc(profile, { email: "other@example.com" }), { code: "permission-denied" });
+  const run = doc(db, "game_runs", game.id);
+  assert.equal((await getDoc(run)).data().playerCount, null);
+  await gameSessionService.updatePlayerCount(game.id, 22);
+  assert.equal((await getDoc(run)).data().playerCount, 22);
+  await gameSessionService.startGame(game.id);
+  await gameSessionService.settleRound(game.id, { endEarly: true });
+  await gameSessionService.deleteSession(game.id);
+  const completed = (await getDoc(run)).data();
+  assert.equal(completed.completed, true);
+  assert.equal(completed.roundsPlayed, 1);
+  assert.equal(completed.endedEarly, true);
+  assert.equal(completed.townCount, 6);
+  assert.ok(completed.completedAt);
+  await assert.rejects(deleteDoc(run), { code: "permission-denied" });
+
+  for (const invalid of [{ ...claims, sub_expires: 1 }, { ccs_email: existing.email }]) {
+    await signInFromTestCcs(existing.uid, invalid);
+    await assert.rejects(getDoc(profile), { code: "permission-denied" });
+    await assert.rejects(getDoc(run), { code: "permission-denied" });
+  }
+  const newUid = "ccs-" + Date.now();
+  await signInFromTestCcs(newUid, { ...claims, role: "reporter" });
+  await gameSessionService.createSession(newUid, "New CCS game", { playerCount: 8 });
+  await assert.rejects(getDoc(run), { code: "permission-denied" });
+  await assert.rejects(getDocs(collection(db, "game_runs")), { code: "permission-denied" });
+  await signInFromTestCcs("ccs-reporter", { role: "reporter" });
+  assert.ok((await getDocs(collection(db, "game_runs"))).docs.some(d => d.id === game.id));
+  await assert.rejects(getDoc(profile), { code: "permission-denied" });
+  await assert.rejects(updateDoc(run, { completed: false }), { code: "permission-denied" });
+  await assert.rejects(getDocs(collection(db, "game_sessions")), { code: "permission-denied" });
+});
+
+test("Firestore enforces the 24-hour CCS deadline even with a future subscription", async () => {
+  const { uid } = await signInFreshUser("ccs-clock");
+  const game = await gameSessionService.createSession(uid, "Clock fixture");
+  const now = Math.floor(Date.now() / 1000);
+  const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080").split(":");
+  for (const age of [3600, 86401]) {
+    const app = initializeApp(auth.app.options, "ccs-clock-" + age);
+    try {
+      const testDb = getFirestore(app);
+      connectFirestoreEmulator(testDb, host, Number(port), {
+        mockUserToken: {
+          sub: uid, auth_time: now - age, sub_expires: now + 3600,
+          firebase: { sign_in_provider: "custom", identities: {} },
+        },
+      });
+      const read = getDoc(doc(testDb, "game_sessions", game.id));
+      if (age < 86400) assert.ok((await read).exists());
+      else await assert.rejects(read, { code: "permission-denied" });
+    } finally {
+      await deleteApp(app);
+    }
+  }
 });

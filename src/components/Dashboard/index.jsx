@@ -395,7 +395,7 @@ export default function Dashboard() {
                   </Avatar>
                   <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
                     <Typography component="h2" fontWeight={700}>{displayName}</Typography>
-                    <Typography variant="body2" color="text.secondary">{currentUser.email}</Typography>
+                    <Typography variant="body2" color="text.secondary">{userProfile?.email || currentUser.email}</Typography>
                   </Box>
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>

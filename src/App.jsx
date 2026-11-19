@@ -19,6 +19,8 @@ import AppProviders from "./contexts";
 // Components
 import Dashboard from "./components/Dashboard";
 import Account from "./components/Account";
+import CcsAccess from "./components/auth/CcsAccess";
+import { ccsOnly } from "./contexts/ccsSession";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import ForgotPassword from "./components/auth/ForgotPassword";
@@ -70,7 +72,7 @@ const theme = createTheme({
   },
 });
 
-function App() {
+function App({ handoffUid }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -84,10 +86,10 @@ function App() {
             }}
           >
             <Routes>
-              {/* Your existing routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth" element={<CcsAccess handoffUid={handoffUid} />} />
+              <Route path="/login" element={ccsOnly ? <CcsAccess /> : <Login />} />
+              <Route path="/signup" element={ccsOnly ? <CcsAccess /> : <Signup />} />
+              <Route path="/forgot-password" element={ccsOnly ? <CcsAccess /> : <ForgotPassword />} />
               <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
               <Route
                 path="/"

@@ -36,7 +36,7 @@ async function resizeAvatar(file) {
 }
 
 function ProfileForm() {
-  const { currentUser, userProfile, updateProfile } = useAuth();
+  const { currentUser, userProfile, updateProfile, isCcs } = useAuth();
   const [name, setName] = useState(null);
   const [photo, setPhoto] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -97,9 +97,9 @@ function ProfileForm() {
           {photoURL && <Button disabled={busy} onClick={() => setPhoto("")}>Remove avatar</Button>}
         </Stack>
       </Stack>
-      <TextField label="Display name" autoComplete="nickname" value={displayName} disabled={busy}
+      <TextField label="Display name" autoComplete="nickname" value={displayName} disabled={busy || isCcs}
         onChange={(event) => setName(event.target.value)} slotProps={{ htmlInput: { maxLength: 80 } }} />
-      <TextField label="Sign-in email" value={currentUser.email || ""} slotProps={{ input: { readOnly: true } }} />
+      <TextField label="Sign-in email" value={userProfile?.email || currentUser.email || ""} slotProps={{ input: { readOnly: true } }} />
       {feedback && <Alert severity={feedback.severity}>{feedback.message}</Alert>}
       <Button type="submit" variant="contained" disabled={busy || (name === null && photo === null)}
         sx={{ alignSelf: "start", bgcolor: actionColor }}>Save profile</Button>
@@ -108,7 +108,7 @@ function ProfileForm() {
 }
 
 function PasswordForm() {
-  const { currentUser, changePassword, resetPassword } = useAuth();
+  const { currentUser, changePassword, resetPassword, isCcs } = useAuth();
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -156,6 +156,7 @@ function PasswordForm() {
     }
   }
 
+  if (isCcs) return <Typography>Your CCS account manages your password.</Typography>;
   return (
     <Stack component="form" onSubmit={submit} spacing={2}>
       <Typography component="h2" variant="h5">Change password</Typography>
