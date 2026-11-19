@@ -1,4 +1,5 @@
 // src/components/Charts/TownPieChart.jsx
+import { DEFAULT_TOWN_LABEL_COLOR } from "../../constants/townLabelColors.js";
 import React from "react";
 import {
   Box,
@@ -20,8 +21,6 @@ import {
   economyColor,
   societyColor,
   healthColor,
-  primaryColorLight,
-  secondaryColor,
 } from "../../constants/palette";
 import {
   MAX_SCORE,
@@ -98,8 +97,8 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         alignItems: "center",
         justifyContent: "space-between",
         width: "100%",
-        maxWidth: "var(--town-card-size, 420px)",
         aspectRatio: "1 / 1",
+        minHeight: 0,
         cursor: onToggleFlip ? "pointer" : "default",
         position: "relative",
         transition: "transform 0.2s, box-shadow 0.2s",
@@ -115,6 +114,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          columnGap: 0.5,
           mb: 0.25,
           flexShrink: 0,
         }}
@@ -151,7 +151,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
             minHeight: 0,
           }}
         >
-          <svg width="100%" height="100%" viewBox="10 10 260 260" style={{ position: "absolute", inset: 0 }}>
+          <svg width="100%" height="100%" viewBox="14 24 252 244" style={{ position: "absolute", inset: 0 }}>
             {hazards.map((hazard) => {
               return aspects.map((aspect, aspectIndex) => {
                 const value = town[hazard.id]?.[aspect];
@@ -374,30 +374,30 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         </Box>
       )}
 
-      {/* Town Name Pill */}
-      <Box
+      <Typography
+        component="h3"
+        variant="subtitle1"
+        fontWeight={700}
+        title={town.name}
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          bgcolor: primaryColorLight,
-          borderRadius: 10,
-          mt: 0.25,
-          boxShadow: 2,
-          width: "85%",
           flexShrink: 0,
+          width: "100%",
+          px: 0.5,
           py: 0.25,
-          px: 1.5,
+          textAlign: "center",
+          lineHeight: 1.25,
+          bgcolor: town.labelColor ?? DEFAULT_TOWN_LABEL_COLOR,
+          color: "white",
+          borderRadius: 1,
+          overflowWrap: "anywhere",
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 2,
+          overflow: "hidden",
         }}
       >
-        <Typography
-          variant="subtitle1"
-          fontWeight="bold"
-          sx={{ color: secondaryColor, textAlign: "center", lineHeight: 1.3 }}
-        >
-          {town.name}
-        </Typography>
-      </Box>
+        {town.name}
+      </Typography>
     </Box>
   );
 };

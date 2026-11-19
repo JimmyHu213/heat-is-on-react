@@ -11,6 +11,7 @@ import {
 import { allCards } from "../constants/cards.js";
 import { hazards } from "../constants/hazards.js";
 import { defaultTowns } from "../constants/towns.js";
+import { TOWN_LABEL_COLORS } from "../constants/townLabelColors.js";
 import { db } from "../firebase/config.js";
 import { applyCardEffects, cardEffectiveRounds, playCard, revertCardEffects } from "../game/cards.js";
 import { GameRuleError } from "../game/errors.js";
@@ -298,16 +299,20 @@ class GameSessionService {
   }
 
   /**
-   * Rename a town (only changes `name`; not a game move)
+   * Save a town name and optional label color without changing game scores
    */
-  async updateTownName(townId, name) {
+  async updateTownName(townId, name, labelColor) {
     const trimmed = typeof name === "string" ? name.trim() : "";
     if (!trimmed || trimmed.length > 80) {
       throw new GameRuleError("invalid-town-name", "Town name must be 1–80 characters");
     }
-    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, {
-      name: trimmed,
-    });
+    if (labelColor !== undefined && !TOWN_LABEL_COLORS.some(({ value }) => value === labelColor)) {
+      throw new GameRuleError("invalid-town-label-color", "Choose one of the available town colors.");
+    }
+
+    const changes = { name: trimmed };
+    if (labelColor !== undefined) changes.labelColor = labelColor;
+    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, changes);
   }
 
   /**
@@ -362,15 +367,16 @@ class GameSessionService {
       const current = await firestoreService.getDocument(this.TOWNS_COLLECTION, townId);
       if (current && current.effortPoints !== data.effortPoints) {
         const res = await this.updateTownBudget(townId, data.effortPoints, options);
-        if (data.name && data.name !== current.name) {
-          await this.updateTownName(townId, data.name);
-          return { ...res.town, name: data.name.trim() };
+        if (typeof data.name === "string" &&
+          (data.name !== current.name || (data.labelColor !== undefined && data.labelColor !== current.labelColor))) {
+          const saved = await this.updateTownName(townId, data.name, data.labelColor);
+          return { ...res.town, name: saved.name, labelColor: saved.labelColor };
         }
         return res.town;
       }
     }
     if (data && typeof data.name === "string") {
-      return await this.updateTownName(townId, data.name);
+      return await this.updateTownName(townId, data.name, data.labelColor);
     }
     return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, data);
   }

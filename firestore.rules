@@ -117,6 +117,12 @@ service cloud.firestore {
     }
 
     // Towns belong to a session.
+    function validTownLabelColor(data) {
+      return data.get('labelColor', '#356361') in [
+        '#356361', '#2F5D8A', '#386343', '#65447B', '#9B4A38', '#485565'
+      ];
+    }
+
     match /towns/{townId} {
       allow read: if resource == null ? canAccessGameData() : ownsSession(resource.data.sessionId);
       allow delete: if ownsSession(resource.data.sessionId);
@@ -135,6 +141,7 @@ service cloud.firestore {
         && request.resource.data.currentRound >= 0
         && request.resource.data.currentRound <= 21
         && request.resource.data.isComparisonTown is bool
+        && validTownLabelColor(request.resource.data)
         && validTownScores(request.resource.data);
 
       allow update: if ownsSession(resource.data.sessionId)
@@ -150,6 +157,7 @@ service cloud.firestore {
         && request.resource.data.currentRound is int
         && request.resource.data.currentRound >= 0
         && request.resource.data.currentRound <= 21
+        && validTownLabelColor(request.resource.data)
         && validTownScores(request.resource.data);
     }
 

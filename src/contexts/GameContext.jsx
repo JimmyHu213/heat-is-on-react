@@ -570,23 +570,20 @@ export function GameProvider({ children }) {
     return towns.find((town) => town.id === townId) || null;
   };
 
-  const updateTownName = async (townId, name) => {
+  const updateTownName = async (townId, name, labelColor) => {
     if (!currentSession) return null;
 
     setLoading(true);
     try {
-      await gameSessionService.updateTownName(townId, name);
-      const trimmedName = name.trim();
-      let updatedTown = null;
+      const saved = await gameSessionService.updateTownName(townId, name, labelColor);
+      const details = { name: saved.name };
+      if (saved.labelColor !== undefined) details.labelColor = saved.labelColor;
+
       setTowns((prevTowns) =>
-        prevTowns.map((t) => {
-          if (t.id !== townId) return t;
-          updatedTown = { ...t, name: trimmedName };
-          return updatedTown;
-        })
+        prevTowns.map((town) => town.id === townId ? { ...town, ...details } : town)
       );
       setError(null);
-      return updatedTown || { id: townId, name: trimmedName };
+      return { id: townId, ...details };
     } catch (err) {
       console.error("Error updating town name:", err);
       setError(
@@ -643,17 +640,12 @@ export function GameProvider({ children }) {
     if (
       existing &&
       typeof updatedTown.name === "string" &&
-      updatedTown.name !== existing.name
+      (updatedTown.name !== existing.name ||
+        (updatedTown.labelColor !== undefined && updatedTown.labelColor !== existing.labelColor))
     ) {
-      const renamed = await updateTownName(updatedTown.id, updatedTown.name);
-      if (!renamed) return null;
-      const mergedName = updatedTown.name.trim();
-      resultTown = { ...(resultTown || existing), name: mergedName };
-      setTowns((prevTowns) =>
-        prevTowns.map((t) =>
-          t.id === updatedTown.id ? { ...t, name: mergedName } : t
-        )
-      );
+      const details = await updateTownName(updatedTown.id, updatedTown.name, updatedTown.labelColor);
+      if (!details) return null;
+      resultTown = { ...resultTown, ...details };
     }
     return resultTown;
   };

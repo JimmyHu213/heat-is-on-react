@@ -35,7 +35,12 @@ const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress
     updateHeight();
     const observer = new ResizeObserver(updateHeight);
     const main = grid.closest("main");
-    if (main) observer.observe(main);
+    if (main) {
+      for (const section of main.children) {
+        if (!section.contains(grid)) observer.observe(section);
+      }
+    }
+    if (grid.previousElementSibling) observer.observe(grid.previousElementSibling);
     window.addEventListener("resize", updateHeight);
     return () => {
       observer.disconnect();
@@ -51,11 +56,11 @@ const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress
     );
   }
 
-  const cardGap = 6;
+  const cardGap = 10;
   const desktopRows = Math.ceil(towns.length / 3);
-  const desktopCardSize = Math.max(
-    145, Math.floor((availableHeight - (desktopRows - 1) * cardGap) / desktopRows)
-  );
+  const desktopCardSize = Math.max(180, Math.floor(
+    (availableHeight - (desktopRows - 1) * cardGap) / desktopRows
+  ));
   const beforeById = new Map(hazardPresentation?.before.map((town) => [town.id, town]));
   const afterById = new Map(hazardPresentation?.after?.map((town) => [town.id, town]));
   const allFlipped =
@@ -112,24 +117,15 @@ const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress
           mb: 0.5,
           display: "grid",
           width: "100%",
-          maxWidth: {
-            xs: "var(--town-card-size)",
-            sm: `calc(2 * var(--town-card-size) + ${cardGap}px)`,
-            md: `calc(3 * var(--town-card-size) + ${2 * cardGap}px)`,
-          },
-          mx: "auto",
           gridTemplateColumns: {
             xs: "minmax(0, 1fr)",
             sm: "repeat(2, minmax(0, 1fr))",
             md: "repeat(3, minmax(0, 1fr))",
           },
           gap: `${cardGap}px`,
-          justifyContent: "center",
-          justifyItems: "center",
-          alignItems: "start",
-          "--town-card-size": {
-            xs: "756px",
-            md: "var(--desktop-town-card-size)",
+          mx: "auto",
+          maxWidth: {
+            md: `calc(3 * var(--desktop-town-card-size) + ${2 * cardGap}px)`,
           },
         }}
       >

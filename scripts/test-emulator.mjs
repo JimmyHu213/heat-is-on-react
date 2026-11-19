@@ -546,3 +546,25 @@ test("firestore.rules reject cross-user access, ID squatting, round_stats mutati
   const afterDelete = await gameSessionService.getSession(sessionA.id);
   assert.equal(afterDelete, null);
 });
+
+test("town label color is optional, saved with the name, and validated by Firestore", async () => {
+  const user = await signInFreshUser("town-label-color");
+  const created = await gameSessionService.createSession(user.uid, "Town colors");
+  const [legacyTown] = await gameSessionService.getSessionTowns(created.id);
+  assert.equal(legacyTown.labelColor, undefined);
+
+  const renamed = await gameSessionService.updateTownName(legacyTown.id, "Harbour Town");
+  assert.equal(renamed.name, "Harbour Town");
+  assert.equal(renamed.labelColor, undefined);
+
+  await gameSessionService.updateTownName(legacyTown.id, "Harbour Town", "#2F5D8A");
+  const [colored] = await gameSessionService.getSessionTowns(created.id);
+  assert.equal(colored.name, "Harbour Town");
+  assert.equal(colored.labelColor, "#2F5D8A");
+  assert.deepEqual(colored.bushfire, legacyTown.bushfire);
+  assert.equal(colored.effortPoints, legacyTown.effortPoints);
+
+  const ref = doc(db, "towns", legacyTown.id);
+  await assert.rejects(updateDoc(ref, { labelColor: "#FFFFFF" }), { code: "permission-denied" });
+  assert.equal((await getDoc(ref)).data().labelColor, "#2F5D8A");
+});

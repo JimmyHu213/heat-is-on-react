@@ -15,7 +15,7 @@
 
 ## 需求进度
 
-共 49 项，其中 ✅ 已完成 44 项，◐ 部分完成 5 项。DF-01 至 DF-44 可追溯到原始 Excel，DF-45 至 DF-49 来自后续反馈。
+共 50 项，其中 ✅ 已完成 45 项，◐ 部分完成 5 项。DF-01 至 DF-44 可追溯到原始 Excel，DF-45 至 DF-50 来自后续反馈。
 
 本批次 15 个条目的实施顺序、文件和验收方法见[工作坊仪表盘开发计划](superpowers/plans/2026-11-19-workshop-dashboard-revision.md)。
 
@@ -24,7 +24,7 @@
 | DF-01 | 2 | 尽可能放大灾害转盘 | ◐ | [HazardWheel](../src/components/Game/components/HazardWheel.jsx) 使用 340×340 SVG，实际容器为 `min(440px, 52vh)`；已有大型弹窗，仍需在目标 16:9 投影分辨率验收大小和裁切。 |
 | DF-02 | 3 | 增加 Mystery `?` 格子 | ✅ | [wheel.js](../src/game/wheel.js) 定义五种灾害与一个 Mystery；[HazardControls](../src/components/Game/components/HazardControls.jsx) 对 Mystery 显示提示、不自动应用灾害。最终行为决定见 Q-03。 |
 | DF-03 | 4 | 恢复四张跨灾害卡牌 | ✅ | [cards.js](../src/constants/cards.js) 包含 Green industries、Community events、Health services、Protected areas；[CardControls](../src/components/Game/components/CardControls.jsx) 使用完整 19 张卡牌列表。 |
-| DF-04 | 5 | 六个城镇图适配 16:9 投影，接近 1:1，占据主要画面 | ◐ | TownPieCharts 桌面三列两行，卡片尺寸受视窗宽高约束。真实投影设备验收仍待执行。 |
+| DF-04 | 5 + 后续反馈 | 六张城镇卡片保持正方形，桌面三列两行，随窗口宽高缩放 | ◐ | 宽屏将阶段栏和标签移至图表左侧，网格按右区剩余宽高计算正方形尺寸。每个城镇名在卡片底部独立显示。在 1280×720 至 2560×1440 的浏览器中验证六图同屏，手机和平板分别回落到一列和两列。真实投影设备验收仍待执行。 |
 | DF-05 | 6 | 删除非最后一次的错误出牌（原反馈：不紧急） | ✅ | [GameTable](../src/components/Game/components/GameTable.jsx) 和 Adapt 控件已有删除入口；BUG-02 已修复，多年度卡牌按已生效年度数扣除效果，费用只退一次，模拟器验证通过。 |
 | DF-06 | 7 | 出牌时看见城镇 NESH 实时变化，避免遮挡 | ◐ | [Game](../src/components/Game/index.jsx) 即时更新图表，已移除出牌确认框；浮动面板和侧边抽屉仍可能遮挡，需要投影验收。 |
 | DF-07 | 7、16 + 新反馈 | 灾害 GIF 循环播放，主持人手动关闭后，六镇雷达图再缓慢收缩到灾后数值 | ✅ | Game 在保存前冻结灾前图表。GIF 由主持人手动关闭，之后六镇同步过渡约 1.2 秒。 |
@@ -36,7 +36,7 @@
 | DF-13 | 12 | Event 标题改为指定问题，去掉副标题 | ✅ | StageBar：`Will Adaptania face a climate hazard this year?`。 |
 | DF-14 | 13 | Review 标题改为指定问题，去掉副标题 | ✅ | StageBar：`How resilient is Adaptania now?`。 |
 | DF-15 | 14 + 新反馈 | 移除阶段栏中原第三步 Review 的独立展示，将其文案 `How resilient is Adaptania now?` 移至原第四步，替换该步标题 `Reward for effort` | ✅ | StageBar 只显示三个入口。最后一步显示原 Review 文案，返回 Event、奖励和结算继续由 Review 状态承载。 |
-| DF-16 | 15 | 转盘和事件可通过下拉入口访问 | ◐ | 有主持人抽屉入口与浮动按钮；[HazardControls](../src/components/Game/components/HazardControls.jsx) 仅在 Event 阶段允许应用灾害。与“always available via dropdown”的具体预期需确认。 |
+| DF-16 | 15 | 转盘和事件可通过下拉入口访问 | ◐ | 通过右下角浮动按钮访问；[HazardControls](../src/components/Game/components/HazardControls.jsx) 仅在 Event 阶段允许应用灾害。与“always available via dropdown”的具体预期需确认。 |
 | DF-17 | 15 | 可以从 Review 返回 Event | ✅ | StageBar 提供 `Back to Event`；[stages.js](../src/game/stages.js) 允许返回，达到每轮五次灾害上限时禁止。 |
 | DF-18 | 17 | 同一轮连续应用灾害，包括相同灾害两次 | ✅ | [gameSessionService](../src/services/gameSessionService.js) 按次数追加灾害，未按类型去重；每轮最多五次。 |
 | DF-19 | 18 | 移除出牌 / 灾害的“是否确定”确认界面 | ✅ | CardControls 和 HazardControls 直接调用操作；此项不代表所有控制面板都不遮挡图表，见 DF-06/07。 |
@@ -64,12 +64,13 @@
 | DF-41 | 57 | 从开场页删除原三步说明 | ✅ | 开场页已替换为视频卡片，不再显示原 01/02/03 步骤。 |
 | DF-42 | 58、61 | 顶部增加 NESH explainer 视频按钮 | ✅ | Game 顶部已有按钮和播放器，已导入 Understanding NESH 至 `nesh-explainer.mp4`。本批素材待部署；视频体积处理见[素材清单](media-assets.md)。 |
 | DF-43 | 63 | 提供返回 opening screen 的入口 | ✅ | Game 顶部提供 Opening Screen；已开始的游戏可再返回 Live Dashboard。 |
-| DF-44 | 64 | Town details 移除 Hazard Resilience levels | ✅ | TownDetailsView 已移除该明细区域。 |
+| DF-44 | 64 + 后续反馈 | Town Details 显示总体韧性和每种灾害的 N/E/S/H 分数 | ✅ | 恢复为紧凑表格，直接读取当前城镇分数。 |
 | DF-45 | 品牌邮件 | 主标题使用 Fredoka SemiBold，游戏标题统一显示为 `THE HEAT IS ON`，正文使用 Figtree | ✅ | Fredoka 和 Figtree 随站点加载，两个游戏标题均用大写。 |
 | DF-46 | 品牌邮件 | 登录页封面使用 Adaptania 地图 | ✅ | 登录页使用 Adaptania 地图，替代文字已更新，旧照片署名已移除。 |
 | DF-47 | 新反馈 1 | 游戏欢迎页默认展示五个灾害的小图标，点击其中一个放大对应图标 | ✅ | Opening Screen 默认显示五个按钮，分别打开对应的放大图标。 |
 | DF-48 | 新反馈 4 | 游戏进行期间隐藏两张汇总柱状图，游戏结束后在 View Summary 中展示 | ✅ | GameSummaryDialog 在游戏结束后显示两张汇总图。实时仪表盘显示六镇卡片。 |
 | DF-49 | 新反馈 5 | 欢迎页视频区只显示两个相邻入口，顺序为 ① Time Machine、② NESH Explainer | ✅ | 欢迎页视频入口顺序已更新。保留顶部 NESH Explainer 入口。 |
+| DF-50 | 后续反馈 | 改名时可选六种雷达图名称框背景色 | ✅ | 名称和颜色一次写入城镇文档。旧文档继续使用默认青绿。已验证仅改颜色、同时改名和颜色，以及刷新后显示。 |
 
 ## 已知缺陷与修复待办
 
