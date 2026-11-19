@@ -171,6 +171,25 @@ const Game = () => {
     loadSession(sessionId);
   }, [sessionId]);
 
+  useEffect(() => {
+    if (currentStage !== "hazard" || showOpeningScreen || navigator.connection?.saveData) return;
+
+    let cancelled = false;
+    async function preloadAnimations() {
+      for (const src of Object.values(MEDIA_CONFIG.eventAnimations)) {
+        if (cancelled) return;
+        await new Promise((resolve) => {
+          const image = new Image();
+          image.fetchPriority = "low";
+          image.onload = image.onerror = resolve;
+          image.src = src;
+        });
+      }
+    }
+    preloadAnimations();
+    return () => { cancelled = true; };
+  }, [currentStage, showOpeningScreen]);
+
   const presentation = hazardAnnouncement
     && currentStage === "hazard"
     && hazardAnnouncement.sessionId === sessionId

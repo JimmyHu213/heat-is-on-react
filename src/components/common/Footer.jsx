@@ -37,6 +37,8 @@ const LogoItem = ({ src, alt, size, maxLogoWidth }) => {
       component="img"
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
       sx={{
         ...(maxLogoWidth

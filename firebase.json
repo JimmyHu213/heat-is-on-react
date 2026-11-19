@@ -12,9 +12,15 @@
     ],
     "headers": [
       {
-        "source": "/media/**",
+        "regex": "^/media/([^/]+|(events|icons|logos|introductions|fonts)/.+)$",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "/media/v1/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
         ]
       }
     ],

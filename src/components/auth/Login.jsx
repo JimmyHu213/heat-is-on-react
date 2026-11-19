@@ -73,7 +73,13 @@ const Login = () => {
   return (
     <main className="login-page">
       <header className="login-hero">
-        <img src={MEDIA_CONFIG.loginCover} alt="Illustrated map of Adaptania" />
+        <img
+          src={MEDIA_CONFIG.loginCover}
+          srcSet={`${MEDIA_CONFIG.loginCoverSmall} 640w, ${MEDIA_CONFIG.loginCover} 1200w`}
+          sizes="(max-width: 720px) 100vw, 58vw"
+          fetchPriority="high"
+          alt="Illustrated map of Adaptania"
+        />
         <div className="login-hero-copy">
           <h1>THE HEAT IS ON</h1>
           <p>Help your town adapt to a changing climate.</p>

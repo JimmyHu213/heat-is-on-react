@@ -82,3 +82,9 @@ npx firebase deploy --only hosting --project <project-id>
 | `D:\Projects\heat_is_on\UTAS-#1-Climate_THE-Rankings-2026_HOR_MONO.png` | `public/media/logos/utas-climate-rankings-2026.png` |
 
 Fredoka 和 Figtree 来自 Google Fonts 的开源字库，字体和对应 OFL 许可随站点存放在 `public/media/fonts/`。欢迎页视频区按 Time Machine、NESH Explainer 的顺序展示。游戏顶部也提供 NESH Explainer 入口。
+
+## 图片加载优化
+
+- 线上图片优先使用 `public/media/v1/` 下的 WebP。更新这些文件的内容时使用新版本路径，并在 `firebase.json` 为新路径设置同样的缓存策略，避免用户的浏览器读到已长期缓存的旧图。
+- 登录页按显示宽度在 640 和 1200 像素的 Adaptania 封面中选择。页脚 Logo 使用浏览器的延迟加载。
+- 五个灾害动画优先使用循环 WebP。进入 Event 后逐个低优先级加载，启用省流量模式时跳过预载。原 GIF 保留作浏览器格式回退。

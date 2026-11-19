@@ -8,12 +8,13 @@ import {
   getEventGifPath,
 } from "./mediaConfig.js";
 
-test("MEDIA_CONFIG defines English intro video, all 5 event GIFs, and all 5 hazard icons", () => {
+test("MEDIA_CONFIG defines English intro video, 5 animations, their GIF fallbacks, and hazard icons", () => {
   assert.equal(MEDIA_CONFIG.introVideo, "/media/introduction-en.mp4");
   const expectedHazards = ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"];
   for (const id of expectedHazards) {
     assert.equal(MEDIA_CONFIG.eventGifs[id], `/media/events/${id}.gif`);
-    assert.equal(MEDIA_CONFIG.hazardIcons[id], `/media/icons/${id}.png`);
+    assert.equal(MEDIA_CONFIG.eventAnimations[id], `/media/v1/events/${id}.webp`);
+    assert.equal(MEDIA_CONFIG.hazardIcons[id], `/media/v1/icons/${id}.webp`);
   }
 });
 
@@ -22,9 +23,9 @@ test("MEDIA_CONFIG defines workshop video, logo, and copyright properties", () =
   assert.equal(MEDIA_CONFIG.neshExplainerVideo, "/media/nesh-explainer.mp4");
   assert.equal(
     MEDIA_CONFIG.inspiringTasmaniaLogo,
-    "/media/logos/inspiring-tasmania.png"
+    "/media/v1/logos/inspiring-tasmania.webp"
   );
-  assert.equal(MEDIA_CONFIG.utasLogo, "/media/logos/utas-climate-rankings-2026.png");
+  assert.equal(MEDIA_CONFIG.utasLogo, "/media/v1/logos/utas.webp");
   assert.equal(MEDIA_CONFIG.copyrightText, "© University of Tasmania · The Heat Is On");
 });
 
@@ -36,6 +37,8 @@ test("all configured workshop videos and hazard assets exist in the Hosting publ
     MEDIA_CONFIG.inspiringTasmaniaLogo,
     MEDIA_CONFIG.utasLogo,
     MEDIA_CONFIG.loginCover,
+    MEDIA_CONFIG.loginCoverSmall,
+    ...Object.values(MEDIA_CONFIG.eventAnimations),
     ...Object.values(MEDIA_CONFIG.eventGifs),
     ...Object.values(MEDIA_CONFIG.hazardIcons),
     ...Object.values(MEDIA_CONFIG.hazardIntroductions),
@@ -63,7 +66,7 @@ test("getValidTrainingUrl accepts https/http URLs and rejects empty, relative, o
 });
 
 test("getHazardIconPath and getEventGifPath return paths for known hazards and null for unknown or prototype keys", () => {
-  assert.equal(getHazardIconPath("bushfire"), "/media/icons/bushfire.png");
+  assert.equal(getHazardIconPath("bushfire"), "/media/v1/icons/bushfire.webp");
   assert.equal(getEventGifPath("stormSurge"), "/media/events/stormSurge.gif");
   assert.equal(getHazardIconPath("unknown"), null);
   assert.equal(getEventGifPath("toString"), null);
