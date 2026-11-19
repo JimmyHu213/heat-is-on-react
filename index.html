@@ -17,6 +17,13 @@
       }
     </script>
     <style>
+      /* Title glyphs from the bundled Fredoka font, licensed in /media/fonts/fredoka-OFL.txt. */
+      @font-face {
+        font-family: "Fredoka Title";
+        src: url("/media/v1/fonts/fredoka-title.woff2") format("woff2");
+        font-weight: 600;
+        font-display: swap;
+      }
       #startup {
         position: fixed;
         inset: 0;
@@ -31,7 +38,7 @@
       #startup[hidden] { display: none; }
       #startup h1 {
         margin: 0;
-        font: 600 clamp(1.5rem, 8vw, 4.5rem)/1.1 Fredoka, system-ui, sans-serif;
+        font: 600 clamp(1.5rem, 8vw, 4.5rem)/1.1 "Fredoka Title", system-ui, sans-serif;
         letter-spacing: -.035em;
       }
       #startup h1 span {
