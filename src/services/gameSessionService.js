@@ -11,6 +11,7 @@ import {
 import { allCards } from "../constants/cards.js";
 import { hazards } from "../constants/hazards.js";
 import { defaultTowns } from "../constants/towns.js";
+import { TOWN_LABEL_COLORS } from "../constants/townLabelColors.js";
 import { db } from "../firebase/config.js";
 import { applyCardEffects, cardEffectiveRounds, playCard, revertCardEffects } from "../game/cards.js";
 import { GameRuleError } from "../game/errors.js";
@@ -214,17 +215,18 @@ class GameSessionService {
   /**
    * Get completed game sessions for a user
    */
-  async getUserCompletedSessions(userId, limitCount = 10) {
+  async getUserCompletedSessions(userId) {
     try {
-      return await firestoreService.getDocuments(
+      const sessions = await firestoreService.getDocuments(
         this.SESSIONS_COLLECTION,
         [
           ["userId", "==", userId],
           ["isActive", "==", false],
-        ],
-        ["completedAt", "desc"],
-        limitCount
+        ]
       );
+      const finishedDate = (session) => session.completedAt ?? session.createdAt;
+      const timestamp = (value) => value?.toMillis?.() ?? (Date.parse(value) || 0);
+      return sessions.sort((a, b) => timestamp(finishedDate(b)) - timestamp(finishedDate(a)));
     } catch (error) {
       console.error(
         `Error getting completed sessions for user ${userId}:`,
@@ -297,16 +299,20 @@ class GameSessionService {
   }
 
   /**
-   * Rename a town (only changes `name`; not a game move)
+   * Save a town name and optional label color without changing game scores
    */
-  async updateTownName(townId, name) {
+  async updateTownName(townId, name, labelColor) {
     const trimmed = typeof name === "string" ? name.trim() : "";
     if (!trimmed || trimmed.length > 80) {
       throw new GameRuleError("invalid-town-name", "Town name must be 1–80 characters");
     }
-    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, {
-      name: trimmed,
-    });
+    if (labelColor !== undefined && !TOWN_LABEL_COLORS.some(({ value }) => value === labelColor)) {
+      throw new GameRuleError("invalid-town-label-color", "Choose one of the available town colors.");
+    }
+
+    const changes = { name: trimmed };
+    if (labelColor !== undefined) changes.labelColor = labelColor;
+    return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, changes);
   }
 
   /**
@@ -361,15 +367,16 @@ class GameSessionService {
       const current = await firestoreService.getDocument(this.TOWNS_COLLECTION, townId);
       if (current && current.effortPoints !== data.effortPoints) {
         const res = await this.updateTownBudget(townId, data.effortPoints, options);
-        if (data.name && data.name !== current.name) {
-          await this.updateTownName(townId, data.name);
-          return { ...res.town, name: data.name.trim() };
+        if (typeof data.name === "string" &&
+          (data.name !== current.name || (data.labelColor !== undefined && data.labelColor !== current.labelColor))) {
+          const saved = await this.updateTownName(townId, data.name, data.labelColor);
+          return { ...res.town, name: saved.name, labelColor: saved.labelColor };
         }
         return res.town;
       }
     }
     if (data && typeof data.name === "string") {
-      return await this.updateTownName(townId, data.name);
+      return await this.updateTownName(townId, data.name, data.labelColor);
     }
     return await firestoreService.updateDocument(this.TOWNS_COLLECTION, townId, data);
   }
@@ -545,7 +552,9 @@ class GameSessionService {
       }
 
       const nextRev = assertRevision(session, expectedRevision);
-      const { town: updatedTown, play } = playCard(town, card, recordRound);
+      const appliedCount = cardEffectiveRounds(recordRound, card.duration)
+        .filter((r) => r <= session.currentRound).length;
+      const { town: updatedTown, play } = playCard(town, card, recordRound, appliedCount);
 
       const lastUndo = buildCardUndo({
         round: session.currentRound,
@@ -563,7 +572,7 @@ class GameSessionService {
         updatedAt: serverTimestamp(),
       });
 
-      const isActivePlay = Math.max(...play.effectiveRounds) >= session.currentRound;
+      const isActivePlay = play.effectiveRounds.some((r) => r > session.currentRound);
       const cardPlayDoc = {
         sessionId: session.id,
         cardId: play.cardId,
@@ -1270,7 +1279,9 @@ class GameSessionService {
       }
 
       const nextRev = assertRevision(session, expectedRevision);
-      const revertedTown = revertCardEffects(town, card);
+      const effectiveRounds = play.effectiveRounds ?? cardEffectiveRounds(play.playedAtRound, card.duration);
+      const appliedCount = effectiveRounds.filter((r) => r <= session.currentRound).length;
+      const revertedTown = revertCardEffects(town, card, appliedCount);
 
       tx.update(townRef, {
         effortPoints: revertedTown.effortPoints,

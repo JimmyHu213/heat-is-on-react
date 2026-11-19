@@ -1,0 +1,101 @@
+name: Firebase release
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build -- --mode emulator
+      - run: npx --no-install firebase emulators:exec --only auth,firestore --project demo-heat-is-on "npm run test:emulator"
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: firebase-live-sites
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    environment:
+      name: ${{ github.event_name == 'push' && 'staging' || 'production' }}
+      url: ${{ github.event_name == 'push' && 'https://heat-is-on.web.app' || 'https://the-heat-is-on.web.app' }}
+    env:
+      PROJECT: ${{ github.event_name == 'push' && 'heat-is-on' || 'the-heat-is-on' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check the tested staging revision
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/firebase.yml/runs?event=push&branch=main&head_sha=$GITHUB_SHA&status=success" |
+            jq -e '.total_count > 0'
+          curl -fsS --retry 3 "https://heat-is-on.web.app/release.json?sha=$GITHUB_SHA" |
+            jq -e --arg sha "$GITHUB_SHA" '.sha == $sha and .project == "heat-is-on"'
+      - name: Build for the selected Firebase project
+        env:
+          VITE_TRAINING_COURSE_URL: ${{ vars.TRAINING_COURSE_URL }}
+        run: |
+          curl -fsS --retry 3 "https://$PROJECT.web.app/__/firebase/init.json" > "$RUNNER_TEMP/web.json"
+          node scripts/build-release.mjs "$PROJECT" "$RUNNER_TEMP/web.json" "$GITHUB_SHA"
+          echo "number=$(jq -er '.messagingSenderId' "$RUNNER_TEMP/web.json")" >> "$GITHUB_OUTPUT"
+        id: build
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        id: auth
+        with:
+          project_id: ${{ env.PROJECT }}
+          workload_identity_provider: projects/${{ steps.build.outputs.number }}/locations/global/workloadIdentityPools/dashboard-releases/providers/github
+          service_account: dashboard-release@${{ env.PROJECT }}.iam.gserviceaccount.com
+          token_format: access_token
+      - name: Record previous production versions for rollback
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          previous_site=$(curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://firebasehosting.googleapis.com/v1beta1/sites/$PROJECT/channels/live/releases?pageSize=1" | jq -er '.releases[0].version.name')
+          previous_rules=$(curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://firebaserules.googleapis.com/v1/projects/$PROJECT/releases/cloud.firestore" | jq -er '.rulesetName')
+          printf 'Previous Hosting version: `%s`\n\nPrevious Firestore ruleset: `%s`\n' "$previous_site" "$previous_rules" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish rules and Hosting
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$GITHUB_SHA"
+          npx --no-install firebase deploy --only firestore:rules --project "$PROJECT" --non-interactive
+          npx --no-install firebase deploy --only hosting --project "$PROJECT" --non-interactive -m "$GITHUB_SHA"
+      - name: Verify the live build
+        run: |
+          node scripts/verify-release.mjs "$PROJECT" "$GITHUB_SHA"

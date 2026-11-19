@@ -6,6 +6,8 @@
 
 ## Key Features
 
+Dashboard feedback implementation status and remaining work: [开发进度表](docs/dashboard-feedback-progress.md).
+
 - **User Authentication**: Sign up, login, and password reset functionality using Firebase Authentication
 - **Game Sessions**: Users can create and manage up to 3 active game sessions
 - **Town Management**: Each game session contains 6 towns with different vulnerability profiles

@@ -1,17 +1,19 @@
 Heat Is On presentation assets
 
-Animated GIFs: Animated Noto Emoji by Google, CC BY 4.0.
-Project: https://googlefonts.github.io/noto-emoji-files/
-License: https://creativecommons.org/licenses/by/4.0/
-GIFs are unmodified copies; their filenames describe their use in this game.
-These are illustrative event animations, not recordings of real disasters.
-Bushfire (fire): https://fonts.gstatic.com/s/e/notoemoji/latest/1f525/512.gif
-Flood (rain cloud): https://fonts.gstatic.com/s/e/notoemoji/latest/1f327/512.gif
-Storm surge (wave): https://fonts.gstatic.com/s/e/notoemoji/latest/1f30a/512.gif
-Heatwave (hot face): https://fonts.gstatic.com/s/e/notoemoji/latest/1f975/512.gif
-Biohazard (microbe): https://fonts.gstatic.com/s/e/notoemoji/latest/1f9a0/512.gif
+Workshop assets supplied by Jimmy on 2026-11-18:
+- events/*.gif: Downloads/gifs (five hazard animations).
+- icons/*.png: Downloads/For Jimmy/For Jimmy/Web icons.
+- introductions/*.png: Downloads/For Jimmy/For Jimmy/Introduce-icons.
+- time-machine.mp4: Time Machine.mp4.
+- nesh-explainer.mp4: Understanding NESH.mp4.
+Files are unmodified copies with filenames normalized for the app.
+Creator and license information was not included in these folders.
+The event GIFs replace the earlier Animated Noto Emoji placeholders and
+must not be attributed to Google or assigned the placeholders' CC BY license.
+See docs/media-assets.md in the source repository for the inventory and usage.
 
-SVG icons: Tabler Icons by Pawel Kuna, MIT License.
+Legacy SVG icons (retained files; current UI uses supplied PNGs):
+Tabler Icons by Pawel Kuna, MIT License.
 Project: https://github.com/tabler/tabler-icons
 Full copyright and permission notice: /media/TABLER-LICENSE.txt
 Original icons: icons/outline/{flame,flood,ripple,sun-high,virus}.svg

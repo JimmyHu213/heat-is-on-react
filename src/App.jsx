@@ -18,6 +18,7 @@ import AppProviders from "./contexts";
 
 // Components
 import Dashboard from "./components/Dashboard";
+import Account from "./components/Account";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import ForgotPassword from "./components/auth/ForgotPassword";
@@ -27,6 +28,7 @@ import Footer from "./components/common/Footer";
 import { Box } from "@mui/material";
 
 // Create a Material UI theme
+const heading = { fontFamily: "Fredoka, sans-serif", fontWeight: 600 };
 const theme = createTheme({
   palette: {
     primary: {
@@ -42,7 +44,11 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: heading,
+    h2: heading,
+    h3: heading,
+    h4: heading,
+    fontFamily: '"Figtree", "Helvetica", "Arial", sans-serif',
   },
   components: {
     MuiButton: {
@@ -82,6 +88,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
               <Route
                 path="/"
                 element={

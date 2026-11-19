@@ -1,4 +1,5 @@
 // src/components/Charts/TownPieChart.jsx
+import { DEFAULT_TOWN_LABEL_COLOR } from "../../constants/townLabelColors.js";
 import React from "react";
 import {
   Box,
@@ -20,8 +21,6 @@ import {
   economyColor,
   societyColor,
   healthColor,
-  primaryColorLight,
-  secondaryColor,
 } from "../../constants/palette";
 import {
   MAX_SCORE,
@@ -90,14 +89,16 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         bgcolor: "grey.200",
         borderRadius: 2,
         boxShadow: 2,
-        p: 1.25,
-        minHeight: "265px",
+        p: 0.5,
+        minWidth: 0,
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "space-between",
         width: "100%",
-        maxWidth: "255px",
+        aspectRatio: "1 / 1",
+        minHeight: 0,
         cursor: onToggleFlip ? "pointer" : "default",
         position: "relative",
         transition: "transform 0.2s, box-shadow 0.2s",
@@ -113,7 +114,9 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          columnGap: 0.5,
           mb: 0.25,
+          flexShrink: 0,
         }}
       >
         <Chip
@@ -126,6 +129,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
           <Tooltip title={flipped ? "Show Radial Chart" : "Flip for NESH Averages"}>
             <IconButton
               size="small"
+              sx={{ p: 0.25 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleFlip();
@@ -142,11 +146,12 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         <Box
           sx={{
             position: "relative",
-            width: 190,
-            height: 190,
+            width: "100%",
+            flex: 1,
+            minHeight: 0,
           }}
         >
-          <svg width="100%" height="100%" viewBox="0 0 280 280">
+          <svg width="100%" height="100%" viewBox="14 24 252 244" style={{ position: "absolute", inset: 0 }}>
             {hazards.map((hazard) => {
               return aspects.map((aspect, aspectIndex) => {
                 const value = town[hazard.id]?.[aspect];
@@ -210,7 +215,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
                       fontSize="10"
                       fontWeight="bold"
                     >
-                      {value}
+                      {Math.round(value)}
                     </text>
                     {value >= 20 && (
                       <g>
@@ -258,24 +263,24 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
             />
 
             <g>
-              <foreignObject x={220} y={20} width={30} height={30}>
+              <foreignObject x={208} y={30} width={30} height={30}>
                 <HazardIcon hazardId="bushfire" color={bushfireColor1} size={24} />
               </foreignObject>
-              <foreignObject x={250} y={centerY} width={30} height={30}>
+              <foreignObject x={238} y={centerY + 12} width={30} height={30}>
                 <HazardIcon hazardId="flood" color={floodColor1} size={24} />
               </foreignObject>
               <foreignObject
                 x={centerX - 15}
-                y={centerY + 110}
+                y={centerY + 100}
                 width={30}
                 height={30}
               >
                 <HazardIcon hazardId="stormSurge" color={stormSurgeColor1} size={24} />
               </foreignObject>
-              <foreignObject x={10} y={centerY} width={30} height={30}>
+              <foreignObject x={18} y={centerY + 12} width={30} height={30}>
                 <HazardIcon hazardId="heatwave" color={heatwaveColor1} size={24} />
               </foreignObject>
-              <foreignObject x={40} y={20} width={30} height={30}>
+              <foreignObject x={48} y={30} width={30} height={30}>
                 <HazardIcon hazardId="biohazard" color={biohazardColor1} size={24} />
               </foreignObject>
             </g>
@@ -286,12 +291,14 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         <Box
           sx={{
             width: "100%",
-            height: 190,
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
             px: 0.5,
-            py: 0.25,
+            py: 0.75,
           }}
         >
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -367,29 +374,30 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
         </Box>
       )}
 
-      {/* Town Name Pill */}
-      <Box
+      <Typography
+        component="h3"
+        variant="subtitle1"
+        fontWeight={700}
+        title={town.name}
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          bgcolor: primaryColorLight,
-          borderRadius: 10,
-          mt: 1,
-          boxShadow: 2,
-          width: "85%",
-          py: 0.75,
-          px: 1.5,
+          flexShrink: 0,
+          width: "100%",
+          px: 0.5,
+          py: 0.25,
+          textAlign: "center",
+          lineHeight: 1.25,
+          bgcolor: town.labelColor ?? DEFAULT_TOWN_LABEL_COLOR,
+          color: "white",
+          borderRadius: 1,
+          overflowWrap: "anywhere",
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 2,
+          overflow: "hidden",
         }}
       >
-        <Typography
-          variant="subtitle1"
-          fontWeight="bold"
-          sx={{ color: secondaryColor, textAlign: "center" }}
-        >
-          {town.name}
-        </Typography>
-      </Box>
+        {town.name}
+      </Typography>
     </Box>
   );
 };

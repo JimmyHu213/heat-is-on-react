@@ -24,11 +24,19 @@ const envTrainingUrl =
 export const MEDIA_CONFIG = Object.freeze({
   introVideo: "/media/introduction-en.mp4",
   timeMachineVideo: "/media/time-machine.mp4",
-  globalScenarioVideo: "/media/global-scenario.mp4",
   neshExplainerVideo: "/media/nesh-explainer.mp4",
-  inspiringTasmaniaLogo: "/media/logos/inspiring-tasmania-placeholder.svg",
-  utasLogo: "/media/logos/utas-placeholder.svg",
+  inspiringTasmaniaLogo: "/media/v1/logos/inspiring-tasmania.webp",
+  utasLogo: "/media/v1/logos/utas.webp",
+  loginCover: "/media/v1/adaptania-1200.webp",
+  loginCoverSmall: "/media/v1/adaptania-640.webp",
   copyrightText: "© University of Tasmania · The Heat Is On",
+  eventAnimations: Object.freeze({
+    bushfire: "/media/v1/events/bushfire.webp",
+    flood: "/media/v1/events/flood.webp",
+    stormSurge: "/media/v1/events/stormSurge.webp",
+    heatwave: "/media/v1/events/heatwave.webp",
+    biohazard: "/media/v1/events/biohazard.webp",
+  }),
   eventGifs: Object.freeze({
     bushfire: "/media/events/bushfire.gif",
     flood: "/media/events/flood.gif",
@@ -36,19 +44,23 @@ export const MEDIA_CONFIG = Object.freeze({
     heatwave: "/media/events/heatwave.gif",
     biohazard: "/media/events/biohazard.gif",
   }),
+  hazardIntroductions: Object.freeze({
+    bushfire: "/media/introductions/bushfire.png",
+    flood: "/media/introductions/flood.png",
+    stormSurge: "/media/introductions/stormSurge.png",
+    heatwave: "/media/introductions/heatwave.png",
+    biohazard: "/media/introductions/biohazard.png",
+  }),
   hazardIcons: Object.freeze({
-    bushfire: "/media/icons/bushfire.svg",
-    flood: "/media/icons/flood.svg",
-    stormSurge: "/media/icons/stormSurge.svg",
-    heatwave: "/media/icons/heatwave.svg",
-    biohazard: "/media/icons/biohazard.svg",
+    bushfire: "/media/v1/icons/bushfire.webp",
+    flood: "/media/v1/icons/flood.webp",
+    stormSurge: "/media/v1/icons/stormSurge.webp",
+    heatwave: "/media/v1/icons/heatwave.webp",
+    biohazard: "/media/v1/icons/biohazard.webp",
+    mystery: "/media/v1/icons/mystery.webp",
   }),
-  eventGifAttribution: Object.freeze({
-    label: "Animated Noto Emoji · Google",
-    url: "https://googlefonts.github.io/noto-emoji-files/",
-    licenseLabel: "CC BY 4.0",
-    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
-  }),
+  // These GIFs were supplied with the workshop assets, not the Noto placeholders.
+  eventGifAttribution: null,
   trainingCourseUrl: getValidTrainingUrl(envTrainingUrl),
 });
 

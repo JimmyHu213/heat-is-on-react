@@ -24,20 +24,19 @@ import FlagIcon from "@mui/icons-material/Flag";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import { getPlayerCount, getTotalRounds, MAX_PLAYERS } from "../../../game/options.js";
-import { canChangeStage, MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
+import { canChangeStage } from "../../../game/stages.js";
 
 const STAGE_STEPS = [
   { key: "adaptation", label: "What adaptations will you choose for your town?" },
   { key: "hazard", label: "Will Adaptania face a climate hazard this year?" },
   { key: "review", label: "How resilient is Adaptania now?" },
-  { key: "dividends", label: "Reward for effort" },
 ];
 
 function getActiveStepIndex(currentStage) {
   if (currentStage === "adaptation") return 0;
   if (currentStage === "hazard") return 1;
   if (currentStage === "review") return 2;
-  if (currentStage === "complete") return 4;
+  if (currentStage === "complete") return STAGE_STEPS.length;
   return -1;
 }
 
@@ -47,13 +46,13 @@ export default function StageBar({
   currentStage,
   hazardCountThisRound = 0,
   loading = false,
+  vertical = false,
   onStartGame,
   onChangeStage,
   onOpenDividends,
   onOpenEndEarly,
   onOpenSummary,
   onUpdatePlayerCount,
-  onOpenControlsDrawer,
 }) {
   const [playerDialogOpen, setPlayerDialogOpen] = useState(false);
   const [playerInput, setPlayerInput] = useState("");
@@ -114,12 +113,12 @@ export default function StageBar({
     <Paper
       elevation={2}
       sx={{
-        p: 2,
-        mb: 2,
+        p: 1,
+        mb: 0.75,
         borderRadius: 2,
         display: "flex",
         flexDirection: "column",
-        gap: 1.5,
+        gap: 0.75,
       }}
     >
       <Box
@@ -186,27 +185,15 @@ export default function StageBar({
           )}
 
           {currentStage === "adaptation" && (
-            <>
-              {onOpenControlsDrawer && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  onClick={onOpenControlsDrawer}
-                  disabled={loading}
-                >
-                  Play Adaptation Cards
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                color="primary"
-                endIcon={<ArrowForwardIcon />}
-                onClick={() => onChangeStage("hazard")}
-                disabled={loading}
-              >
-                Next: Event Stage
-              </Button>
-            </>
+            <Button
+              variant="contained"
+              color="primary"
+              endIcon={<ArrowForwardIcon />}
+              onClick={() => onChangeStage("hazard")}
+              disabled={loading}
+            >
+              Next: Event Stage
+            </Button>
           )}
 
           {currentStage === "hazard" && (
@@ -231,19 +218,6 @@ export default function StageBar({
                 </span>
               </Tooltip>
 
-              {onOpenControlsDrawer && (
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  onClick={onOpenControlsDrawer}
-                  disabled={loading || hazardCountThisRound >= MAX_HAZARDS_PER_ROUND}
-                >
-                  {session.digitalWheelEnabled === false
-                    ? "Select Hazard"
-                    : "Open Hazard Wheel"}{" "}
-                  ({hazardCountThisRound}/{MAX_HAZARDS_PER_ROUND})
-                </Button>
-              )}
 
               <Tooltip
                 title={
@@ -260,7 +234,7 @@ export default function StageBar({
                     onClick={() => onChangeStage("review")}
                     disabled={loading || !canMoveToReview}
                   >
-                    Next: Review Stage
+                    Next: How resilient is Adaptania now?
                   </Button>
                 </span>
               </Tooltip>
@@ -323,7 +297,7 @@ export default function StageBar({
               startIcon={<AssessmentIcon />}
               onClick={onOpenSummary}
             >
-              View Game Summary
+              View Summary
             </Button>
           )}
         </Box>
@@ -333,7 +307,8 @@ export default function StageBar({
       {currentStage !== "setup" && (
         <Stepper
           activeStep={activeStep}
-          alternativeLabel
+          orientation={vertical ? "vertical" : "horizontal"}
+          alternativeLabel={!vertical}
           sx={{ pt: 0.5 }}
         >
           {STAGE_STEPS.map((step) => (

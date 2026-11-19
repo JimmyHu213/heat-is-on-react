@@ -11,6 +11,9 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from "firebase/auth";
 import { auth } from "../firebase/config";
 import {
@@ -91,6 +94,13 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   }
 
+  async function changePassword(currentPassword, newPassword) {
+    const user = auth.currentUser;
+    if (!user?.email) throw new Error("Sign in again to change your password.");
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+    await updatePassword(user, newPassword);
+  }
+
   // Fetch the user's profile from Firestore
   const fetchUserProfile = useCallback(async (user) => {
     if (user) {
@@ -111,9 +121,10 @@ export function AuthProvider({ children }) {
   // Memoize the updateProfile function to avoid unnecessary re-creations
   const updateProfile = useCallback(
     async (data) => {
-      if (!currentUser) return null;
+      if (!currentUser) throw new Error("Sign in again to update your profile.");
 
       try {
+        if (!userProfile) await createUserDocument(currentUser);
         const updated = await updateUserDocument(currentUser.uid, data);
         setUserProfile(updated);
         return updated;
@@ -122,7 +133,7 @@ export function AuthProvider({ children }) {
         throw error;
       }
     },
-    [currentUser]
+    [currentUser, userProfile]
   );
 
   // Add loading state initialization on mount
@@ -151,6 +162,7 @@ export function AuthProvider({ children }) {
     signup,
     logout,
     resetPassword,
+    changePassword,
     fetchUserProfile,
     updateProfile,
   };

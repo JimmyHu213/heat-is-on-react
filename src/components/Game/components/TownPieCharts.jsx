@@ -1,11 +1,52 @@
 // src/components/Game/components/TownPieCharts.jsx
-import React, { useState } from "react";
-import { Box, Grid, Typography, Button } from "@mui/material";
+import React, { useLayoutEffect, useRef, useState } from "react";
+import { Box, Typography, Button } from "@mui/material";
 import FlipCameraAndroidIcon from "@mui/icons-material/FlipCameraAndroid";
 import TownPieChart from "../../Charts/TownPieChart";
+import { ASPECTS, HAZARD_IDS } from "../../../game/scores.js";
 
-const TownPieCharts = ({ towns, currentStage }) => {
+function displayedTown(town, before, after, progress) {
+  if (!before) return town;
+  if (!after || progress === 0) return before;
+
+  const scores = Object.fromEntries(HAZARD_IDS.map((hazard) => [
+    hazard,
+    Object.fromEntries(ASPECTS.map((aspect) => {
+      const start = before[hazard][aspect];
+      return [aspect, start + (after[hazard][aspect] - start) * progress];
+    })),
+  ]));
+  return { ...town, ...scores };
+}
+
+const TownPieCharts = ({ towns, currentStage, chartPresentation, chartProgress }) => {
   const [flippedMap, setFlippedMap] = useState({});
+  const gridRef = useRef(null);
+  const [availableHeight, setAvailableHeight] = useState(600);
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const updateHeight = () => {
+      const documentTop = grid.getBoundingClientRect().top + window.scrollY;
+      setAvailableHeight(Math.max(0, window.innerHeight - documentTop - 8));
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    const main = grid.closest("main");
+    if (main) {
+      for (const section of main.children) {
+        if (!section.contains(grid)) observer.observe(section);
+      }
+    }
+    if (grid.previousElementSibling) observer.observe(grid.previousElementSibling);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, [towns?.length]);
 
   if (!towns || towns.length === 0) {
     return (
@@ -15,6 +56,13 @@ const TownPieCharts = ({ towns, currentStage }) => {
     );
   }
 
+  const cardGap = 10;
+  const desktopRows = Math.ceil(towns.length / 3);
+  const desktopCardSize = Math.max(180, Math.floor(
+    (availableHeight - (desktopRows - 1) * cardGap) / desktopRows
+  ));
+  const beforeById = new Map(chartPresentation?.before.map((town) => [town.id, town]));
+  const afterById = new Map(chartPresentation?.after?.map((town) => [town.id, town]));
   const allFlipped =
     towns.length > 0 && towns.every((town) => Boolean(flippedMap[town.id]));
 
@@ -42,8 +90,8 @@ const TownPieCharts = ({ towns, currentStage }) => {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          mb: 1,
-          gap: 1,
+          mb: 0.5,
+          gap: 0.5,
         }}
       >
         <Typography variant="caption" sx={{ color: "white" }}>
@@ -62,28 +110,34 @@ const TownPieCharts = ({ towns, currentStage }) => {
         </Button>
       </Box>
 
-      <Grid
-        container
-        spacing={1.5}
-        sx={{ mb: 1, display: "flex", justifyContent: "space-evenly" }}
+      <Box
+        ref={gridRef}
+        style={{ "--desktop-town-card-size": `${desktopCardSize}px` }}
+        sx={{
+          mb: 0.5,
+          display: "grid",
+          width: "100%",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            sm: "repeat(2, minmax(0, 1fr))",
+            md: "repeat(3, minmax(0, 1fr))",
+          },
+          gap: `${cardGap}px`,
+          mx: "auto",
+          maxWidth: {
+            md: `calc(3 * var(--desktop-town-card-size) + ${2 * cardGap}px)`,
+          },
+        }}
       >
         {towns.map((town) => (
-          <Grid
-            item
-            xs={12}
-            sm={6}
-            md={4}
+          <TownPieChart
             key={town.id}
-            sx={{ display: "flex", justifyContent: "center" }}
-          >
-            <TownPieChart
-              town={town}
-              flipped={Boolean(flippedMap[town.id])}
-              onToggleFlip={() => handleToggleTown(town.id)}
-            />
-          </Grid>
+            town={displayedTown(town, beforeById.get(town.id), afterById.get(town.id), chartProgress)}
+            flipped={Boolean(flippedMap[town.id])}
+            onToggleFlip={() => handleToggleTown(town.id)}
+          />
         ))}
-      </Grid>
+      </Box>
     </>
   );
 };

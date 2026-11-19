@@ -3,37 +3,37 @@ import { ASPECTS, HAZARD_IDS, clampScore } from "./scores.js";
 
 // Hazard-type cards boost all four aspects of one hazard type; aspect cards
 // (type "nature", "economy", ...) boost one aspect across every hazard type.
-export function applyCardEffects(town, card) {
+export function applyCardEffects(town, card, times = 1) {
   const updated = { ...town };
   if (HAZARD_IDS.includes(card.type)) {
     updated[card.type] = Object.fromEntries(
-      ASPECTS.map((aspect) => [aspect, clampScore(town[card.type][aspect] + card[aspect])])
+      ASPECTS.map((aspect) => [aspect, clampScore(town[card.type][aspect] + card[aspect] * times)])
     );
   } else if (ASPECTS.includes(card.type)) {
     for (const hazard of HAZARD_IDS) {
       updated[hazard] = {
         ...town[hazard],
-        [card.type]: clampScore(town[hazard][card.type] + card[card.type]),
+        [card.type]: clampScore(town[hazard][card.type] + card[card.type] * times),
       };
     }
   }
   return updated;
 }
 
-export function revertCardEffects(town, card) {
+export function revertCardEffects(town, card, times = 1) {
   const updated = {
     ...town,
-    effortPoints: Math.max(0, (town.effortPoints ?? 0) + (card.cost ?? 0)),
+    effortPoints: Math.min(9999, Math.max(0, (town.effortPoints ?? 0) + (card.cost ?? 0))),
   };
   if (HAZARD_IDS.includes(card.type)) {
     updated[card.type] = Object.fromEntries(
-      ASPECTS.map((aspect) => [aspect, clampScore(town[card.type][aspect] - card[aspect])])
+      ASPECTS.map((aspect) => [aspect, clampScore(town[card.type][aspect] - card[aspect] * times)])
     );
   } else if (ASPECTS.includes(card.type)) {
     for (const hazard of HAZARD_IDS) {
       updated[hazard] = {
         ...town[hazard],
-        [card.type]: clampScore(town[hazard][card.type] - card[card.type]),
+        [card.type]: clampScore(town[hazard][card.type] - card[card.type] * times),
       };
     }
   }
@@ -44,11 +44,11 @@ export function cardEffectiveRounds(playedAtRound, duration = 1) {
   return Array.from({ length: duration }, (_, i) => playedAtRound + i);
 }
 
-export function playCard(town, card, round) {
+export function playCard(town, card, round, times = 1) {
   if (town.isComparisonTown) throw new GameRuleError("comparison-town");
   if (town.effortPoints < card.cost) throw new GameRuleError("insufficient-effort-points");
   return {
-    town: { ...applyCardEffects(town, card), effortPoints: town.effortPoints - card.cost },
+    town: { ...applyCardEffects(town, card, times), effortPoints: town.effortPoints - card.cost },
     play: {
       cardId: card.id,
       townId: town.id,

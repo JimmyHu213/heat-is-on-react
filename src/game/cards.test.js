@@ -87,3 +87,40 @@ test("revertCardEffects subtracts aspect-type effects across all hazards and cla
   assert.equal(reverted.flood.nature, 65);
   assert.equal(reverted.effortPoints, 10 + allNature.cost);
 });
+
+test("historical multi-year play applies each elapsed year's boost but charges once", () => {
+  const town = makeTown();
+  const { town: updated, play } = playCard(town, bushfire3, 1, 3);
+  assert.deepEqual(updated.bushfire, { nature: 70, economy: 100, society: 100, health: 100 });
+  assert.equal(updated.effortPoints, 85);
+  assert.deepEqual(play.effectiveRounds, [1, 2, 3]);
+  assert.equal(town.bushfire.nature, 40);
+});
+
+test("removing a multi-year play subtracts all elapsed boosts but refunds once", () => {
+  const town = makeTown({
+    effortPoints: 85,
+    bushfire: { nature: 70, economy: 100, society: 100, health: 100 },
+  });
+  const updated = revertCardEffects(town, bushfire3, 3);
+  assert.deepEqual(updated.bushfire, { nature: 40, economy: 40, society: 40, health: 40 });
+  assert.equal(updated.effortPoints, 100);
+  assert.equal(town.bushfire.nature, 70);
+});
+
+test("multiple aspect boosts affect every hazard and stay within score bounds", () => {
+  const updated = applyCardEffects(makeTown(), allNature, 2);
+  assert.deepEqual(
+    ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"].map((h) => updated[h].nature),
+    [70, 100, 100, 90, 100]
+  );
+  const reverted = revertCardEffects(makeTown(), allNature, 3);
+  assert.deepEqual(
+    ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"].map((h) => reverted[h].nature),
+    [0, 35, 35, 15, 35]
+  );
+});
+
+test("refunding a historical card respects the stored effort point limit", () => {
+  assert.equal(revertCardEffects(makeTown({ effortPoints: 9999 }), bushfire3, 3).effortPoints, 9999);
+});
