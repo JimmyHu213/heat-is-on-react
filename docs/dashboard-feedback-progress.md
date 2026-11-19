@@ -2,7 +2,7 @@
 
 来源：`New Dashboard Feedback.xlsx`，`Sheet1`（原文件：`C:\Users\jimmy\Downloads\New Dashboard Feedback.xlsx`）。
 
-原始代码核对基线为 2026-11-18 的 `main` / `4a8361c`（#13）。2026-11-19 根据品牌邮件、三张附件和五条交互反馈更新相关条目，对照本地 `c6a84da`。其余条目沿用原核对记录。
+当前发布版本为 `feat/workshop-dashboard` / `5c0d822`，已在 [heat-is-on.web.app](https://heat-is-on.web.app) 核对线上构建。原始代码核对基线为 2026-11-18 的 `main` / `4a8361c`（#13）。2026-11-19 根据品牌邮件、三张附件和五条交互反馈更新相关条目，对照本地 `c6a84da`。其余条目沿用原核对记录。
 
 ## 状态与验收口径
 
@@ -26,8 +26,8 @@
 | DF-03 | 4 | 恢复四张跨灾害卡牌 | ✅ | [cards.js](../src/constants/cards.js) 包含 Green industries、Community events、Health services、Protected areas；[CardControls](../src/components/Game/components/CardControls.jsx) 使用完整 19 张卡牌列表。 |
 | DF-04 | 5 + 后续反馈 | 六张城镇卡片保持正方形，桌面三列两行，随窗口宽高缩放 | ◐ | 宽屏将阶段栏和标签移至图表左侧，网格按右区剩余宽高计算正方形尺寸。每个城镇名在卡片底部独立显示。在 1280×720 至 2560×1440 的浏览器中验证六图同屏，手机和平板分别回落到一列和两列。真实投影设备验收仍待执行。 |
 | DF-05 | 6 | 删除非最后一次的错误出牌（原反馈：不紧急） | ✅ | [GameTable](../src/components/Game/components/GameTable.jsx) 和 Adapt 控件已有删除入口；BUG-02 已修复，多年度卡牌按已生效年度数扣除效果，费用只退一次，模拟器验证通过。 |
-| DF-06 | 7 | 出牌时看见城镇 NESH 实时变化，避免遮挡 | ◐ | [Game](../src/components/Game/index.jsx) 即时更新图表，已移除出牌确认框；浮动面板和侧边抽屉仍可能遮挡，需要投影验收。 |
-| DF-07 | 7、16 + 新反馈 | 灾害 GIF 循环播放，主持人手动关闭后，六镇雷达图再缓慢收缩到灾后数值 | ✅ | Game 在保存前冻结灾前图表。GIF 由主持人手动关闭，之后六镇同步过渡约 1.2 秒。 |
+| DF-06 | 7 | 出牌时看见城镇 NESH 实时变化，避免遮挡 | ◐ | [Game](../src/components/Game/index.jsx) 出牌保存成功后浮动面板收起，对应城镇分数以约 1.2 秒动画过渡，浏览器已验证。仍需在真实投影设备验收可见性。 |
+| DF-07 | 7、16 + 新反馈 | 灾害 GIF 循环播放，主持人手动关闭后，六镇雷达图再缓慢收缩到灾后数值 | ✅ | Game 在保存前冻结灾前图表。循环动画优先使用 WebP，主持人手动关闭后，六镇同步过渡约 1.2 秒。 |
 | DF-08 | 8 | 在合作伙伴区显示正式 Inspiring Tasmania Logo | ✅ | Footer 已使用正式图档，登录页和站内页脚共用配置。 |
 | DF-09 | 8 | 合作伙伴区使用新版 UTAS Logo | ✅ | Footer 已使用 2026 横版标识，图档等比显示。 |
 | DF-10 | 9 | 保留现行版权文字 | ✅ | 邮件确认接受当前页脚版权信息，见 [mediaConfig](../src/constants/mediaConfig.js) 和 [Footer](../src/components/common/Footer.jsx)。 |
@@ -36,7 +36,7 @@
 | DF-13 | 12 | Event 标题改为指定问题，去掉副标题 | ✅ | StageBar：`Will Adaptania face a climate hazard this year?`。 |
 | DF-14 | 13 | Review 标题改为指定问题，去掉副标题 | ✅ | StageBar：`How resilient is Adaptania now?`。 |
 | DF-15 | 14 + 新反馈 | 移除阶段栏中原第三步 Review 的独立展示，将其文案 `How resilient is Adaptania now?` 移至原第四步，替换该步标题 `Reward for effort` | ✅ | StageBar 只显示三个入口。最后一步显示原 Review 文案，返回 Event、奖励和结算继续由 Review 状态承载。 |
-| DF-16 | 15 | 转盘和事件可通过下拉入口访问 | ◐ | 通过右下角浮动按钮访问；[HazardControls](../src/components/Game/components/HazardControls.jsx) 仅在 Event 阶段允许应用灾害。与“always available via dropdown”的具体预期需确认。 |
+| DF-16 | 15 | 转盘和事件可通过下拉入口访问 | ◐ | 通过左下角浮动按钮访问；[HazardControls](../src/components/Game/components/HazardControls.jsx) 仅在 Event 阶段允许应用灾害。与“always available via dropdown”的具体预期需确认。 |
 | DF-17 | 15 | 可以从 Review 返回 Event | ✅ | StageBar 提供 `Back to Event`；[stages.js](../src/game/stages.js) 允许返回，达到每轮五次灾害上限时禁止。 |
 | DF-18 | 17 | 同一轮连续应用灾害，包括相同灾害两次 | ✅ | [gameSessionService](../src/services/gameSessionService.js) 按次数追加灾害，未按类型去重；每轮最多五次。 |
 | DF-19 | 18 | 移除出牌 / 灾害的“是否确定”确认界面 | ✅ | CardControls 和 HazardControls 直接调用操作；此项不代表所有控制面板都不遮挡图表，见 DF-06/07。 |
@@ -62,7 +62,7 @@
 | DF-39 | 53 | 允许补改遗漏的游戏历史 | ◐ | GameTable 可补录已进行轮次的卡牌和删除出牌；BUG-01/02/03 已修复，历史卡牌事务验证通过。灾害编辑和已结束游戏编辑不在当前实现中，仍需确认范围（Q-04）。 |
 | DF-40 | 56、58–60 | 欢迎页提供 Time Machine 入口，移除 Global Scenario 入口 | ✅ | [Game](../src/components/Game/index.jsx) 已提供 Time Machine 卡片，Global Scenario 入口已移除。欢迎页两段视频的组合和顺序见 DF-49。 |
 | DF-41 | 57 | 从开场页删除原三步说明 | ✅ | 开场页已替换为视频卡片，不再显示原 01/02/03 步骤。 |
-| DF-42 | 58、61 | 顶部增加 NESH explainer 视频按钮 | ✅ | Game 顶部已有按钮和播放器，已导入 Understanding NESH 至 `nesh-explainer.mp4`。本批素材待部署；视频体积处理见[素材清单](media-assets.md)。 |
+| DF-42 | 58、61 | 顶部增加 NESH explainer 视频按钮 | ✅ | Game 顶部已有按钮和播放器，已导入 Understanding NESH 至 `nesh-explainer.mp4`。视频已上线。体积处理见[素材清单](media-assets.md)。 |
 | DF-43 | 63 | 提供返回 opening screen 的入口 | ✅ | Game 顶部提供 Opening Screen；已开始的游戏可再返回 Live Dashboard。 |
 | DF-44 | 64 + 后续反馈 | Town Details 显示总体韧性和每种灾害的 N/E/S/H 分数 | ✅ | 恢复为紧凑表格，直接读取当前城镇分数。 |
 | DF-45 | 品牌邮件 | 主标题使用 Fredoka SemiBold，游戏标题统一显示为 `THE HEAT IS ON`，正文使用 Figtree | ✅ | Fredoka 和 Figtree 随站点加载，两个游戏标题均用大写。 |
@@ -130,5 +130,8 @@
 | 2026-11-19 | 核对品牌邮件及三张原图，更新 DF-07/08/09/10/15/36，新增 DF-45 至 DF-48。本次更新开发清单。 |
 | 2026-11-19 | 追加 DF-49，明确欢迎页视频顺序，同步关闭 DF-40 的 Global Scenario 素材依赖。 |
 | 2026-11-19 | 工作坊改版实现品牌、欢迎页媒体、阶段展示、GIF 和结束总结。DF-01/04/06 等待真实投影验收，DF-16/39 等待产品确认。 |
+| 2026-11-19 | `af44905` 已发布网页及 Firestore 规则。城镇名称颜色为可选字段，旧存档显示默认青绿，无需迁移。 |
+| 2026-11-19 | `63b2433` 已发布响应式 WebP 地图、循环 WebP 灾害动画、分阶段预载和版本化长缓存。已核对线上响应。 |
+| 2026-11-20 | 记录收尾状态。线上运行 `5c0d822`，出牌后以约 1.2 秒过渡到保存后的分数。70 项单元测试通过，浏览器已验证动画，线上构建与本地逐字节一致。待办为 DF-01/04/06 真实投影验收及 DF-16/39 产品确认。 |
 
 后续每次修复或交付：更新对应 DF 状态与证据，勾选完成的缺陷 / 素材 / 验收项，在验证记录写明执行结果，并在维护记录追加日期与提交号。已确认的问题修复前，相关需求保持 ◐。
