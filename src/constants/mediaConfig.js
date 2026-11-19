@@ -24,7 +24,6 @@ const envTrainingUrl =
 export const MEDIA_CONFIG = Object.freeze({
   introVideo: "/media/introduction-en.mp4",
   timeMachineVideo: "/media/time-machine.mp4",
-  globalScenarioVideo: "/media/global-scenario.mp4",
   neshExplainerVideo: "/media/nesh-explainer.mp4",
   inspiringTasmaniaLogo: "/media/logos/inspiring-tasmania-placeholder.svg",
   utasLogo: "/media/logos/utas-placeholder.svg",
@@ -36,19 +35,23 @@ export const MEDIA_CONFIG = Object.freeze({
     heatwave: "/media/events/heatwave.gif",
     biohazard: "/media/events/biohazard.gif",
   }),
+  hazardIntroductions: Object.freeze({
+    bushfire: "/media/introductions/bushfire.png",
+    flood: "/media/introductions/flood.png",
+    stormSurge: "/media/introductions/stormSurge.png",
+    heatwave: "/media/introductions/heatwave.png",
+    biohazard: "/media/introductions/biohazard.png",
+  }),
   hazardIcons: Object.freeze({
-    bushfire: "/media/icons/bushfire.svg",
-    flood: "/media/icons/flood.svg",
-    stormSurge: "/media/icons/stormSurge.svg",
-    heatwave: "/media/icons/heatwave.svg",
-    biohazard: "/media/icons/biohazard.svg",
+    bushfire: "/media/icons/bushfire.png",
+    flood: "/media/icons/flood.png",
+    stormSurge: "/media/icons/stormSurge.png",
+    heatwave: "/media/icons/heatwave.png",
+    biohazard: "/media/icons/biohazard.png",
+    mystery: "/media/icons/mystery.png",
   }),
-  eventGifAttribution: Object.freeze({
-    label: "Animated Noto Emoji · Google",
-    url: "https://googlefonts.github.io/noto-emoji-files/",
-    licenseLabel: "CC BY 4.0",
-    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
-  }),
+  // These GIFs were supplied with the workshop assets, not the Noto placeholders.
+  eventGifAttribution: null,
   trainingCourseUrl: getValidTrainingUrl(envTrainingUrl),
 });
 

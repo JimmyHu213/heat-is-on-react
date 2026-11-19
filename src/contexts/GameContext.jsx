@@ -48,6 +48,7 @@ export function GameProvider({ children }) {
       setRoundEventDocs([]);
       setRoundStats([]);
       setTownCardPlays({});
+      setTownCardPlayDocs({});
       setLastHazardImpact(null);
       setLastHazardId(null);
     }
@@ -680,11 +681,17 @@ export function GameProvider({ children }) {
         setRoundEventDocs(eventDocs);
 
         const cardPlays = {};
+        const cardPlayDocs = {};
         for (const town of result.towns || []) {
-          const townCards = await gameSessionService.getTownCardPlays(town.id);
+          const [townCards, townPlayDocs] = await Promise.all([
+            gameSessionService.getTownCardPlays(town.id),
+            gameSessionService.getTownCardPlayDocs(town.id),
+          ]);
           cardPlays[town.id] = townCards;
+          cardPlayDocs[town.id] = townPlayDocs;
         }
         setTownCardPlays(cardPlays);
+        setTownCardPlayDocs(cardPlayDocs);
         setError(null);
       } catch (refreshErr) {
         console.warn("Undo saved, but re-read failed:", refreshErr);

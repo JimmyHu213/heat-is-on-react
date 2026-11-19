@@ -6,6 +6,7 @@ import FloodIcon from "@mui/icons-material/Flood";
 import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
 import WbSunnyIcon from "@mui/icons-material/WbSunny";
 import BugReportIcon from "@mui/icons-material/BugReport";
+import QuestionMarkIcon from "@mui/icons-material/QuestionMark";
 import {
   bushfireColor1,
   floodColor1,
@@ -21,6 +22,7 @@ const FALLBACK_ICONS = {
   stormSurge: ThunderstormIcon,
   heatwave: WbSunnyIcon,
   biohazard: BugReportIcon,
+  mystery: QuestionMarkIcon,
 };
 
 const FALLBACK_COLORS = {

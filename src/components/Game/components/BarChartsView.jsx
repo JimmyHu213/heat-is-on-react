@@ -1,6 +1,6 @@
 // src/components/Game/components/BarChartsView.jsx
 import React from "react";
-import { Box, Grid, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
 import {
   BarChart,
   Bar,
@@ -146,17 +146,29 @@ const BarChartsView = ({ towns }) => {
   };
 
   return (
-    <Grid container spacing={3} justifyContent="center" sx={{ my: 2 }}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr)",
+        gridTemplateRows: { lg: "minmax(0, 9fr) minmax(0, 11fr)" },
+        gap: 0.75,
+        height: { lg: "100%" },
+        minHeight: 0,
+      }}
+    >
       {/* NESH Resilience Summary Chart */}
-      <Grid item xs={12} md={6}>
         <Paper
           sx={{
-            p: 2,
+            p: { xs: 1.5, lg: 1 },
             borderRadius: 2,
             boxShadow: 2,
-            height: 400,
+            height: { xs: 612, lg: "auto" },
+            minHeight: 0,
             width: "100%",
-            minWidth: { sm: 480 },
+            minWidth: 0,
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
             bgcolor: "#2c4260",
           }}
         >
@@ -164,24 +176,25 @@ const BarChartsView = ({ towns }) => {
             variant="h6"
             align="center"
             fontWeight="bold"
-            gutterBottom
-            sx={{ color: "#fff" }}
+            sx={{ color: "#fff", fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
           >
             NESH Resilience Summary
           </Typography>
-          <Box sx={{ height: 330, width: "100%" }}>
+          <Box sx={{ flex: 1, minHeight: 0, width: "100%" }}>
             <ResponsiveContainer>
               <BarChart
                 data={aspectData}
-                margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
-                barSize={38}
+                margin={{ top: 16, right: 8, left: 0, bottom: 0 }}
+                maxBarSize={68}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
+                  height={22}
                   tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
                 />
                 <YAxis
+                  width={44}
                   domain={[0, 100]}
                   unit="%"
                   tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
@@ -228,18 +241,20 @@ const BarChartsView = ({ towns }) => {
             </ResponsiveContainer>
           </Box>
         </Paper>
-      </Grid>
 
       {/* Towns Resilience Summary Chart */}
-      <Grid item xs={12} md={6}>
         <Paper
           sx={{
-            p: 2,
+            p: { xs: 1.5, lg: 1 },
             borderRadius: 2,
             boxShadow: 2,
-            height: 400,
+            height: { xs: 612, lg: "auto" },
+            minHeight: 0,
             width: "100%",
-            minWidth: { sm: 480 },
+            minWidth: 0,
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
             bgcolor: "#2c4260",
           }}
         >
@@ -247,31 +262,39 @@ const BarChartsView = ({ towns }) => {
             variant="h6"
             align="center"
             fontWeight="bold"
-            gutterBottom
-            sx={{ color: "#fff" }}
+            sx={{ color: "#fff", fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
           >
             Towns Resilience Summary
           </Typography>
-          <Box sx={{ height: 330, width: "100%" }}>
+          <Box sx={{ flex: 1, minHeight: 0, width: "100%" }}>
             <ResponsiveContainer>
               <BarChart
                 data={townData}
-                margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
-                barSize={38}
+                margin={{ top: 16, right: 8, left: 0, bottom: 0 }}
+                maxBarSize={68}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  interval={0}
+                  angle={-25}
+                  textAnchor="end"
+                  height={34}
+                  tick={{ fontSize: 10, fill: "#fff", fontWeight: "bold" }}
                 />
                 <YAxis
+                  width={44}
                   domain={[0, 100]}
                   unit="%"
                   tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
                   tickCount={6}
                 />
                 <Tooltip content={renderTooltip} />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#fff" }} />
+                <Legend
+                  iconSize={9}
+                  wrapperStyle={{ fontSize: 10, lineHeight: 1.25 }}
+                  formatter={(label) => <span style={{ color: "#fff" }}>{label}</span>}
+                />
                 <Bar
                   dataKey="nature"
                   name="Nature"
@@ -312,8 +335,7 @@ const BarChartsView = ({ towns }) => {
             </ResponsiveContainer>
           </Box>
         </Paper>
-      </Grid>
-    </Grid>
+    </Box>
   );
 };
 

@@ -18,7 +18,6 @@ import {
   Snackbar,
   useTheme,
   Tooltip,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -42,7 +41,6 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import HomeIcon from "@mui/icons-material/Home";
 import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
-import PublicIcon from "@mui/icons-material/Public";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import StyleIcon from "@mui/icons-material/Style";
 import CasinoIcon from "@mui/icons-material/Casino";
@@ -60,12 +58,28 @@ import DividendsDialog from "./components/DividendsDialog";
 import EndEarlyDialog from "./components/EndEarlyDialog";
 import GameSummaryDialog from "./components/GameSummaryDialog";
 import TrainingLink from "../common/TrainingLink";
+import HazardMedia from "./components/HazardMedia";
+import { hazards } from "../../constants/hazards";
 import { MEDIA_CONFIG } from "../../constants/mediaConfig";
-import { primaryColor } from "../../constants/palette";
+import {
+  floodColor1,
+  healthColor,
+  heatwaveColor1,
+  natureColor,
+  primaryColor,
+  stormSurgeColor1,
+} from "../../constants/palette";
 import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
 
 const drawerWidth = 500;
+const HAZARD_HEADLINES = {
+  bushfire: "Bushfire breaks out!",
+  flood: "Floodwaters are rising!",
+  stormSurge: "Storm surge hits the coast!",
+  heatwave: "The heat is on!",
+  biohazard: "A biohazard is spreading!",
+};
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -128,13 +142,21 @@ const Game = () => {
   const [floatingControlsOpen, setFloatingControlsOpen] = useState(false);
   const [videoModal, setVideoModal] = useState({ open: false, title: "", src: "" });
   const [videoError, setVideoError] = useState(false);
+  const [hazardAnnouncement, setHazardAnnouncement] = useState(null);
 
   useEffect(() => {
     loadSession(sessionId);
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!hazardAnnouncement) return;
+    const timer = window.setTimeout(() => setHazardAnnouncement(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [hazardAnnouncement]);
+
   const totalRounds = currentSession ? getTotalRounds(currentSession) : 5;
   const hazardCountThisRound = (roundEvents[currentRound] || []).length;
+  const announcedHazard = hazards.find((hazard) => hazard.id === hazardAnnouncement?.hazardId);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -246,6 +268,7 @@ const Game = () => {
   const handleRevert = async () => {
     const result = await revertToPreviousState();
     if (result) {
+      setHazardAnnouncement(null);
       showNotification("Reverted last move in this round", "success");
     }
   };
@@ -254,6 +277,8 @@ const Game = () => {
     const result = await applyHazard(hazardId);
     if (result) {
       setDrawerOpen(false);
+      setFloatingControlsOpen(false);
+      setHazardAnnouncement({ hazardId, round: currentRound });
       showNotification("Applied hazard to all towns", "warning");
     }
   };
@@ -325,174 +350,178 @@ const Game = () => {
     );
   }
 
+  const isOpeningScreen = currentRound === 0 || showOpeningScreen;
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       {/* App Bar */}
-      <AppBar
-        position="absolute"
-        sx={{
-          zIndex: theme.zIndex.drawer + 1,
-          backgroundColor: "#E38A6C",
-          boxShadow: 3,
-          transition: theme.transitions.create(["width", "margin"], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-        }}
-      >
-        <Toolbar>
-          <Tooltip title={drawerOpen ? "Hide Controls" : "Show Controls"}>
+      {!isOpeningScreen && (
+        <AppBar
+          position="absolute"
+          sx={{
+            zIndex: theme.zIndex.drawer + 1,
+            backgroundColor: "#E38A6C",
+            boxShadow: 3,
+            transition: theme.transitions.create(["width", "margin"], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+          }}
+        >
+          <Toolbar>
+            <Tooltip title={drawerOpen ? "Hide Controls" : "Show Controls"}>
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 2 }}
+              >
+                {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+              </IconButton>
+            </Tooltip>
+
             <IconButton
               color="inherit"
               edge="start"
-              onClick={handleDrawerToggle}
+              onClick={navigateToDashboard}
               sx={{ mr: 2 }}
             >
-              {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+              <ArrowBackIcon />
             </IconButton>
-          </Tooltip>
 
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={navigateToDashboard}
-            sx={{ mr: 2 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
+            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+              {currentSession?.name || "Workshop"} ·{" "}
+              {currentStage === "setup"
+                ? "Setup"
+                : currentStage === "complete"
+                ? "Completed"
+                : `Year ${2050 + currentRound} (Round ${currentRound}/${totalRounds})`}
+            </Typography>
 
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {currentSession?.name || "Workshop"} ·{" "}
-            {currentStage === "setup"
-              ? "Setup"
-              : currentStage === "complete"
-              ? "Completed"
-              : `Year ${2050 + currentRound} (Round ${currentRound}/${totalRounds})`}
-          </Typography>
-
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="small"
-            startIcon={<HomeIcon />}
-            onClick={() => {
-              setShowOpeningScreen(true);
-              setActiveTab(0);
-            }}
-            sx={{
-              mr: 1.5,
-              borderColor: "white",
-              color: "white",
-              "&:hover": {
-                borderColor: "white",
-                bgcolor: "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
-            Opening Screen
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="inherit"
-            size="small"
-            startIcon={<OndemandVideoIcon />}
-            onClick={() => {
-              setVideoError(false);
-              setVideoModal({
-                open: true,
-                title: "NESH Explainer",
-                src: MEDIA_CONFIG.neshExplainerVideo,
-              });
-            }}
-            sx={{
-              mr: 1.5,
-              borderColor: "white",
-              color: "white",
-              "&:hover": {
-                borderColor: "white",
-                bgcolor: "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
-            NESH Explainer
-          </Button>
-
-          <TrainingLink
-            color="inherit"
-            variant="outlined"
-            size="small"
-            sx={{
-              mr: 1.5,
-              borderColor: "white",
-              color: "white",
-              "&:hover": {
-                borderColor: "white",
-                bgcolor: "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          />
-
-          {/* Undo button */}
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={handleRevert}
-            disabled={loading || !canRevert}
-            startIcon={<UndoIcon />}
-            sx={{
-              mr: 2,
-              borderColor: "white",
-              "&:hover": {
-                borderColor: "white",
-                bgcolor: "rgba(255, 255, 255, 0.1)",
-              },
-            }}
-          >
-            Undo
-          </Button>
-
-          {currentStage === "setup" && (
             <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<PlayArrowIcon />}
-              onClick={handleStartGame}
-              disabled={loading}
+              variant="outlined"
+              color="inherit"
+              size="small"
+              startIcon={<HomeIcon />}
+              onClick={() => {
+                setShowOpeningScreen(true);
+                setActiveTab(0);
+              }}
+              sx={{
+                mr: 1.5,
+                borderColor: "white",
+                color: "white",
+                "&:hover": {
+                  borderColor: "white",
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
             >
-              Start Game
+              Opening Screen
             </Button>
-          )}
 
-          {currentStage === "review" && (
             <Button
-              variant="contained"
-              color="success"
-              startIcon={<DoneIcon />}
-              onClick={() => setDividendsDialogOpen(true)}
-              disabled={loading}
+              variant="outlined"
+              color="inherit"
+              size="small"
+              startIcon={<OndemandVideoIcon />}
+              onClick={() => {
+                setVideoError(false);
+                setVideoModal({
+                  open: true,
+                  title: "NESH Explainer",
+                  src: MEDIA_CONFIG.neshExplainerVideo,
+                });
+              }}
+              sx={{
+                mr: 1.5,
+                borderColor: "white",
+                color: "white",
+                "&:hover": {
+                  borderColor: "white",
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
             >
-              {currentRound >= totalRounds ? "Finish Game" : "Settle Round"}
+              NESH Explainer
             </Button>
-          )}
 
-          {currentStage === "complete" && (
+            <TrainingLink
+              color="inherit"
+              variant="outlined"
+              size="small"
+              sx={{
+                mr: 1.5,
+                borderColor: "white",
+                color: "white",
+                "&:hover": {
+                  borderColor: "white",
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
+            />
+
+            {/* Undo button */}
             <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<AssessmentIcon />}
-              onClick={() => setSummaryDialogOpen(true)}
+              variant="outlined"
+              color="inherit"
+              onClick={handleRevert}
+              disabled={loading || !canRevert}
+              startIcon={<UndoIcon />}
+              sx={{
+                mr: 2,
+                borderColor: "white",
+                "&:hover": {
+                  borderColor: "white",
+                  bgcolor: "rgba(255, 255, 255, 0.1)",
+                },
+              }}
             >
-              Summary
+              Undo
             </Button>
-          )}
-        </Toolbar>
-      </AppBar>
+
+            {currentStage === "setup" && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<PlayArrowIcon />}
+                onClick={handleStartGame}
+                disabled={loading}
+              >
+                Start Game
+              </Button>
+            )}
+
+            {currentStage === "review" && (
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<DoneIcon />}
+                onClick={() => setDividendsDialogOpen(true)}
+                disabled={loading}
+              >
+                {currentRound >= totalRounds ? "Finish Game" : "Settle Round"}
+              </Button>
+            )}
+
+            {currentStage === "complete" && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<AssessmentIcon />}
+                onClick={() => setSummaryDialogOpen(true)}
+              >
+                Summary
+              </Button>
+            )}
+          </Toolbar>
+        </AppBar>
+      )}
 
       {/* Side Drawer */}
       <Drawer
         variant="temporary"
-        open={drawerOpen}
+        open={!isOpeningScreen && drawerOpen}
         onClose={handleDrawerToggle}
         sx={{
           flexShrink: 0,
@@ -561,7 +590,7 @@ const Game = () => {
           flexDirection: "column",
         }}
       >
-        <Toolbar /> {/* Spacer for AppBar */}
+        {!isOpeningScreen && <Toolbar />}
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
@@ -570,60 +599,86 @@ const Game = () => {
         )}
 
         {/* Facilitated Stage Bar */}
-        <StageBar
-          session={currentSession}
-          currentRound={currentRound}
-          currentStage={currentStage}
-          hazardCountThisRound={hazardCountThisRound}
-          loading={loading}
-          onStartGame={handleStartGame}
-          onChangeStage={handleChangeStage}
-          onOpenDividends={() => setDividendsDialogOpen(true)}
-          onOpenEndEarly={() => setEndEarlyDialogOpen(true)}
-          onOpenSummary={() => setSummaryDialogOpen(true)}
-          onUpdatePlayerCount={updatePlayerCount}
-          onOpenControlsDrawer={() => setDrawerOpen(true)}
-        />
+        {!isOpeningScreen && (
+          <StageBar
+            session={currentSession}
+            currentRound={currentRound}
+            currentStage={currentStage}
+            hazardCountThisRound={hazardCountThisRound}
+            loading={loading}
+            onStartGame={handleStartGame}
+            onChangeStage={handleChangeStage}
+            onOpenDividends={() => setDividendsDialogOpen(true)}
+            onOpenEndEarly={() => setEndEarlyDialogOpen(true)}
+            onOpenSummary={() => setSummaryDialogOpen(true)}
+            onUpdatePlayerCount={updatePlayerCount}
+            onOpenControlsDrawer={() => setDrawerOpen(true)}
+          />
+        )}
 
         {/* Tabs */}
-        <Paper sx={{ borderRadius: 1, mb: 2 }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="fullWidth"
-            sx={{ borderBottom: 1, borderColor: "divider" }}
-          >
-            <Tab
-              icon={<DashboardIcon />}
-              label="Dashboard"
-              iconPosition="start"
-            />
-            <Tab
-              icon={<LocationCityIcon />}
-              label="Town Details"
-              iconPosition="start"
-            />
-            <Tab
-              icon={<HistoryIcon />}
-              label="Game History"
-              iconPosition="start"
-            />
-          </Tabs>
-        </Paper>
+        {!isOpeningScreen && (
+          <Paper sx={{ borderRadius: 1, mb: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="fullWidth"
+              sx={{ borderBottom: 1, borderColor: "divider" }}
+            >
+              <Tab
+                icon={<DashboardIcon />}
+                label="Dashboard"
+                iconPosition="start"
+              />
+              <Tab
+                icon={<LocationCityIcon />}
+                label="Town Details"
+                iconPosition="start"
+              />
+              <Tab
+                icon={<HistoryIcon />}
+                label="Game History"
+                iconPosition="start"
+              />
+            </Tabs>
+          </Paper>
+        )}
 
         {/* Tab Panels */}
-        <TabPanel value={activeTab} index={0}>
-          {currentRound === 0 || showOpeningScreen ? (
+        <TabPanel value={isOpeningScreen ? 0 : activeTab} index={0}>
+          {isOpeningScreen ? (
             <Paper sx={{ p: 4, borderRadius: 2, maxWidth: 960, mx: "auto" }}>
               <Typography variant="h4" gutterBottom fontWeight="bold" align="center">
-                Welcome to The Heat Is On!
+                Welcome to{" "}
+                <Box component="span" sx={{ color: floodColor1 }}>The</Box>{" "}
+                <Box component="span" sx={{ color: heatwaveColor1 }}>Heat</Box>{" "}
+                <Box component="span" sx={{ color: natureColor }}>Is</Box>{" "}
+                <Box component="span" sx={{ color: stormSurgeColor1 }}>
+                  On<Box component="span" sx={{ color: healthColor }}>!</Box>
+                </Box>
               </Typography>
               <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
                 Manage your towns across {totalRounds} {totalRounds === 1 ? "year" : "years"} of climate hazards and adaptations.
               </Typography>
 
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))" }, gap: 3, width: "100%", maxWidth: 720, mx: "auto", mb: 4 }}>
+                <Box>
+                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardActionArea
+                      onClick={() => {
+                        setVideoError(false);
+                        setVideoModal({ open: true, title: "Workshop Introduction", src: MEDIA_CONFIG.introVideo });
+                      }}
+                      sx={{ p: 3, textAlign: "center" }}
+                    >
+                      <CardContent>
+                        <OndemandVideoIcon sx={{ fontSize: 56, color: "primary.main", mb: 1 }} />
+                        <Typography variant="h6" fontWeight="bold">Workshop Introduction</Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                </Box>
+                <Box>
                   <Card variant="outlined" sx={{ borderRadius: 2 }}>
                     <CardActionArea
                       onClick={() => {
@@ -644,32 +699,24 @@ const Game = () => {
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Card variant="outlined" sx={{ borderRadius: 2 }}>
-                    <CardActionArea
-                      onClick={() => {
-                        setVideoError(false);
-                        setVideoModal({
-                          open: true,
-                          title: "Global Scenario",
-                          src: MEDIA_CONFIG.globalScenarioVideo,
-                        });
-                      }}
-                      sx={{ p: 3, textAlign: "center" }}
-                    >
-                      <CardContent>
-                        <PublicIcon sx={{ fontSize: 56, color: "secondary.main", mb: 1 }} />
-                        <Typography variant="h6" fontWeight="bold">
-                          Global Scenario
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Box component="details" sx={{ mb: 3 }}>
+                <Box component="summary" sx={{ cursor: "pointer", fontWeight: "bold", p: 1 }}>
+                  Meet the five climate hazards
+                </Box>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }, gap: 1 }}>
+                  {hazards.map((hazard) => <HazardMedia key={hazard.id} hazard={hazard} introduction />)}
+                </Box>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "center", gap: 1, flexWrap: "wrap" }}>
+                {currentRound === 0 && (
+                  <Button onClick={navigateToDashboard} startIcon={<ArrowBackIcon />}>
+                    Back to game list
+                  </Button>
+                )}
                 {currentRound === 0 ? (
                   <Button
                     variant="contained"
@@ -695,8 +742,37 @@ const Game = () => {
             </Paper>
           ) : (
             <>
-              <TownPieCharts towns={towns} currentStage={currentStage} />
-              <BarChartsView towns={towns} />
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "minmax(0, 1fr)",
+                    lg: "minmax(0, 11fr) minmax(0, 5fr)",
+                  },
+                  columnGap: 0.75,
+                  rowGap: { xs: 1, lg: 0 },
+                  alignItems: "start",
+                }}
+              >
+                <Box sx={{ minWidth: 0, display: { xs: "block", lg: "contents" } }}>
+                  <TownPieCharts towns={towns} currentStage={currentStage} />
+                </Box>
+                <Box
+                  sx={{
+                    minWidth: 0,
+                    minHeight: 0,
+                    gridColumn: { lg: 2 },
+                    gridRow: { lg: 2 },
+                    alignSelf: "stretch",
+                    mb: { lg: 0.5 },
+                    // The radar cards determine the row height.
+                    contain: { lg: "size" },
+                    overflow: { lg: "auto" },
+                  }}
+                >
+                  <BarChartsView towns={towns} />
+                </Box>
+              </Box>
 
               {/* Floating expandable stage controls panel (non-hazard stages) */}
               {floatingControlsOpen && currentStage !== "hazard" && (
@@ -845,7 +921,7 @@ const Game = () => {
           )}
         </TabPanel>
 
-        <TabPanel value={activeTab} index={1}>
+        <TabPanel value={isOpeningScreen ? 0 : activeTab} index={1}>
           <TownDetailsView
             towns={towns}
             onUpdateTownName={handleUpdateTownName}
@@ -853,7 +929,7 @@ const Game = () => {
           />
         </TabPanel>
 
-        <TabPanel value={activeTab} index={2}>
+        <TabPanel value={isOpeningScreen ? 0 : activeTab} index={2}>
           <GameTable
             towns={towns}
             roundEvents={roundEvents}
@@ -868,7 +944,25 @@ const Game = () => {
         </TabPanel>
       </Box>
 
-      {/* Video Player Modal (Time Machine / Global Scenario / NESH Explainer) */}
+      <Dialog
+        open={Boolean(announcedHazard) && currentStage === "hazard" && hazardAnnouncement?.round === currentRound}
+        onClose={() => setHazardAnnouncement(null)}
+        maxWidth="md"
+        fullWidth
+        aria-labelledby="hazard-animation-title"
+      >
+        <DialogTitle id="hazard-animation-title" sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {HAZARD_HEADLINES[announcedHazard?.id] || announcedHazard?.name}
+          <IconButton aria-label="Close hazard animation" onClick={() => setHazardAnnouncement(null)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {announcedHazard && <HazardMedia key={announcedHazard.id} hazard={announcedHazard} sx={{ width: "100%", maxHeight: "65vh" }} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Video Player Modal (Workshop Introduction / Time Machine / NESH Explainer) */}
       <Dialog
         open={videoModal.open}
         onClose={() => setVideoModal({ open: false, title: "", src: "" })}
@@ -879,16 +973,20 @@ const Game = () => {
         <DialogContent dividers>
           {videoError ? (
             <Alert severity="info">
-              Video placeholder configured at <code>{videoModal.src}</code>. Drop the video file into <code>public{videoModal.src}</code> when ready.
+              This video could not be loaded. Please try again later. You can close this window and continue the workshop.
             </Alert>
           ) : (
-            <Box sx={{ width: "100%", textAlign: "center" }}>
+            <Box sx={{ width: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
               <video
+                key={videoModal.src}
                 src={videoModal.src}
                 controls
                 autoPlay
+                playsInline
+                preload="metadata"
+                aria-label={videoModal.title}
                 onError={() => setVideoError(true)}
-                style={{ width: "100%", maxHeight: "65vh", borderRadius: 8 }}
+                style={{ display: "block", width: "100%", maxHeight: "65vh", objectFit: "contain", background: "#111", borderRadius: 8 }}
               />
             </Box>
           )}

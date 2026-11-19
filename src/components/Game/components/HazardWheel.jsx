@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import CasinoIcon from "@mui/icons-material/Casino";
+import HazardIcon from "../../common/HazardIcon";
 import {
   bushfireColor1,
   floodColor1,
@@ -131,23 +132,33 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
 
             return (
               <g key={hazard.id}>
+                <title>{hazard.isMystery ? "Mystery event" : hazard.name}</title>
                 <path
                   d={path}
                   fill={color}
                   stroke="#ffffff"
                   strokeWidth="2"
                 />
+                <foreignObject
+                  x={lx - 26}
+                  y={ly - 32}
+                  width={52}
+                  height={52}
+                  transform={`rotate(${midDeg}, ${lx}, ${ly})`}
+                >
+                  <HazardIcon hazardId={hazard.id} size={52} />
+                </foreignObject>
                 <text
                   x={lx}
-                  y={ly}
+                  y={ly + 33}
                   fill="#ffffff"
-                  fontSize={hazard.isMystery ? "26" : "14"}
+                  fontSize="13"
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`rotate(${midDeg}, ${lx}, ${ly})`}
                 >
-                  {hazard.name}
+                  {hazard.isMystery ? "Mystery" : hazard.name}
                 </text>
               </g>
             );

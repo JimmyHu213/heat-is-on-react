@@ -7,14 +7,12 @@ import { useGame } from "../../contexts/GameContext";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar,
+  Avatar,
+  Stack,
   Box,
-  Toolbar,
   Typography,
   Container,
   Paper,
-  Grid,
-  Card,
-  CardContent,
   Divider,
   Alert,
   Dialog,
@@ -27,10 +25,9 @@ import {
   Chip,
   TextField,
   IconButton,
-  Tooltip,
 } from "@mui/material";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import AddIcon from "@mui/icons-material/Add";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -38,10 +35,8 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import { primaryColor } from "../../constants/palette";
 import backgroundImage from "../../assets/images/web-banner.png";
 
-import DownloadIcon from "@mui/icons-material/Download";
 import exportService from "../../services/exportService";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -58,7 +53,7 @@ const STAGE_LABELS = {
 };
 
 export default function Dashboard() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
   const {
     loading,
     error,
@@ -78,7 +73,7 @@ export default function Dashboard() {
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [downloadMenu, setDownloadMenu] = useState({
+  const [sessionMenu, setSessionMenu] = useState({
     open: false,
     anchorEl: null,
     sessionId: null,
@@ -161,18 +156,18 @@ export default function Dashboard() {
     return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   }
 
-  const handleDownloadMenuOpen = (event, sessionId) => {
-    setDownloadMenu({ open: true, anchorEl: event.currentTarget, sessionId });
+  const handleSessionMenuOpen = (event, sessionId) => {
+    setSessionMenu({ open: true, anchorEl: event.currentTarget, sessionId });
   };
 
-  const handleDownloadMenuClose = () => {
-    setDownloadMenu({ open: false, anchorEl: null, sessionId: null });
+  const handleSessionMenuClose = () => {
+    setSessionMenu({ open: false, anchorEl: null, sessionId: null });
   };
 
   // Download functions
   const handleDownloadJSON = async () => {
     try {
-      const sessionId = downloadMenu.sessionId;
+      const sessionId = sessionMenu.sessionId;
       if (!sessionId) return;
 
       // Show loading state
@@ -193,7 +188,7 @@ export default function Dashboard() {
       exportService.downloadAsJSON(data, `${sessionName}-data.json`);
 
       // Close menu
-      handleDownloadMenuClose();
+      handleSessionMenuClose();
     } catch (error) {
       console.error("Error downloading JSON:", error);
       clearError();
@@ -204,7 +199,7 @@ export default function Dashboard() {
 
   const handleDownloadExcel = async () => {
     try {
-      const sessionId = downloadMenu.sessionId;
+      const sessionId = sessionMenu.sessionId;
       if (!sessionId) return;
 
       // Show loading state
@@ -225,7 +220,7 @@ export default function Dashboard() {
       await exportService.downloadAsExcel(data, `${sessionName}-data.xlsx`);
 
       // Close menu
-      handleDownloadMenuClose();
+      handleSessionMenuClose();
     } catch (error) {
       console.error("Error downloading Excel:", error);
       clearError();
@@ -280,11 +275,76 @@ export default function Dashboard() {
     setEditSession({ id: null, name: "", isEditing: false });
   };
 
-  // Combine sessions for display
-  const allSessions = [...activeSessions, ...completedSessions];
+  const menuSession = [...activeSessions, ...completedSessions].find(
+    (session) => session.id === sessionMenu.sessionId
+  );
+  const displayName = userProfile?.displayName || currentUser.displayName || "Your account";
+  const avatar = userProfile?.photoURL ?? currentUser.photoURL;
+
+  function renderGame(session) {
+    const editing = editSession.id === session.id && editSession.isEditing;
+    const status = session.isActive
+      ? (session.currentRound === 0 ? "Setup" : STAGE_LABELS[session.stage] || "Adapt")
+      : session.endedEarly ? "Ended early" : "Completed";
+    const date = session.completedAt ?? session.createdAt;
+    const players = getPlayerCount(session);
+
+    return (
+      <Box component="li" key={session.id} sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(0, 1fr) auto" },
+        gap: 1.5, alignItems: "center", py: 2, borderTop: "1px solid #dce5df",
+      }}>
+        <Box sx={{ minWidth: 0 }}>
+          {editing ? (
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <TextField fullWidth autoFocus size="small" label="Game name" value={editSession.name}
+                onChange={handleNameChange} slotProps={{ htmlInput: { maxLength: 50 } }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleSaveSessionName(event);
+                  if (event.key === "Escape") handleCancelEdit(event);
+                }} />
+              <IconButton aria-label="Save game name" onClick={handleSaveSessionName}><CheckIcon /></IconButton>
+              <IconButton aria-label="Cancel rename" onClick={handleCancelEdit}><CloseIcon /></IconButton>
+            </Stack>
+          ) : (
+            <Stack direction="row" gap={1} flexWrap="wrap" alignItems="center">
+              <Typography component="h3" fontWeight={700} sx={{ overflowWrap: "anywhere" }}>
+                {session.name || "Untitled Game"}
+              </Typography>
+              <Chip size="small" variant="outlined" label={status} />
+            </Stack>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {[
+              session.isActive && session.currentRound > 0
+                ? "Round " + session.currentRound + " of " + getTotalRounds(session)
+                : !session.isActive
+                  ? Math.max(0, (session.currentRound ?? 1) - 1) + " of " + getTotalRounds(session) + " rounds played"
+                  : null,
+              date ? formatDate(date) : null,
+              players === null ? null : players + " players",
+            ].filter(Boolean).join(" · ")}
+          </Typography>
+        </Box>
+        <Stack direction="row" gap={0.5}>
+          <Button variant={session.isActive ? "contained" : "outlined"}
+            startIcon={session.isActive ? <PlayArrowIcon /> : <VisibilityIcon />}
+            onClick={() => handleStartGame(session.id)}
+            sx={session.isActive ? { bgcolor: "#245956" } : { color: "#245956" }}>
+            {session.isActive ? "Continue" : "View"}
+          </Button>
+          <IconButton aria-label={"Actions for " + (session.name || "Untitled Game")} aria-haspopup="menu"
+            onClick={(event) => handleSessionMenuOpen(event, session.id)}>
+            <MoreHorizIcon />
+          </IconButton>
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
       <AppBar
         position="relative"
         sx={{
@@ -296,347 +356,60 @@ export default function Dashboard() {
         }}
       ></AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-            {error}
-          </Alert>
-        )}
-
-        <Grid container spacing={3}>
-          {/* Profile */}
-          <Grid item xs={12} md={4} lg={3}>
-            <Paper
-              sx={{
-                p: 2,
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-              }}
-            >
-              <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-                <AccountCircleIcon
-                  sx={{ fontSize: 80, color: "primary.main" }}
-                />
-              </Box>
-              <Typography
-                variant="h6"
-                gutterBottom
-                component="div"
-                align="center"
-              >
-                User Profile
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" gutterBottom>
-                <strong>Email:</strong> {currentUser.email}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>User ID:</strong> {currentUser.uid}
-              </Typography>
-              <TrainingLink fullWidth sx={{ mt: 1.5 }} />
-              <Button
-                color="primary"
-                variant="contained"
-                onClick={handleLogout}
-                startIcon={<LogoutIcon />}
-                sx={{ mt: 2, textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
-              >
-                Logout
-              </Button>
-            </Paper>
-          </Grid>
-
-          {/* Game Sessions */}
-          <Grid item xs={12} md={8} lg={9}>
-            <Paper
-              sx={{
-                p: 2,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 240,
-                width: "100%",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h5">Game Sessions</Typography>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mr: 2, ml: 2 }}
-                  >
-                    {activeSessions.length}/3 active games
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => setIsNewGameDialogOpen(true)}
-                    disabled={isCreating || activeSessions.length >= 3}
-                  >
-                    {isCreating
-                      ? "Creating..."
-                      : activeSessions.length >= 3
-                      ? "Limit Reached"
-                      : "New Game"}
-                  </Button>
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: "#f6f8f5", color: "#172e2c" }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
+          {error && <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>{error}</Alert>}
+          <Box sx={{
+            display: "grid", gap: 3, alignItems: "start",
+            gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(245px, 0.38fr)" },
+          }}>
+            <Paper component="section" aria-labelledby="dashboard-games" variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+              <Stack direction="row" gap={2} flexWrap="wrap" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Box>
+                  <Typography id="dashboard-games" component="h1" variant="h4" fontWeight={700}>Your games</Typography>
+                  <Typography variant="body2" color="text.secondary">{activeSessions.length} of 3 active games</Typography>
                 </Box>
-              </Box>
-              <Divider sx={{ mb: 2 }} />
-              {loading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
-                  <CircularProgress />
-                </Box>
-              ) : allSessions.length === 0 ? (
-                <Typography variant="body1" sx={{ p: 2, textAlign: "center" }}>
-                  No game sessions found. Create a new game to start!
-                </Typography>
-              ) : (
-                <Grid container spacing={2}>
-                  {allSessions.map((session) => (
-                    <Grid item xs={12} sm={6} key={session.id}>
-                      <Card
-                        sx={{
-                          cursor:
-                            editSession.isEditing &&
-                            editSession.id === session.id
-                              ? "default"
-                              : "pointer",
-                          transition: "box-shadow 0.3s",
-                          "&:hover": {
-                            boxShadow: 3,
-                          },
-                        }}
-                        onClick={() => {
-                          // Only navigate if we're not in edit mode
-                          if (
-                            !(
-                              editSession.isEditing &&
-                              editSession.id === session.id
-                            )
-                          ) {
-                            handleStartGame(session.id);
-                          }
-                        }}
-                      >
-                        <CardContent>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              mb: 1,
-                            }}
-                          >
-                            {editSession.isEditing &&
-                            editSession.id === session.id ? (
-                              // Edit mode
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  width: "100%",
-                                }}
-                              >
-                                <TextField
-                                  value={editSession.name}
-                                  onChange={handleNameChange}
-                                  variant="outlined"
-                                  size="small"
-                                  autoFocus
-                                  onClick={(e) => e.stopPropagation()}
-                                  sx={{ flexGrow: 1 }}
-                                  inputProps={{ maxLength: 50 }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  color="primary"
-                                  onClick={handleSaveSessionName}
-                                  sx={{ ml: 1 }}
-                                >
-                                  <CheckIcon />
-                                </IconButton>
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={handleCancelEdit}
-                                  sx={{ ml: 0.5 }}
-                                >
-                                  <CloseIcon />
-                                </IconButton>
-                              </Box>
-                            ) : (
-                              // Display mode
-                              <>
-                                <Typography
-                                  variant="h6"
-                                  sx={{ display: "flex", alignItems: "center" }}
-                                >
-                                  {session.name || "Untitled Game"}
-                                  <Tooltip title="Edit Name">
-                                    <IconButton
-                                      size="small"
-                                      color="primary"
-                                      onClick={(e) =>
-                                        handleStartEdit(session, e)
-                                      }
-                                      sx={{ ml: 1 }}
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                </Typography>
-                                {session.isActive ? (
-                                  <Chip
-                                    label={
-                                      session.currentRound === 0
-                                        ? "Setup"
-                                        : STAGE_LABELS[session.stage] || "Adapt"
-                                    }
-                                    color="info"
-                                    variant="outlined"
-                                    size="small"
-                                    sx={{ ml: 1 }}
-                                  />
-                                ) : (
-                                  <Chip
-                                    label={
-                                      session.endedEarly
-                                        ? "Ended Early"
-                                        : "Completed"
-                                    }
-                                    color={
-                                      session.endedEarly ? "warning" : "success"
-                                    }
-                                    size="small"
-                                    sx={{ ml: 1 }}
-                                  />
-                                )}
-                              </>
-                            )}
-                          </Box>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            gutterBottom
-                          >
-                            <strong>Created:</strong>{" "}
-                            {formatDate(session.createdAt)}
-                          </Typography>
-                          {session.isActive ? (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              <strong>Progress:</strong>{" "}
-                              {session.currentRound === 0
-                                ? `Setup (0 of ${getTotalRounds(session)} rounds)`
-                                : `Round ${session.currentRound} of ${getTotalRounds(session)}`}
-                            </Typography>
-                          ) : (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              <strong>Rounds Played:</strong>{" "}
-                              {Math.max(0, (session.currentRound ?? 1) - 1)} of{" "}
-                              {getTotalRounds(session)}
-                            </Typography>
-                          )}
-                          {getPlayerCount(session) !== null && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              <strong>Players:</strong>{" "}
-                              {getPlayerCount(session)}
-                            </Typography>
-                          )}
-
-                          {!session.isActive && session.completedAt && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              <strong>Completed:</strong>{" "}
-                              {formatDate(session.completedAt)}
-                            </Typography>
-                          )}
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              mt: 2,
-                            }}
-                          >
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              startIcon={
-                                session.isActive ? (
-                                  <PlayArrowIcon />
-                                ) : (
-                                  <VisibilityIcon />
-                                )
-                              }
-                              sx={{ mr: 1 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartGame(session.id);
-                              }}
-                            >
-                              {session.isActive ? "Continue" : "View"}
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="primary"
-                              startIcon={<DownloadIcon />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadMenuOpen(e, session.id);
-                              }}
-                              sx={{ mr: 1 }}
-                              disabled={isExporting}
-                            >
-                              {isExporting &&
-                              downloadMenu.sessionId === session.id
-                                ? "Exporting..."
-                                : "Export"}
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="error"
-                              startIcon={<DeleteIcon />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDeleteDialog(session);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                <Button variant="contained" startIcon={<AddIcon />} sx={{ bgcolor: "#245956" }}
+                  onClick={() => setIsNewGameDialogOpen(true)} disabled={isCreating || activeSessions.length >= 3}>
+                  {isCreating ? "Creating…" : activeSessions.length >= 3 ? "Limit reached" : "New game"}
+                </Button>
+              </Stack>
+              {loading ? <CircularProgress aria-label="Loading games" size={28} /> : (
+                <>
+                  <Typography component="h2" variant="h6" fontWeight={600} sx={{ mb: 1 }}>In progress</Typography>
+                  {activeSessions.length ? (
+                    <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>{activeSessions.map(renderGame)}</Box>
+                  ) : <Typography color="text.secondary">No games in progress.</Typography>}
+                  <Typography component="h2" variant="h6" fontWeight={600} sx={{ mt: 3, mb: 1 }}>Finished games</Typography>
+                  {completedSessions.length ? (
+                    <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>{completedSessions.map(renderGame)}</Box>
+                  ) : <Typography color="text.secondary">No finished games yet.</Typography>}
+                </>
               )}
             </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+            <Paper component="aside" aria-label="Account" variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
+              <Stack spacing={2}>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Avatar src={avatar || undefined} sx={{ bgcolor: "#245956" }}>
+                    {(userProfile?.displayName || currentUser.displayName || currentUser.email || "?").charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                    <Typography component="h2" fontWeight={700}>{displayName}</Typography>
+                    <Typography variant="body2" color="text.secondary">{currentUser.email}</Typography>
+                  </Box>
+                </Stack>
+                <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                  User ID: {currentUser.uid}
+                </Typography>
+                <Divider />
+                <Button variant="outlined" onClick={() => navigate("/account")} sx={{ color: "#245956" }}>Manage account</Button>
+                <TrainingLink fullWidth />
+                <Button onClick={handleLogout} startIcon={<LogoutIcon />} sx={{ color: "#245956" }}>Sign out</Button>
+              </Stack>
+            </Paper>
+          </Box>
+        </Container>
+      </Box>
 
       {/* Confirmation Dialog */}
       <Dialog open={isDialogOpen} onClose={closeDeleteDialog}>
@@ -656,15 +429,27 @@ export default function Dashboard() {
       </Dialog>
 
       <Menu
-        anchorEl={downloadMenu.anchorEl}
-        open={downloadMenu.open}
-        onClose={handleDownloadMenuClose}
+        anchorEl={sessionMenu.anchorEl}
+        open={sessionMenu.open}
+        onClose={handleSessionMenuClose}
       >
+        <MenuItem disabled={!menuSession} onClick={() => {
+          handleSessionMenuClose();
+          handleStartEdit(menuSession);
+        }}>
+          <EditIcon fontSize="small" sx={{ mr: 1 }} /> Rename
+        </MenuItem>
         <MenuItem onClick={handleDownloadJSON} disabled={isExporting}>
           Download as JSON
         </MenuItem>
         <MenuItem onClick={handleDownloadExcel} disabled={isExporting}>
           Download as Excel
+        </MenuItem>
+        <MenuItem disabled={!menuSession} onClick={() => {
+          handleSessionMenuClose();
+          openDeleteDialog(menuSession);
+        }} sx={{ color: "error.main" }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} /> Delete
         </MenuItem>
       </Menu>
 

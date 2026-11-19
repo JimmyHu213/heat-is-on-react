@@ -214,17 +214,18 @@ class GameSessionService {
   /**
    * Get completed game sessions for a user
    */
-  async getUserCompletedSessions(userId, limitCount = 10) {
+  async getUserCompletedSessions(userId) {
     try {
-      return await firestoreService.getDocuments(
+      const sessions = await firestoreService.getDocuments(
         this.SESSIONS_COLLECTION,
         [
           ["userId", "==", userId],
           ["isActive", "==", false],
-        ],
-        ["completedAt", "desc"],
-        limitCount
+        ]
       );
+      const finishedDate = (session) => session.completedAt ?? session.createdAt;
+      const timestamp = (value) => value?.toMillis?.() ?? (Date.parse(value) || 0);
+      return sessions.sort((a, b) => timestamp(finishedDate(b)) - timestamp(finishedDate(a)));
     } catch (error) {
       console.error(
         `Error getting completed sessions for user ${userId}:`,
@@ -545,7 +546,9 @@ class GameSessionService {
       }
 
       const nextRev = assertRevision(session, expectedRevision);
-      const { town: updatedTown, play } = playCard(town, card, recordRound);
+      const appliedCount = cardEffectiveRounds(recordRound, card.duration)
+        .filter((r) => r <= session.currentRound).length;
+      const { town: updatedTown, play } = playCard(town, card, recordRound, appliedCount);
 
       const lastUndo = buildCardUndo({
         round: session.currentRound,
@@ -563,7 +566,7 @@ class GameSessionService {
         updatedAt: serverTimestamp(),
       });
 
-      const isActivePlay = Math.max(...play.effectiveRounds) >= session.currentRound;
+      const isActivePlay = play.effectiveRounds.some((r) => r > session.currentRound);
       const cardPlayDoc = {
         sessionId: session.id,
         cardId: play.cardId,
@@ -1270,7 +1273,9 @@ class GameSessionService {
       }
 
       const nextRev = assertRevision(session, expectedRevision);
-      const revertedTown = revertCardEffects(town, card);
+      const effectiveRounds = play.effectiveRounds ?? cardEffectiveRounds(play.playedAtRound, card.duration);
+      const appliedCount = effectiveRounds.filter((r) => r <= session.currentRound).length;
+      const revertedTown = revertCardEffects(town, card, appliedCount);
 
       tx.update(townRef, {
         effortPoints: revertedTown.effortPoints,

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import {
   MEDIA_CONFIG,
   getValidTrainingUrl,
@@ -12,13 +13,12 @@ test("MEDIA_CONFIG defines English intro video, all 5 event GIFs, and all 5 haza
   const expectedHazards = ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"];
   for (const id of expectedHazards) {
     assert.equal(MEDIA_CONFIG.eventGifs[id], `/media/events/${id}.gif`);
-    assert.equal(MEDIA_CONFIG.hazardIcons[id], `/media/icons/${id}.svg`);
+    assert.equal(MEDIA_CONFIG.hazardIcons[id], `/media/icons/${id}.png`);
   }
 });
 
 test("MEDIA_CONFIG defines placeholder video, logo, and copyright properties", () => {
   assert.equal(MEDIA_CONFIG.timeMachineVideo, "/media/time-machine.mp4");
-  assert.equal(MEDIA_CONFIG.globalScenarioVideo, "/media/global-scenario.mp4");
   assert.equal(MEDIA_CONFIG.neshExplainerVideo, "/media/nesh-explainer.mp4");
   assert.equal(
     MEDIA_CONFIG.inspiringTasmaniaLogo,
@@ -26,6 +26,20 @@ test("MEDIA_CONFIG defines placeholder video, logo, and copyright properties", (
   );
   assert.equal(MEDIA_CONFIG.utasLogo, "/media/logos/utas-placeholder.svg");
   assert.equal(MEDIA_CONFIG.copyrightText, "© University of Tasmania · The Heat Is On");
+});
+
+test("all configured workshop videos and hazard assets exist in the Hosting public directory", () => {
+  const paths = [
+    MEDIA_CONFIG.introVideo,
+    MEDIA_CONFIG.timeMachineVideo,
+    MEDIA_CONFIG.neshExplainerVideo,
+    ...Object.values(MEDIA_CONFIG.eventGifs),
+    ...Object.values(MEDIA_CONFIG.hazardIcons),
+    ...Object.values(MEDIA_CONFIG.hazardIntroductions),
+  ];
+  for (const path of paths) {
+    assert.ok(existsSync(new URL(`../../public${path}`, import.meta.url)), `Missing media: ${path}`);
+  }
 });
 
 test("getValidTrainingUrl accepts https/http URLs and rejects empty, relative, or javascript: URLs", () => {
@@ -46,7 +60,7 @@ test("getValidTrainingUrl accepts https/http URLs and rejects empty, relative, o
 });
 
 test("getHazardIconPath and getEventGifPath return paths for known hazards and null for unknown or prototype keys", () => {
-  assert.equal(getHazardIconPath("bushfire"), "/media/icons/bushfire.svg");
+  assert.equal(getHazardIconPath("bushfire"), "/media/icons/bushfire.png");
   assert.equal(getEventGifPath("stormSurge"), "/media/events/stormSurge.gif");
   assert.equal(getHazardIconPath("unknown"), null);
   assert.equal(getEventGifPath("toString"), null);

@@ -167,7 +167,8 @@ service cloud.firestore {
         && request.resource.data.effectiveRounds is list
         && request.resource.data.effectiveRounds.size() >= 1
         && request.resource.data.effectiveRounds.size() <= 3
-        && request.resource.data.isActive == true;
+        // Historical plays may have no future effects remaining.
+        && request.resource.data.isActive is bool;
 
       allow update: if ownsSession(resource.data.sessionId)
         && request.resource.data.sessionId == resource.data.sessionId

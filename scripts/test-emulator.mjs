@@ -35,6 +35,78 @@ async function signInFreshUser(prefix = "user") {
   return { uid: cred.user.uid, email, password };
 }
 
+test("expired historical card can be saved atomically and undone under Firestore rules", async () => {
+  const user = await signInFreshUser("history-expired");
+  const created = await gameSessionService.createSession(user.uid, "Historical cards");
+  await gameSessionService.startGame(created.id);
+  await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  const current = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  const townId = `${created.id}_town_1`;
+  const statsRef = doc(db, "round_stats", `${created.id}_1`);
+  const beforeStats = (await getDoc(statsRef)).data();
+
+  const result = await gameSessionService.applyCardToTown(townId, "bushfire1", 3, {
+    expectedRevision: current.revision, targetRound: 1, allowAnyStage: true,
+  });
+  assert.equal(result.town.bushfire.nature, 60);
+  assert.equal(result.town.effortPoints, 85);
+  assert.equal(result.cardPlay.isActive, false);
+  assert.equal((await getDoc(doc(db, "card_plays", result.cardPlay.id))).data().isActive, false);
+  assert.equal((await getDoc(doc(db, "towns", townId))).data().bushfire.nature, 60);
+  assert.deepEqual((await getDoc(statsRef)).data(), beforeStats);
+
+  const undone = await gameSessionService.undoLastMove(created.id, {
+    expectedRevision: result.session.revision,
+  });
+  assert.equal(undone.towns.find((t) => t.id === townId).bushfire.nature, 40);
+  assert.equal((await gameSessionService.getTownCardPlayDocs(townId)).length, 0);
+
+  await signInFreshUser("history-intruder");
+  await assert.rejects(() => gameSessionService.applyCardToTown(townId, "bushfire1", 3, {
+    targetRound: 1, allowAnyStage: true,
+  }), { code: "permission-denied" });
+});
+
+test("historical multi-year card applies elapsed effects and schedules only future effects", async () => {
+  const user = await signInFreshUser("history-multiyear");
+  const created = await gameSessionService.createSession(user.uid, "Catch up effects");
+  await gameSessionService.startGame(created.id);
+  await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  const current = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  const townId = `${created.id}_town_1`;
+  const result = await gameSessionService.applyCardToTown(townId, "bushfire3", 3, {
+    expectedRevision: current.revision, targetRound: 2, allowAnyStage: true,
+  });
+  assert.equal(result.town.bushfire.nature, 60);
+  assert.equal(result.town.effortPoints, 85);
+  assert.equal(result.cardPlay.isActive, true);
+  const next = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  assert.equal(next.towns.find((t) => t.id === townId).bushfire.nature, 70);
+  assert.equal((await getDoc(doc(db, "card_plays", result.cardPlay.id))).data().isActive, false);
+  const removed = await gameSessionService.removeCardPlay(created.id, result.cardPlay.id, {
+    expectedRevision: next.revision,
+  });
+  assert.equal(removed.town.bushfire.nature, 40);
+  assert.equal(removed.town.effortPoints, next.towns.find((t) => t.id === townId).effortPoints + 15);
+});
+
+test("removing a naturally played multi-year card reverses every elapsed year's boost", async () => {
+  const user = await signInFreshUser("history-remove");
+  const created = await gameSessionService.createSession(user.uid, "Remove old card");
+  await gameSessionService.startGame(created.id);
+  const townId = `${created.id}_town_1`;
+  const played = await gameSessionService.applyCardToTown(townId, "bushfire3", 1);
+  await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  const current = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
+  assert.equal(current.towns.find((t) => t.id === townId).bushfire.nature, 70);
+  const result = await gameSessionService.removeCardPlay(created.id, played.cardPlay.id, {
+    expectedRevision: current.revision,
+  });
+  assert.equal(result.town.bushfire.nature, 40);
+  assert.equal(result.town.effortPoints, 100);
+  assert.equal((await gameSessionService.getTownCardPlayDocs(townId)).length, 0);
+});
+
 test("plays a full 2-round facilitated game with persisted undo, stage rules and revisions", async () => {
   const userA = await signInFreshUser("facilitator-a");
 

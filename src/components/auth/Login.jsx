@@ -3,19 +3,15 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  Container,
   Box,
   Typography,
   TextField,
   Button,
-  Grid,
-  Paper,
-  Avatar,
+  Stack,
   Alert,
   CircularProgress,
 } from "@mui/material";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { primaryColorLight } from "../../constants/palette";
+import "./Login.css";
 
 /**
  * Login component for user authentication
@@ -74,32 +70,21 @@ const Login = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            width: "100%",
-            borderRadius: 2,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <Avatar sx={{ m: 1, bgcolor: primaryColorLight }}>
-            <LockOutlinedIcon />
-          </Avatar>
-
-          <Typography component="h1" variant="h5">
-            Sign In
+    <main className="login-page">
+      <header className="login-hero">
+        <img src="/media/stanley-tasmania.webp" alt="The coastal town of Stanley and The Nut" />
+        <div className="login-hero-copy">
+          <h1>The Heat Is On</h1>
+          <p>Help your town adapt to a changing climate.</p>
+          <a href="https://commons.wikimedia.org/wiki/File:Stanley-20150411-009.jpg">
+            Stanley, Tasmania · Photo by Gary Houston
+          </a>
+        </div>
+      </header>
+      <section className="login-panel" aria-labelledby="login-heading">
+        <div className="login-panel-content">
+          <Typography id="login-heading" component="h2" variant="h4" fontWeight={700}>
+            Sign in
           </Typography>
 
           {error && (
@@ -112,7 +97,7 @@ const Login = () => {
             component="form"
             onSubmit={handleSubmit}
             noValidate
-            sx={{ mt: 1, width: "100%" }}
+            sx={{ mt: 2, width: "100%" }}
           >
             <TextField
               margin="normal"
@@ -122,7 +107,6 @@ const Login = () => {
               label="Email Address"
               name="email"
               autoComplete="email"
-              autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
@@ -146,43 +130,25 @@ const Login = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 2, mb: 2, minHeight: 48, bgcolor: "#245956", "&:hover": { bgcolor: "#194542" } }}
               disabled={loading}
             >
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                "Sign In"
+                "Sign in"
               )}
             </Button>
 
-            <Grid container spacing={2}>
-              <Grid item xs>
-                <Link to="/forgot-password" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Forgot password?
-                  </Typography>
-                </Link>
-              </Grid>
-              <Grid item>
-                <Link to="/signup" style={{ textDecoration: "none" }}>
-                  <Typography variant="body2" color="primary">
-                    Don't have an account? Sign Up
-                  </Typography>
-                </Link>
-              </Grid>
-            </Grid>
+            <Stack direction="row" justifyContent="space-between" gap={2} flexWrap="wrap">
+              <Link to="/forgot-password">Forgot password?</Link>
+              <Link to="/signup">Create an account</Link>
+            </Stack>
 
-            {/* For testing only - remove in production */}
-            <Box sx={{ mt: 3, textAlign: "center" }}>
-              <Typography variant="caption" color="text.secondary">
-                Demo credentials: demo@example.com / password123
-              </Typography>
-            </Box>
           </Box>
-        </Paper>
-      </Box>
-    </Container>
+        </div>
+      </section>
+    </main>
   );
 };
 

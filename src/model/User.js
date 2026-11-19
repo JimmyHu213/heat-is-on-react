@@ -7,6 +7,7 @@ export class User {
     this.userId = data.userId || "";
     this.email = data.email || "";
     this.displayName = data.displayName || "";
+    this.photoURL = data.photoURL || "";
     this.createdAt = data.createdAt || null;
     this.lastLogin = data.lastLogin || null;
   }
@@ -17,6 +18,7 @@ export class User {
       userId: this.userId,
       email: this.email,
       displayName: this.displayName,
+      photoURL: this.photoURL,
       createdAt: this.createdAt,
       lastLogin: this.lastLogin,
     };
@@ -29,6 +31,7 @@ export class User {
       userId: doc.id,
       email: data.email,
       displayName: data.displayName,
+      photoURL: data.photoURL,
       createdAt: data.createdAt?.toDate(),
       lastLogin: data.lastLogin?.toDate(),
     });

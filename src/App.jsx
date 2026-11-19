@@ -18,6 +18,7 @@ import AppProviders from "./contexts";
 
 // Components
 import Dashboard from "./components/Dashboard";
+import Account from "./components/Account";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import ForgotPassword from "./components/auth/ForgotPassword";
@@ -82,6 +83,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
               <Route
                 path="/"
                 element={
