@@ -5,9 +5,85 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Heat Is On</title>
+    <script>
+      if (["/", "/login", "/login/"].includes(location.pathname)) {
+        const map = document.createElement("link");
+        map.rel = "preload";
+        map.as = "image";
+        map.imageSrcset = "/media/v1/adaptania-640.webp 640w, /media/v1/adaptania-1200.webp 1200w";
+        map.imageSizes = "(max-width: 720px) 100vw, 58vw";
+        map.fetchPriority = "high";
+        document.head.append(map);
+      }
+    </script>
+    <style>
+      /* Title glyphs from the bundled Fredoka font, licensed in /media/fonts/fredoka-OFL.txt. */
+      @font-face {
+        font-family: "Fredoka Title";
+        src: url("/media/v1/fonts/fredoka-title.woff2") format("woff2");
+        font-weight: 600;
+        font-display: swap;
+      }
+      #startup {
+        position: fixed;
+        inset: 0;
+        z-index: 1500;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: clamp(1.25rem, 4vw, 2rem);
+        background: #172e2c;
+        color: #fff;
+      }
+      #startup[hidden] { display: none; }
+      #startup h1 {
+        margin: 0;
+        font: 600 clamp(1.5rem, 8vw, 4.5rem)/1.1 "Fredoka Title", system-ui, sans-serif;
+        letter-spacing: -.035em;
+      }
+      #startup h1 span {
+        display: inline-block;
+        animation: heat-bounce 1.5s ease-in-out infinite;
+      }
+      #startup h1 span:nth-child(2) { animation-delay: .1s; }
+      #startup h1 span:nth-child(3) { animation-delay: .2s; }
+      #startup h1 span:nth-child(4) { animation-delay: .3s; }
+      #startup .track {
+        width: min(52vw, 14rem);
+        height: .375rem;
+        overflow: hidden;
+        border-radius: 1rem;
+        background: #536a65;
+      }
+      #startup .track::after {
+        content: "";
+        display: block;
+        width: 45%;
+        height: 100%;
+        border-radius: inherit;
+        background: #f2c94c;
+        animation: heat-progress 1.5s ease-in-out infinite;
+      }
+      @keyframes heat-bounce {
+        0%, 32%, 100% { transform: translateY(0); }
+        16% { transform: translateY(-.14em); }
+      }
+      @keyframes heat-progress {
+        from { transform: translateX(-100%); }
+        to { transform: translateX(225%); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #startup h1 span, #startup .track::after { animation: none; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="startup">
+      <h1><span>THE</span> <span>HEAT</span> <span>IS</span> <span>ON</span></h1>
+      <div class="track" role="progressbar" aria-label="Loading The Heat Is On"></div>
+      <noscript>Please enable JavaScript to open the dashboard.</noscript>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
