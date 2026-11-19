@@ -19,7 +19,7 @@ function displayedTown(town, before, after, progress) {
   return { ...town, ...scores };
 }
 
-const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress }) => {
+const TownPieCharts = ({ towns, currentStage, chartPresentation, chartProgress }) => {
   const [flippedMap, setFlippedMap] = useState({});
   const gridRef = useRef(null);
   const [availableHeight, setAvailableHeight] = useState(600);
@@ -61,8 +61,8 @@ const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress
   const desktopCardSize = Math.max(180, Math.floor(
     (availableHeight - (desktopRows - 1) * cardGap) / desktopRows
   ));
-  const beforeById = new Map(hazardPresentation?.before.map((town) => [town.id, town]));
-  const afterById = new Map(hazardPresentation?.after?.map((town) => [town.id, town]));
+  const beforeById = new Map(chartPresentation?.before.map((town) => [town.id, town]));
+  const afterById = new Map(chartPresentation?.after?.map((town) => [town.id, town]));
   const allFlipped =
     towns.length > 0 && towns.every((town) => Boolean(flippedMap[town.id]));
 
@@ -132,7 +132,7 @@ const TownPieCharts = ({ towns, currentStage, hazardPresentation, hazardProgress
         {towns.map((town) => (
           <TownPieChart
             key={town.id}
-            town={displayedTown(town, beforeById.get(town.id), afterById.get(town.id), hazardProgress)}
+            town={displayedTown(town, beforeById.get(town.id), afterById.get(town.id), chartProgress)}
             flipped={Boolean(flippedMap[town.id])}
             onToggleFlip={() => handleToggleTown(town.id)}
           />

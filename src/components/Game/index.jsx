@@ -164,8 +164,8 @@ const Game = () => {
   const [videoModal, setVideoModal] = useState({ open: false, title: "", src: "" });
   const [videoError, setVideoError] = useState(false);
   const [selectedHazard, setSelectedHazard] = useState(null);
-  const [hazardAnnouncement, setHazardAnnouncement] = useState(null);
-  const [hazardProgress, setHazardProgress] = useState(0);
+  const [chartPresentation, setChartPresentation] = useState(null);
+  const [chartProgress, setChartProgress] = useState(0);
 
   useEffect(() => {
     loadSession(sessionId);
@@ -190,17 +190,17 @@ const Game = () => {
     return () => { cancelled = true; };
   }, [currentStage, showOpeningScreen]);
 
-  const presentation = hazardAnnouncement
-    && currentStage === "hazard"
-    && hazardAnnouncement.sessionId === sessionId
-    && hazardAnnouncement.round === currentRound
-    ? hazardAnnouncement
+  const presentation = chartPresentation
+    && chartPresentation.stage === currentStage
+    && chartPresentation.sessionId === sessionId
+    && chartPresentation.round === currentRound
+    ? chartPresentation
     : null;
 
   useEffect(() => {
     if (presentation?.phase !== "animating") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setHazardAnnouncement(null);
+      setChartPresentation(null);
       return;
     }
 
@@ -209,10 +209,10 @@ const Game = () => {
     const tick = (now) => {
       const progress = Math.min(1, (now - startedAt) / 1200);
       if (progress >= 1) {
-        setHazardAnnouncement(null);
+        setChartPresentation(null);
         return;
       }
-      setHazardProgress(1 - (1 - progress) ** 2);
+      setChartProgress(1 - (1 - progress) ** 2);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -332,16 +332,16 @@ const Game = () => {
   const handleRevert = async () => {
     const result = await revertToPreviousState();
     if (result) {
-      setHazardAnnouncement(null);
+      setChartPresentation(null);
       showNotification("Reverted last move in this round", "success");
     }
   };
 
   const handleApplyHazard = async (hazardId) => {
     if (presentation) return;
-    const pending = { sessionId, round: currentRound, hazardId, before: towns, phase: "saving" };
-    setHazardProgress(0);
-    setHazardAnnouncement(pending);
+    const pending = { sessionId, round: currentRound, stage: currentStage, hazardId, before: towns, phase: "saving" };
+    setChartProgress(0);
+    setChartPresentation(pending);
 
     const result = await applyHazard(hazardId);
     if (result) {
@@ -349,12 +349,14 @@ const Game = () => {
       setActiveTab(0);
       showNotification("Applied hazard to all towns", "warning");
     }
-    setHazardAnnouncement((current) => current !== pending ? current : result
+    setChartPresentation((current) => current !== pending ? current : result
       ? { ...pending, after: result.towns, phase: "playing" }
       : null);
   };
 
   const handlePlayCard = async (townId, cardId) => {
+    if (presentation) return;
+    let pending;
     try {
       const town = towns.find((t) => t.id === townId);
       const card = allCards.find((c) => c.id === cardId);
@@ -368,14 +370,24 @@ const Game = () => {
         return;
       }
 
+      pending = { sessionId, round: currentRound, stage: currentStage, before: [town], phase: "saving" };
+      setChartProgress(0);
+      setChartPresentation(pending);
+
       const result = await playCard(townId, cardId);
+      setChartPresentation((current) => current !== pending ? current : result
+        ? { ...pending, after: [result.town], phase: "animating" }
+        : null);
       if (result) {
+        setFloatingControlsOpen(false);
+        setActiveTab(0);
         showNotification(
-          `Applied ${card.name} to ${town?.name || "town"} (-${card.cost} EP)`,
+          `Applied ${card.name} to ${town.name} (-${card.cost} EP)`,
           "info"
         );
       }
     } catch (err) {
+      setChartPresentation((current) => current === pending ? null : current);
       console.error("Error playing card:", err);
       showNotification(err.message || "Failed to play card", "error");
     }
@@ -771,8 +783,8 @@ const Game = () => {
               <TownPieCharts
                 towns={towns}
                 currentStage={currentStage}
-                hazardPresentation={presentation}
-                hazardProgress={hazardProgress}
+                chartPresentation={presentation}
+                chartProgress={chartProgress}
               />
             )}
           </TabPanel>
@@ -823,7 +835,7 @@ const Game = () => {
                 <CardControls
                   towns={towns}
                   onPlayCard={handlePlayCard}
-                  disabled={loading || !currentSession?.isActive}
+                  disabled={loading || Boolean(presentation) || !currentSession?.isActive}
                   currentRound={currentRound}
                   currentStage={currentStage}
                   townCardPlayDocs={townCardPlayDocs}
@@ -953,12 +965,12 @@ const Game = () => {
         open={presentation?.phase === "playing"}
         onClose={(_, reason) => {
           if (reason !== "backdropClick") {
-            setHazardAnnouncement({ ...presentation, phase: "closing" });
+            setChartPresentation({ ...presentation, phase: "closing" });
           }
         }}
         slotProps={{
           transition: {
-            onExited: () => setHazardAnnouncement((current) => current?.phase === "closing"
+            onExited: () => setChartPresentation((current) => current?.phase === "closing"
               ? { ...current, phase: "animating" }
               : current),
           },
@@ -971,7 +983,7 @@ const Game = () => {
           id="hazard-animation-title"
           hazard={announcedHazard}
           closeLabel="Close hazard animation"
-          onClose={() => setHazardAnnouncement({ ...presentation, phase: "closing" })}
+          onClose={() => setChartPresentation({ ...presentation, phase: "closing" })}
         >
           {HAZARD_HEADLINES[announcedHazard?.id] || announcedHazard?.name}
         </HazardDialogTitle>
