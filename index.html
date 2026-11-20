@@ -45,9 +45,16 @@
         display: inline-block;
         animation: heat-bounce 1.5s ease-in-out infinite;
       }
-      #startup h1 span:nth-child(2) { animation-delay: .1s; }
-      #startup h1 span:nth-child(3) { animation-delay: .2s; }
-      #startup h1 span:nth-child(4) { animation-delay: .3s; }
+      /* Match Nature, Economy, Society and Health in src/constants/palette.js on first paint. */
+      #startup h1 span:nth-child(1) { color: #43AE35; }
+      #startup h1 span:nth-child(2) { color: #F2C94C; animation-delay: .1s; }
+      #startup h1 span:nth-child(3) { color: #73C6D5; animation-delay: .2s; }
+      #startup h1 span:nth-child(4) {
+        color: #2F5D8A;
+        -webkit-text-stroke: .035em #ADCEEB;
+        paint-order: stroke fill;
+        animation-delay: .3s;
+      }
       #startup .track {
         width: min(52vw, 14rem);
         height: .375rem;
