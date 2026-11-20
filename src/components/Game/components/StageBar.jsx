@@ -4,9 +4,6 @@ import {
   Paper,
   Box,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
   Button,
   Chip,
   Tooltip,
@@ -18,13 +15,10 @@ import {
 } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PaidIcon from "@mui/icons-material/Paid";
-import FlagIcon from "@mui/icons-material/Flag";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import { getPlayerCount, getTotalRounds, MAX_PLAYERS } from "../../../game/options.js";
-import { canChangeStage } from "../../../game/stages.js";
 
 const STAGE_STEPS = [
   { key: "adaptation", label: "What adaptations will you choose for your town?" },
@@ -32,25 +26,17 @@ const STAGE_STEPS = [
   { key: "review", label: "How resilient is Adaptania now?" },
 ];
 
-function getActiveStepIndex(currentStage) {
-  if (currentStage === "adaptation") return 0;
-  if (currentStage === "hazard") return 1;
-  if (currentStage === "review") return 2;
-  if (currentStage === "complete") return STAGE_STEPS.length;
-  return -1;
-}
-
 export default function StageBar({
   session,
   currentRound,
   currentStage,
-  hazardCountThisRound = 0,
+  eventLimitReached,
   loading = false,
-  vertical = false,
   onStartGame,
   onChangeStage,
-  onOpenDividends,
-  onOpenEndEarly,
+  onOpenCards,
+  onOpenEvent,
+  onSettleRound,
   onOpenSummary,
   onUpdatePlayerCount,
 }) {
@@ -62,24 +48,6 @@ export default function StageBar({
 
   const totalRounds = getTotalRounds(session);
   const playerCount = getPlayerCount(session);
-  const activeStep = getActiveStepIndex(currentStage);
-
-  const canStepBackToAdapt = canChangeStage(
-    currentStage,
-    "adaptation",
-    hazardCountThisRound
-  );
-  const canMoveToReview = canChangeStage(
-    currentStage,
-    "review",
-    hazardCountThisRound
-  );
-  const canStepBackToEvent = canChangeStage(
-    currentStage,
-    "hazard",
-    hazardCountThisRound
-  );
-
   const handleOpenPlayerDialog = () => {
     setPlayerInput(playerCount !== null ? String(playerCount) : "");
     setPlayerError(null);
@@ -121,202 +89,97 @@ export default function StageBar({
         gap: 0.75,
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-          <Typography variant="h6" fontWeight="bold">
-            {currentStage === "setup"
-              ? `Setup (0 of ${totalRounds} rounds)`
-              : currentStage === "complete"
-              ? `Game Complete (${Math.max(0, currentRound - 1)} of ${totalRounds} rounds)`
-              : `Round ${currentRound} of ${totalRounds} · Year ${2050 + currentRound}`}
-          </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+        <Typography variant="h6" fontWeight="bold">
+          {currentStage === "setup"
+            ? `Setup (0 of ${totalRounds} rounds)`
+            : currentStage === "complete"
+            ? `Game Complete (${Math.max(0, currentRound - 1)} of ${totalRounds} rounds)`
+            : `Round ${currentRound} of ${totalRounds} · Year ${2050 + currentRound}`}
+        </Typography>
 
-          {session.endedEarly && (
-            <Chip label="Ended Early" color="warning" size="small" />
-          )}
+        {session.endedEarly && (
+          <Chip label="Ended Early" color="warning" size="small" />
+        )}
 
-          {session.isActive ? (
-            <Tooltip title="Click to set or update participant count">
-              <Chip
-                icon={<GroupIcon />}
-                label={
-                  playerCount !== null
-                    ? `${playerCount} Players`
-                    : "Set Players"
-                }
-                variant="outlined"
-                size="small"
-                onClick={handleOpenPlayerDialog}
-                clickable
-              />
-            </Tooltip>
-          ) : (
-            playerCount !== null && (
-              <Chip
-                icon={<GroupIcon />}
-                label={`${playerCount} Players`}
-                variant="outlined"
-                size="small"
-              />
-            )
-          )}
-        </Box>
-
-        {/* Stage Action Buttons */}
-        <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
-          {currentStage === "setup" && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<PlayArrowIcon />}
-              onClick={onStartGame}
-              disabled={loading}
-            >
-              Start Game (Round 1)
-            </Button>
-          )}
-
-          {currentStage === "adaptation" && (
-            <Button
-              variant="contained"
-              color="primary"
-              endIcon={<ArrowForwardIcon />}
-              onClick={() => onChangeStage("hazard")}
-              disabled={loading}
-            >
-              Next: Event Stage
-            </Button>
-          )}
-
-          {currentStage === "hazard" && (
-            <>
-              <Tooltip
-                title={
-                  canStepBackToAdapt
-                    ? "Return to Adapt stage"
-                    : "Cannot return to Adapt after a hazard has been applied this round"
-                }
-              >
-                <span>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => onChangeStage("adaptation")}
-                    disabled={loading || !canStepBackToAdapt}
-                  >
-                    Back to Adapt
-                  </Button>
-                </span>
-              </Tooltip>
-
-
-              <Tooltip
-                title={
-                  canMoveToReview
-                    ? "Proceed to Review stage"
-                    : "Apply at least one hazard first"
-                }
-              >
-                <span>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    endIcon={<ArrowForwardIcon />}
-                    onClick={() => onChangeStage("review")}
-                    disabled={loading || !canMoveToReview}
-                  >
-                    Next: How resilient is Adaptania now?
-                  </Button>
-                </span>
-              </Tooltip>
-            </>
-          )}
-
-          {currentStage === "review" && (
-            <>
-              <Tooltip
-                title={
-                  canStepBackToEvent
-                    ? "Return to Event stage to apply another hazard"
-                    : "Maximum 5 hazards reached for this round"
-                }
-              >
-                <span>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => onChangeStage("hazard")}
-                    disabled={loading || !canStepBackToEvent}
-                  >
-                    Back to Event
-                  </Button>
-                </span>
-              </Tooltip>
-
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<PaidIcon />}
-                onClick={onOpenDividends}
-                disabled={loading}
-              >
-                {currentRound >= totalRounds
-                  ? "Settle Final Round & Reward for effort"
-                  : "Settle Round & Reward for effort"}
-              </Button>
-            </>
-          )}
-
-          {session.isActive && currentRound >= 1 && (
-            <Button
+        {session.isActive ? (
+          <Tooltip title="Click to set or update participant count">
+            <Chip
+              icon={<GroupIcon />}
+              label={
+                playerCount !== null
+                  ? `${playerCount} Players`
+                  : "Set Players"
+              }
               variant="outlined"
-              color="error"
               size="small"
-              startIcon={<FlagIcon />}
-              onClick={onOpenEndEarly}
-              disabled={loading}
-            >
-              End Game Early
-            </Button>
-          )}
-
-          {currentStage === "complete" && (
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<AssessmentIcon />}
-              onClick={onOpenSummary}
-            >
-              View Summary
-            </Button>
-          )}
-        </Box>
+              onClick={handleOpenPlayerDialog}
+              clickable
+            />
+          </Tooltip>
+        ) : (
+          playerCount !== null && (
+            <Chip
+              icon={<GroupIcon />}
+              label={`${playerCount} Players`}
+              variant="outlined"
+              size="small"
+            />
+          )
+        )}
       </Box>
 
-      {/* Round Stage Stepper */}
-      {currentStage !== "setup" && (
-        <Stepper
-          activeStep={activeStep}
-          orientation={vertical ? "vertical" : "horizontal"}
-          alternativeLabel={!vertical}
-          sx={{ pt: 0.5 }}
-        >
-          {STAGE_STEPS.map((step) => (
-            <Step key={step.key}>
-              <StepLabel>{step.label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+      {currentStage === "setup" ? (
+        <Button variant="contained" startIcon={<PlayArrowIcon />} onClick={onStartGame} disabled={loading}>
+          Start Game (Round 1)
+        </Button>
+      ) : currentStage === "complete" ? (
+        <Button variant="contained" startIcon={<AssessmentIcon />} onClick={onOpenSummary}>
+          View Summary
+        </Button>
+      ) : (
+        <Box component="ol" aria-label="Round stages" sx={{ m: 0, p: 0, listStyle: "none" }}>
+          {STAGE_STEPS.map(({ key, label }, index) => {
+            const active = key === currentStage;
+            return (
+              <Box component="li" key={key} aria-current={active ? "step" : undefined}
+                sx={{ px: 1.25, py: 1, borderLeft: 3, borderColor: active ? "primary.main" : "divider" }}>
+                <Typography variant="body2" fontWeight={active ? 700 : 400}
+                  color={active ? "text.primary" : "text.secondary"}>
+                  {label}
+                </Typography>
+                {active && (
+                  <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {key === "review" ? (
+                      <Button size="small" variant="contained" color="success" startIcon={<PaidIcon />}
+                        onClick={onSettleRound} disabled={loading}>
+                        {currentRound >= totalRounds ? "Settle & View Summary" : "Settle & Start Next Year"}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button size="small" variant="contained"
+                          onClick={key === "adaptation" ? onOpenCards : onOpenEvent}
+                          disabled={loading || (key === "hazard" && eventLimitReached)}>
+                          {key === "adaptation" ? "Now – Play Cards" : "Now – Event"}
+                        </Button>
+                        <Button size="small" variant="outlined" endIcon={<ArrowForwardIcon />}
+                          onClick={() => onChangeStage(STAGE_STEPS[index + 1].key)} disabled={loading}>
+                          Next
+                        </Button>
+                      </>
+                    )}
+                    {index > 0 && (
+                      <Button size="small" onClick={() => onChangeStage(STAGE_STEPS[index - 1].key)}
+                        disabled={loading}>
+                        Back
+                      </Button>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            );
+          })}
+        </Box>
       )}
 
       {/* Edit Player Count Dialog */}

@@ -30,6 +30,7 @@ import {
 import { defaultTowns } from "../src/constants/towns.js";
 import { auth, db } from "../src/firebase/config.js";
 import { buildGameSummary } from "../src/game/summary.js";
+import exportService from "../src/services/exportService.js";
 import gameSessionService from "../src/services/gameSessionService.js";
 
 let counter = 0;
@@ -56,7 +57,7 @@ test("expired historical card can be saved atomically and undone under Firestore
     expectedRevision: current.revision, targetRound: 1, allowAnyStage: true,
   });
   assert.equal(result.town.bushfire.nature, 60);
-  assert.equal(result.town.effortPoints, 85);
+  assert.equal(result.town.effortPoints, 90);
   assert.equal(result.cardPlay.isActive, false);
   assert.equal((await getDoc(doc(db, "card_plays", result.cardPlay.id))).data().isActive, false);
   assert.equal((await getDoc(doc(db, "towns", townId))).data().bushfire.nature, 60);
@@ -85,8 +86,10 @@ test("historical multi-year card applies elapsed effects and schedules only futu
     expectedRevision: current.revision, targetRound: 2, allowAnyStage: true,
   });
   assert.equal(result.town.bushfire.nature, 60);
-  assert.equal(result.town.effortPoints, 85);
+  assert.equal(result.town.effortPoints, 70);
   assert.equal(result.cardPlay.isActive, true);
+  const exported = await exportService.getSessionDataPackage(created.id);
+  assert.deepEqual(exported.cardPlays.map((row) => row.cost), [30, 0, 0]);
   const next = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
   assert.equal(next.towns.find((t) => t.id === townId).bushfire.nature, 70);
   assert.equal((await getDoc(doc(db, "card_plays", result.cardPlay.id))).data().isActive, false);
@@ -94,7 +97,7 @@ test("historical multi-year card applies elapsed effects and schedules only futu
     expectedRevision: next.revision,
   });
   assert.equal(removed.town.bushfire.nature, 40);
-  assert.equal(removed.town.effortPoints, next.towns.find((t) => t.id === townId).effortPoints + 15);
+  assert.equal(removed.town.effortPoints, next.towns.find((t) => t.id === townId).effortPoints + 30);
 });
 
 test("removing a naturally played multi-year card reverses every elapsed year's boost", async () => {
@@ -112,6 +115,31 @@ test("removing a naturally played multi-year card reverses every elapsed year's 
   assert.equal(result.town.bushfire.nature, 40);
   assert.equal(result.town.effortPoints, 100);
   assert.equal((await gameSessionService.getTownCardPlayDocs(townId)).length, 0);
+});
+
+test("skips an event and applies extra hazards without moving the facilitator", async () => {
+  const user = await signInFreshUser("round-flow");
+  const { id } = await gameSessionService.createSession(user.uid, "Round flow", { totalRounds: 2 });
+  const started = await gameSessionService.startGame(id);
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "review");
+  const second = await gameSessionService.settleRound(id, { expectedRound: 1 });
+  assert.equal(second.currentRound, 2);
+  assert.deepEqual(second.towns[0].flood, started.towns[0].flood);
+  assert.equal((await getDoc(doc(db, "round_events", id + "_1"))).exists(), false);
+  const flood = await gameSessionService.applyHazardToSession(id, "flood", 2);
+  assert.equal(flood.session.stage, "adaptation");
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "adaptation");
+  await gameSessionService.applyCardToTown(id + "_town_1", "bushfire1", 2);
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "review");
+  const fire = await gameSessionService.applyHazardToSession(id, "bushfire", 2);
+  assert.equal((await gameSessionService.getSession(id)).stage, "review");
+  assert.deepEqual(fire.roundEvent.hazardIds, ["flood", "bushfire"]);
+  const final = await gameSessionService.settleRound(id, { expectedRound: 2 });
+  assert.equal(final.stage, "complete");
+  await assert.rejects(gameSessionService.settleRound(id, { expectedRound: 2 }), { code: "game-complete" });
 });
 
 test("plays a full 2-round facilitated game with persisted undo, stage rules and revisions", async () => {
@@ -153,7 +181,7 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
     { name: "GameRuleError", code: "comparison-town" }
   );
 
-  // Play bushfire1 (cost 15, duration 1) and bushfire2 (cost 15, duration 2) on Town 1
+  // Play bushfire1 (cost 10, duration 1) and bushfire2 (cost 20, duration 2) on Town 1
   const play1 = await gameSessionService.applyCardToTown(
     town1Id,
     "bushfire1",
@@ -162,7 +190,7 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
       expectedRevision: 1,
     }
   );
-  assert.equal(play1.town.effortPoints, 85);
+  assert.equal(play1.town.effortPoints, 90);
   assert.equal(play1.town.bushfire.nature, 60);
   assert.equal(play1.session.revision, 2);
 
@@ -178,7 +206,7 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
   assert.equal(play2.town.bushfire.nature, 90);
   assert.equal(play2.session.revision, 3);
 
-  // Undo last move (reverts bushfire2, deletes its card_plays doc, restores Town 1 EP to 85)
+  // Undo last move (reverts bushfire2, deletes its card_plays doc, restores Town 1 EP to 90)
   const undoneCard = await gameSessionService.undoLastMove(sessionId, {
     expectedRevision: 3,
   });
@@ -190,7 +218,7 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
   const reloadedTown1 = reloadedAfterCardUndo.towns.find(
     (t) => t.id === town1Id
   );
-  assert.equal(reloadedTown1.effortPoints, 85);
+  assert.equal(reloadedTown1.effortPoints, 90);
   assert.equal(reloadedTown1.bushfire.nature, 60);
 
   const deletedPlaySnap = await getDoc(
@@ -203,12 +231,6 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
     name: "GameRuleError",
     code: "nothing-to-undo",
   });
-
-  // Reject applying a hazard while still in adaptation
-  await assert.rejects(
-    () => gameSessionService.applyHazardToSession(sessionId, "bushfire", 1),
-    { name: "GameRuleError", code: "wrong-stage" }
-  );
 
   // Move adaptation -> hazard, then step back hazard -> adaptation (allowed when 0 hazards applied), then back to hazard
   const toHazard1 = await gameSessionService.changeStage(sessionId, "hazard", {
@@ -240,14 +262,10 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
   );
   assert.equal(hazardResult.session.revision, 8);
   assert.equal(hazardResult.roundEvent.impactComplete, true);
-  assert.equal(typeof hazardResult.roundEvent.impactPoints[town1Id], "number");
-  assert.ok(hazardResult.roundEvent.impactPoints[town1Id] > 0);
-
-  // Cannot step back hazard -> adaptation once a hazard is applied
-  await assert.rejects(
-    () => gameSessionService.changeStage(sessionId, "adaptation"),
-    { name: "GameRuleError", code: "invalid-stage-transition" }
-  );
+  assert.equal(hazardResult.roundEvent.impactPoints[town1Id], 80);
+  assert.deepEqual(hazardResult.towns.find((town) => town.id === town1Id).bushfire, {
+    nature: 30, economy: 40, society: 30, health: 30,
+  });
 
   // Undo the hazard -> restores pre-hazard scores and clears hazardIds to [], allowing hazard -> adaptation again
   const undoneHazard = await gameSessionService.undoLastMove(sessionId, {
@@ -459,6 +477,19 @@ test("legacy in-progress session without new fields loads, plays and settles as 
   assert.equal(cardRes.session.revision, 1);
   assert.equal(cardRes.session.totalRounds, 5);
   assert.equal(cardRes.session.stage, "adaptation");
+
+  // A play from the old dashboard has no costPaid and was bought for 15 EP.
+  const oldPlayRef = doc(db, "card_plays", legacySessionId + "_old");
+  await setDoc(oldPlayRef, {
+    sessionId: legacySessionId, townId: town1Id, cardId: "bushfire3",
+    playedAtRound: 1, effectiveRounds: [1, 2, 3], isActive: true,
+  });
+  await updateDoc(doc(db, "towns", town1Id), {
+    effortPoints: 75, bushfire: { nature: 70, economy: 70, society: 70, health: 70 },
+  });
+  const refunded = await gameSessionService.removeCardPlay(legacySessionId, oldPlayRef.id);
+  assert.equal(refunded.town.effortPoints, 90);
+  assert.deepEqual(refunded.town.bushfire, cardRes.town.bushfire);
 
   await gameSessionService.changeStage(legacySessionId, "hazard");
   await gameSessionService.applyHazardToSession(legacySessionId, "bushfire", 1);

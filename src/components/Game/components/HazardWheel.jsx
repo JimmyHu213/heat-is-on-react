@@ -1,6 +1,6 @@
 // src/components/Game/components/HazardWheel.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import CasinoIcon from "@mui/icons-material/Casino";
 import HazardIcon from "../../common/HazardIcon";
 import {
@@ -184,9 +184,6 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
       >
         {isSpinning ? "Spinning..." : "Spin Hazard Wheel"}
       </Button>
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, textAlign: "center" }}>
-        Landing on a hazard applies it live; landing on ? triggers a mystery pause.
-      </Typography>
     </Box>
   );
 }

@@ -2,7 +2,7 @@ globalThis.process.env.VITE_USE_FIREBASE_EMULATOR = "true";
 
 import assert from "node:assert/strict";
 import test from "node:test";
-const { normalizeSessionForExport } = await import("./exportService.js");
+const { default: exportService, normalizeSessionForExport } = await import("./exportService.js");
 
 test("normalizeSessionForExport fills defaults for legacy sessions without optional fields", () => {
   const legacySession = {
@@ -88,4 +88,12 @@ test("normalizeSessionForExport handles ended-early 10-round session at round 3"
   assert.equal(normalized.session.endedEarly, true);
   assert.equal(normalized.roundsToExport, 3);
   assert.equal(normalized.roundEvents.length, 3);
+});
+
+test("multi-year export records the paid EP once, including the old flat price", () => {
+  const play = { cardId: "bushfire3", playedAtRound: 2, effectiveRounds: [2, 3, 4] };
+  const costs = (record) => exportService.processCardPlays([record], { id: "t" })
+    .cardPlaysArray.map((row) => row.cost);
+  assert.deepEqual(costs({ ...play, costPaid: 30 }), [30, 0, 0]);
+  assert.deepEqual(costs(play), [15, 0, 0]);
 });

@@ -12,13 +12,9 @@ export function getStage(session, hazardCountThisRound) {
   return hazardCountThisRound > 0 ? "review" : "adaptation";
 }
 
-export function canChangeStage(from, to, hazardCountThisRound) {
-  if (from === "adaptation" && to === "hazard") return true;
-  if (from === "hazard" && to === "review") return hazardCountThisRound >= 1;
-  if (from === "review" && to === "hazard") return hazardCountThisRound < MAX_HAZARDS_PER_ROUND;
-  // No buying cards once a hazard has hit this round.
-  if (from === "hazard" && to === "adaptation") return hazardCountThisRound === 0;
-  return false;
+export function canChangeStage(from, to) {
+  if (from === "hazard") return to === "adaptation" || to === "review";
+  return (from === "adaptation" || from === "review") && to === "hazard";
 }
 
 export function assertCanPlayCard(stage) {
@@ -26,6 +22,6 @@ export function assertCanPlayCard(stage) {
 }
 
 export function assertCanApplyHazard(stage, hazardCountThisRound) {
-  if (stage !== "hazard") throw new GameRuleError("wrong-stage");
+  if (!STAGES.includes(stage)) throw new GameRuleError("wrong-stage");
   if (hazardCountThisRound >= MAX_HAZARDS_PER_ROUND) throw new GameRuleError("hazard-limit");
 }

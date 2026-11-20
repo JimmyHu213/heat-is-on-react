@@ -15,7 +15,7 @@ import { hazards } from "../constants/hazards.js";
 import { defaultTowns } from "../constants/towns.js";
 import { TOWN_LABEL_COLORS } from "../constants/townLabelColors.js";
 import { db } from "../firebase/config.js";
-import { applyCardEffects, cardEffectiveRounds, playCard, revertCardEffects } from "../game/cards.js";
+import { applyCardEffects, cardEffectiveRounds, paidCardCost, playCard, revertCardEffects } from "../game/cards.js";
 import { GameRuleError } from "../game/errors.js";
 import { applyHazard, buildHazardImpact } from "../game/hazards.js";
 import {
@@ -442,7 +442,7 @@ class GameSessionService {
         : 0;
 
       const currentStage = getStage(session, hazardCount);
-      if (!canChangeStage(currentStage, targetStage, hazardCount)) {
+      if (!canChangeStage(currentStage, targetStage)) {
         throw new GameRuleError(
           "invalid-stage-transition",
           `Cannot move from ${currentStage} to ${targetStage}`
@@ -558,6 +558,7 @@ class GameSessionService {
       const cardPlayDoc = {
         sessionId: session.id,
         cardId: play.cardId,
+        costPaid: card.cost,
         townId: play.townId,
         playedAtRound: play.playedAtRound,
         effectiveRounds: play.effectiveRounds,
@@ -1264,7 +1265,7 @@ class GameSessionService {
       const nextRev = assertRevision(session, expectedRevision);
       const effectiveRounds = play.effectiveRounds ?? cardEffectiveRounds(play.playedAtRound, card.duration);
       const appliedCount = effectiveRounds.filter((r) => r <= session.currentRound).length;
-      const revertedTown = revertCardEffects(town, card, appliedCount);
+      const revertedTown = revertCardEffects(town, card, appliedCount, paidCardCost(play));
 
       tx.update(townRef, {
         effortPoints: revertedTown.effortPoints,

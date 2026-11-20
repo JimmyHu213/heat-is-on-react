@@ -1,5 +1,5 @@
 // src/components/Game/components/HazardControls.jsx
-import React, { useState } from "react";
+import React from "react";
 import {
   Box,
   Typography,
@@ -33,25 +33,21 @@ const HazardControls = ({
   onApplyHazard,
   disabled,
   currentRound,
-  currentStage = "hazard",
+  onMystery,
   digitalWheelEnabled = true,
   hazardCountThisRound = 0,
 }) => {
-  const [mysteryBanner, setMysteryBanner] = useState(false);
-
-  const isHazardStage = currentStage === "hazard";
   const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
-  const controlsDisabled = disabled || !isHazardStage || limitReached;
+  const controlsDisabled = disabled || limitReached;
 
   const getHazardColor = (hazardId) => HAZARD_COLORS[hazardId] || "grey.500";
 
   const handleHazardSelect = (hazard) => {
     if (!hazard) return;
     if (hazard.isMystery || hazard.id === "mystery") {
-      setMysteryBanner(true);
+      onMystery();
       return;
     }
-    setMysteryBanner(false);
     onApplyHazard(hazard.id);
   };
 
@@ -76,25 +72,10 @@ const HazardControls = ({
         />
       </Box>
 
-      {mysteryBanner && (
-        <Alert
-          severity="info"
-          onClose={() => setMysteryBanner(false)}
-          sx={{ mb: 1.5 }}
-        >
-          Mystery event (<strong>?</strong>) — no automatic hazard applied.
-          Facilitator may discuss or choose a hazard manually.
-        </Alert>
-      )}
-
-      {!isHazardStage ? (
-        <Alert severity="info" sx={{ mb: 1.5 }}>
-          Hazards can only be applied during the <strong>Event</strong> stage.
-        </Alert>
-      ) : limitReached ? (
+      {limitReached ? (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
           Maximum of {MAX_HAZARDS_PER_ROUND} hazards reached for Year{" "}
-          {2050 + currentRound}. Proceed to Review.
+          {2050 + currentRound}.
         </Alert>
       ) : (
         <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -160,6 +141,11 @@ const HazardControls = ({
             </Tooltip>
           );
         })}
+        {digitalWheelEnabled === false && (
+          <Button size="small" variant="outlined" disabled={controlsDisabled} onClick={onMystery}>
+            Mystery (?)
+          </Button>
+        )}
       </Box>
 
       <Typography

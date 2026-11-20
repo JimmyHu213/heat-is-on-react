@@ -51,13 +51,11 @@ export function buildGameSummary({ session, towns, events, roundStats, cardPlays
     effortPoints: town.effortPoints,
   }));
 
-  const eventsTimeline = [...playedEvents]
-    .sort((a, b) => a.roundNumber - b.roundNumber)
-    .map((event) => ({
-      round: event.roundNumber,
-      year: 2050 + event.roundNumber,
-      hazards: event.hazardIds ?? [],
-    }));
+  const eventsTimeline = Array.from({ length: roundsPlayed }, (_, index) => {
+    const round = index + 1;
+    const event = playedEvents.find((entry) => entry.roundNumber === round);
+    return { round, year: 2050 + round, hazards: event?.hazardIds ?? [] };
+  });
 
   return {
     name: session.name,

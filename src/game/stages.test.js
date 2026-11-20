@@ -11,15 +11,12 @@ test("getStage reports complete, setup, stored and inferred stages", () => {
 });
 
 test("canChangeStage allows only the legal transitions", () => {
-  assert.equal(canChangeStage("adaptation", "hazard", 0), true);
-  assert.equal(canChangeStage("hazard", "review", 1), true);
-  assert.equal(canChangeStage("review", "hazard", 4), true);
-  assert.equal(canChangeStage("hazard", "adaptation", 0), true);
-
-  assert.equal(canChangeStage("hazard", "review", 0), false);
-  assert.equal(canChangeStage("review", "hazard", 5), false);
-  assert.equal(canChangeStage("hazard", "adaptation", 1), false);
-  assert.equal(canChangeStage("adaptation", "review", 0), false);
+  assert.equal(canChangeStage("adaptation", "hazard"), true);
+  assert.equal(canChangeStage("hazard", "review", 0), true);
+  assert.equal(canChangeStage("review", "hazard", 5), true);
+  assert.equal(canChangeStage("hazard", "adaptation", 1), true);
+  assert.equal(canChangeStage("adaptation", "review"), false);
+  assert.equal(canChangeStage("complete", "review"), false);
 });
 
 test("cards can only be played in the adaptation stage", () => {
@@ -27,8 +24,12 @@ test("cards can only be played in the adaptation stage", () => {
   assert.throws(() => assertCanPlayCard("hazard"), { code: "wrong-stage" });
 });
 
-test("hazards can only be applied in the hazard stage, up to five per round", () => {
-  assert.doesNotThrow(() => assertCanApplyHazard("hazard", 4));
-  assert.throws(() => assertCanApplyHazard("review", 0), { code: "wrong-stage" });
-  assert.throws(() => assertCanApplyHazard("hazard", 5), { code: "hazard-limit" });
+test("events are available throughout a live round and share one five-hazard limit", () => {
+  for (const stage of ["adaptation", "hazard", "review"]) {
+    assert.doesNotThrow(() => assertCanApplyHazard(stage, 4));
+    assert.throws(() => assertCanApplyHazard(stage, 5), { code: "hazard-limit" });
+  }
+  for (const stage of ["setup", "complete"]) {
+    assert.throws(() => assertCanApplyHazard(stage, 0), { code: "wrong-stage" });
+  }
 });
