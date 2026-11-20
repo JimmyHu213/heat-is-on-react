@@ -1,5 +1,5 @@
 // src/components/Game/components/HazardControls.jsx
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -33,10 +33,11 @@ const HazardControls = ({
   onApplyHazard,
   disabled,
   currentRound,
-  onMystery,
+  onNext,
   digitalWheelEnabled = true,
   hazardCountThisRound = 0,
 }) => {
+  const [mysterySelected, setMysterySelected] = useState(false);
   const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
   const controlsDisabled = disabled || limitReached;
 
@@ -45,7 +46,7 @@ const HazardControls = ({
   const handleHazardSelect = (hazard) => {
     if (!hazard) return;
     if (hazard.isMystery || hazard.id === "mystery") {
-      onMystery();
+      setMysterySelected(true);
       return;
     }
     onApplyHazard(hazard.id);
@@ -70,6 +71,11 @@ const HazardControls = ({
           size="small"
           color={hazardCountThisRound > 0 ? "warning" : "default"}
         />
+        {mysterySelected && onNext && (
+          <Button variant="contained" size="small" disabled={disabled} onClick={onNext}>
+            Next
+          </Button>
+        )}
       </Box>
 
       {limitReached ? (
@@ -142,7 +148,9 @@ const HazardControls = ({
           );
         })}
         {digitalWheelEnabled === false && (
-          <Button size="small" variant="outlined" disabled={controlsDisabled} onClick={onMystery}>
+          <Button size="small" variant={mysterySelected ? "contained" : "outlined"}
+            aria-pressed={mysterySelected} disabled={controlsDisabled}
+            onClick={() => setMysterySelected(true)}>
             Mystery (?)
           </Button>
         )}

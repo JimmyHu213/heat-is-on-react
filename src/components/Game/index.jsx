@@ -249,6 +249,7 @@ const Game = () => {
   const handleChangeStage = async (targetStage) => {
     const updated = await changeStage(targetStage);
     if (updated) {
+      setOpenTool(null);
       const stageLabels = {
         adaptation: "Adapt",
         hazard: "Event",
@@ -849,7 +850,7 @@ const Game = () => {
           {openTool === "event" && (
             <HazardControls
               onApplyHazard={handleApplyHazard}
-              onMystery={() => setOpenTool(null)}
+              onNext={currentStage === "hazard" ? () => handleChangeStage("review") : undefined}
               disabled={busy}
               currentRound={currentRound}
               digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
