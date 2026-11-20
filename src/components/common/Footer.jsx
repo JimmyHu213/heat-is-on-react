@@ -12,15 +12,15 @@ import estLogo from "../../assets/images/est.png";
 import tasgov from "../../assets/images/tasgov.png";
 
 const logos = [
-  { src: MEDIA_CONFIG.inspiringTasmaniaLogo, alt: "Inspiring Tasmania", size: 60 },
-  { src: MEDIA_CONFIG.utasLogo, alt: "University of Tasmania", maxLogoWidth: 160 },
-  { src: cmsLogo, alt: "CMS", size: 50 },
-  { src: tasgov, alt: "Tasmanian Government", size: 60 },
-  { src: cohLogo, alt: "City of Hobart", size: 100 },
-  { src: estLogo, alt: "EST", size: 60 },
+  { src: MEDIA_CONFIG.inspiringTasmaniaLogo, alt: "Inspiring Tasmania", artHeight: 0.59 },
+  { src: MEDIA_CONFIG.utasLogo, alt: "University of Tasmania" },
+  { src: cmsLogo, alt: "CMS" },
+  { src: tasgov, alt: "Tasmanian Government" },
+  { src: cohLogo, alt: "City of Hobart", artHeight: 0.53 },
+  { src: estLogo, alt: "EST", artHeight: 0.85 },
 ];
 
-const LogoItem = ({ src, alt, size, maxLogoWidth }) => {
+const LogoItem = ({ src, alt, artHeight = 1 }) => {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
@@ -41,9 +41,9 @@ const LogoItem = ({ src, alt, size, maxLogoWidth }) => {
       decoding="async"
       onError={() => setFailed(true)}
       sx={{
-        ...(maxLogoWidth
-          ? { height: "auto", maxWidth: `min(100%, ${maxLogoWidth}px)` }
-          : { height: { xs: 40, sm: 50, md: size }, maxWidth: "100%" }),
+        // Compensate for whitespace embedded in the logo artwork.
+        height: `calc(var(--partner-art-height) / ${artHeight})`,
+        maxWidth: "100%",
         objectFit: "contain",
         filter: "grayscale(20%)",
         transition: "filter 0.3s, transform 0.3s",

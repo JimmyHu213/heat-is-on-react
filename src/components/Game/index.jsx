@@ -42,7 +42,7 @@ import CloseIcon from "@mui/icons-material/Close";
 // Components
 import TownPieCharts from "./components/TownPieCharts";
 import HazardIcon from "../common/HazardIcon";
-import workshopBanner from "../../assets/images/web-banner.png";
+import WorkshopBanner from "../common/WorkshopBanner";
 import GameTable from "./components/GameTable";
 import TownDetailsView from "./components/TownDetailsView";
 import HazardControls from "./components/HazardControls";
@@ -57,7 +57,6 @@ import { MEDIA_CONFIG } from "../../constants/mediaConfig";
 import { primaryColor } from "../../constants/palette";
 import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
-import { MAX_HAZARDS_PER_ROUND } from "../../game/stages.js";
 import { WHEEL_SLICES } from "../../game/wheel.js";
 
 const gameHeaderColor = "#E38A6C";
@@ -141,6 +140,7 @@ const Game = () => {
     addCardPlayAtRound,
     removeCardPlay,
     updatePlayerCount,
+    updateDigitalWheel,
     clearError,
     updateTown,
     revertToPreviousState,
@@ -216,7 +216,6 @@ const Game = () => {
 
   const totalRounds = currentSession ? getTotalRounds(currentSession) : 5;
   const hazardCountThisRound = (roundEvents[currentRound] || []).length;
-  const eventLimitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
   const busy = loading || Boolean(presentation);
   const announcedHazard = hazards.find((hazard) => hazard.id === presentation?.hazardId);
 
@@ -442,20 +441,7 @@ const Game = () => {
         minHeight: isOpeningScreen ? undefined : "100vh",
       }}
     >
-      {isOpeningScreen && (
-        <Box component="header" sx={{ lineHeight: 0 }}>
-          <Box component="h1" sx={{ m: 0 }}>
-            <Box
-              component="img"
-              src={workshopBanner}
-              alt="THE HEAT IS ON"
-              width={1920}
-              height={300}
-              sx={{ display: "block", width: "100%", height: "auto" }}
-            />
-          </Box>
-        </Box>
-      )}
+      {isOpeningScreen && <WorkshopBanner />}
 
       {/* App Bar */}
       {!isOpeningScreen && (
@@ -586,7 +572,7 @@ const Game = () => {
 
             {currentSession?.isActive && currentRound > 0 && (
               <>
-                <Button color="inherit" size="small" disabled={busy || eventLimitReached}
+                <Button color="inherit" size="small" disabled={busy}
                   onClick={() => setOpenTool("event")}>
                   Event
                 </Button>
@@ -632,7 +618,7 @@ const Game = () => {
         }}
       >
 
-        {error && (
+        {error && openTool !== "event" && (
           <Alert severity="error" sx={{ mb: 2, gridColumn: "1 / -1" }} onClose={clearError}>
             {error}
           </Alert>
@@ -673,7 +659,6 @@ const Game = () => {
               session={currentSession}
               currentRound={currentRound}
               currentStage={currentStage}
-              eventLimitReached={eventLimitReached}
               loading={busy}
               onStartGame={handleStartGame}
               onChangeStage={handleChangeStage}
@@ -847,12 +832,14 @@ const Game = () => {
             sx={{ position: "absolute", top: 10, right: 10 }} aria-label="Close hazard wheel">
             <CloseIcon />
           </IconButton>
+          {error && <Alert severity="error" onClose={clearError} sx={{ mr: 4, mb: 1 }}>{error}</Alert>}
           {openTool === "event" && (
             <HazardControls
               onApplyHazard={handleApplyHazard}
               onNext={currentStage === "hazard" ? () => handleChangeStage("review") : undefined}
               disabled={busy}
               currentRound={currentRound}
+              onWheelEnabledChange={(enabled) => updateDigitalWheel(sessionId, enabled)}
               digitalWheelEnabled={currentSession?.digitalWheelEnabled ?? true}
               hazardCountThisRound={hazardCountThisRound}
             />

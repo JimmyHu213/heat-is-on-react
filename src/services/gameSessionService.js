@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   query,
+  updateDoc,
   runTransaction,
   serverTimestamp,
   where,
@@ -169,6 +170,13 @@ class GameSessionService {
       console.error(`Error updating session name for ${sessionId}:`, error);
       throw error;
     }
+  }
+
+  async updateDigitalWheel(sessionId, enabled) {
+    await updateDoc(doc(db, this.SESSIONS_COLLECTION, sessionId), {
+      digitalWheelEnabled: enabled,
+      updatedAt: serverTimestamp(),
+    });
   }
 
   /**

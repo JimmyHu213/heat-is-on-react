@@ -127,7 +127,7 @@ export default function NewGameDialog({ open, onClose, onCreate, loading }) {
               label="Use on-screen hazard wheel"
             />
             <Typography variant="caption" color="text.secondary" display="block">
-              Turn off if your room uses a physical spinning wheel and you want to select the landed hazard directly. Fixed once the game starts.
+              Turn off if your room uses a physical spinning wheel and you want to select the landed hazard directly. You can change this in the game’s Event dialog.
             </Typography>
           </Box>
         </DialogContent>

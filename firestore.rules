@@ -152,9 +152,8 @@ service cloud.firestore {
         && (resource.data.currentRound == 0
             || !('totalRounds' in resource.data)
             || request.resource.data.totalRounds == resource.data.totalRounds)
-        && (resource.data.currentRound == 0
-            || !('digitalWheelEnabled' in resource.data)
-            || request.resource.data.digitalWheelEnabled == resource.data.digitalWheelEnabled)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['digitalWheelEnabled'])
+            || (resource.data.isActive && request.resource.data.digitalWheelEnabled is bool))
         && (!('revision' in request.resource.data)
             || !('revision' in resource.data)
             || request.resource.data.revision == resource.data.revision

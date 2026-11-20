@@ -20,9 +20,8 @@ const HAZARD_COLORS = {
   biohazard: biohazardColor1,
 };
 
-export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
+export default function HazardWheel({ hazards, disabled, isSpinning, onSpinningChange, onSelectHazard }) {
   const [rotation, setRotation] = useState(0);
-  const [isSpinning, setIsSpinning] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -44,17 +43,18 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
     const currentBaseTurns = Math.floor(rotation / 360) * 360;
     const nextRotation = currentBaseTurns + 360 + result.rotationDegrees;
 
-    setIsSpinning(true);
+    onSpinningChange(true);
     setRotation(nextRotation);
 
     timerRef.current = setTimeout(() => {
-      setIsSpinning(false);
+      onSpinningChange(false);
       if (onSelectHazard && chosenHazard) {
         onSelectHazard(chosenHazard);
       }
     }, 4500);
   };
 
+  const spinTransition = isSpinning ? "transform 4.4s cubic-bezier(0.12, 0.88, 0.22, 1)" : "none";
   const count = hazards.length || 6;
   const sliceAngle = 360 / count;
   const cx = 170;
@@ -100,9 +100,7 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
           viewBox="0 0 340 340"
           style={{
             transform: `rotate(${rotation}deg)`,
-            transition: isSpinning
-              ? "transform 4.4s cubic-bezier(0.12, 0.88, 0.22, 1)"
-              : "none",
+            transition: spinTransition,
           }}
         >
           {hazards.map((hazard, index) => {
@@ -139,27 +137,17 @@ export default function HazardWheel({ hazards, disabled, onSelectHazard }) {
                   stroke="#ffffff"
                   strokeWidth="2"
                 />
-                <foreignObject
-                  x={lx - 26}
-                  y={ly - 32}
-                  width={52}
-                  height={52}
-                  transform={`rotate(${midDeg}, ${lx}, ${ly})`}
-                >
-                  <HazardIcon hazardId={hazard.id} size={52} />
-                </foreignObject>
-                <text
-                  x={lx}
-                  y={ly + 33}
-                  fill="#ffffff"
-                  fontSize="13"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={`rotate(${midDeg}, ${lx}, ${ly})`}
-                >
-                  {hazard.isMystery ? "Mystery" : hazard.name}
-                </text>
+                <g transform={`translate(${lx} ${ly})`}>
+                  <g style={{ transform: `rotate(${-rotation}deg)`, transition: spinTransition }}>
+                    <text y="-20" fill="#172329" stroke="white" strokeWidth="2.5"
+                      paintOrder="stroke" fontSize="13" fontWeight="bold" textAnchor="middle">
+                      {hazard.isMystery ? "Mystery" : hazard.name}
+                    </text>
+                    <foreignObject x="-19" y="-12" width="38" height="38">
+                      <HazardIcon hazardId={hazard.id} size={38} />
+                    </foreignObject>
+                  </g>
+                </g>
               </g>
             );
           })}
