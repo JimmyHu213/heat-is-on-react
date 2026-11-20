@@ -151,7 +151,7 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
             minHeight: 0,
           }}
         >
-          <svg width="100%" height="100%" viewBox="14 24 252 244" style={{ position: "absolute", inset: 0 }}>
+          <svg width="100%" height="100%" viewBox="-12 5 304 290" style={{ position: "absolute", inset: 0 }}>
             {hazards.map((hazard) => {
               return aspects.map((aspect, aspectIndex) => {
                 const value = town[hazard.id]?.[aspect];
@@ -262,28 +262,19 @@ const TownPieChart = ({ town, flipped = false, onToggleFlip }) => {
               strokeDasharray="5,2"
             />
 
-            <g>
-              <foreignObject x={208} y={30} width={30} height={30}>
-                <HazardIcon hazardId="bushfire" color={bushfireColor1} size={24} />
-              </foreignObject>
-              <foreignObject x={238} y={centerY + 12} width={30} height={30}>
-                <HazardIcon hazardId="flood" color={floodColor1} size={24} />
-              </foreignObject>
-              <foreignObject
-                x={centerX - 15}
-                y={centerY + 100}
-                width={30}
-                height={30}
-              >
-                <HazardIcon hazardId="stormSurge" color={stormSurgeColor1} size={24} />
-              </foreignObject>
-              <foreignObject x={18} y={centerY + 12} width={30} height={30}>
-                <HazardIcon hazardId="heatwave" color={heatwaveColor1} size={24} />
-              </foreignObject>
-              <foreignObject x={48} y={30} width={30} height={30}>
-                <HazardIcon hazardId="biohazard" color={biohazardColor1} size={24} />
-              </foreignObject>
-            </g>
+            {hazards.map((hazard) => {
+              // Reserve an outer ring for icons, beyond the full score and its label.
+              const angle = ((hazard.startAngle + 36 - 90) * Math.PI) / 180;
+              const iconRadius = innerRadius + MAX_SCORE + 32;
+              return (
+                <foreignObject key={hazard.id}
+                  x={centerX + iconRadius * Math.cos(angle) - 12}
+                  y={centerY + iconRadius * Math.sin(angle) - 12}
+                  width={24} height={24}>
+                  <HazardIcon hazardId={hazard.id} color={hazard.color} size={24} />
+                </foreignObject>
+              );
+            })}
           </svg>
         </Box>
       ) : (

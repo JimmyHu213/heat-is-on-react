@@ -6,7 +6,8 @@ import {
   Button,
   Tooltip,
   Alert,
-  Chip,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { hazards } from "../../../constants/hazards";
 import {
@@ -35,8 +36,10 @@ const HazardControls = ({
   currentRound,
   onNext,
   digitalWheelEnabled = true,
+  onWheelEnabledChange,
   hazardCountThisRound = 0,
 }) => {
+  const [isSpinning, setIsSpinning] = useState(false);
   const [mysterySelected, setMysterySelected] = useState(false);
   const limitReached = hazardCountThisRound >= MAX_HAZARDS_PER_ROUND;
   const controlsDisabled = disabled || limitReached;
@@ -66,17 +69,18 @@ const HazardControls = ({
         <Typography variant="subtitle1" fontWeight="bold">
           Event: Climate Hazard
         </Typography>
-        <Chip
-          label={`${hazardCountThisRound} / ${MAX_HAZARDS_PER_ROUND} this year`}
-          size="small"
-          color={hazardCountThisRound > 0 ? "warning" : "default"}
-        />
         {mysterySelected && onNext && (
-          <Button variant="contained" size="small" disabled={disabled} onClick={onNext}>
+          <Button variant="contained" size="small" disabled={disabled || isSpinning} onClick={onNext}>
             Next
           </Button>
         )}
       </Box>
+
+      <FormControlLabel
+        label="Use on-screen hazard wheel"
+        control={<Switch checked={digitalWheelEnabled} disabled={disabled || isSpinning}
+          onChange={(event) => onWheelEnabledChange(event.target.checked)} />}
+      />
 
       {limitReached ? (
         <Alert severity="warning" sx={{ mb: 1.5 }}>
@@ -95,6 +99,8 @@ const HazardControls = ({
         <HazardWheel
           hazards={WHEEL_SLICES}
           disabled={controlsDisabled}
+          isSpinning={isSpinning}
+          onSpinningChange={setIsSpinning}
           onSelectHazard={handleHazardSelect}
         />
       )}
@@ -121,7 +127,7 @@ const HazardControls = ({
                   variant="outlined"
                   fullWidth
                   size="small"
-                  disabled={controlsDisabled}
+                  disabled={controlsDisabled || isSpinning}
                   startIcon={
                     <HazardIcon
                       hazardId={hazard.id}

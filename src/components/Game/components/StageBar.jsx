@@ -30,7 +30,6 @@ export default function StageBar({
   session,
   currentRound,
   currentStage,
-  eventLimitReached,
   loading = false,
   onStartGame,
   onChangeStage,
@@ -159,7 +158,7 @@ export default function StageBar({
                       <>
                         <Button size="small" variant="contained"
                           onClick={key === "adaptation" ? onOpenCards : onOpenEvent}
-                          disabled={loading || (key === "hazard" && eventLimitReached)}>
+                          disabled={loading}>
                           {key === "adaptation" ? "Now – Play Cards" : "Now – Event"}
                         </Button>
                         <Button size="small" variant="outlined" endIcon={<ArrowForwardIcon />}

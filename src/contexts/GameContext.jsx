@@ -149,6 +149,21 @@ export function GameProvider({ children }) {
     }
   };
 
+  const updateDigitalWheel = async (sessionId, enabled) => {
+    setLoading(true);
+    try {
+      await gameSessionService.updateDigitalWheel(sessionId, enabled);
+      setCurrentSession((session) => session?.id === sessionId
+        ? { ...session, digitalWheelEnabled: enabled }
+        : session);
+      setError(null);
+    } catch (err) {
+      setError(formatMoveError(err, "Could not save the wheel setting. Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updatePlayerCount = async (sessionId, playerCount) => {
     setLoading(true);
     try {
@@ -735,6 +750,7 @@ export function GameProvider({ children }) {
     createNewSession,
     updateSessionName,
     updatePlayerCount,
+    updateDigitalWheel,
     loadSession,
     deleteSession,
     startGame,

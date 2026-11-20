@@ -1,6 +1,6 @@
 import { GameRuleError } from "./errors.js";
 
-export const DEFAULT_ROUNDS = 5;
+export const DEFAULT_ROUNDS = 3;
 export const MAX_ROUNDS = 20;
 export const MAX_PLAYERS = 200;
 export const MAX_MANUAL_BUDGET = 999;
@@ -21,7 +21,7 @@ export function validateGameOptions({
 
 // Games created before configurable length have no totalRounds and are 5 rounds.
 export function getTotalRounds(session) {
-  return session.totalRounds ?? DEFAULT_ROUNDS;
+  return session.totalRounds ?? 5;
 }
 
 export function getPlayerCount(session) {

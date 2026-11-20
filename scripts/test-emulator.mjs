@@ -77,7 +77,7 @@ test("expired historical card can be saved atomically and undone under Firestore
 
 test("historical multi-year card applies elapsed effects and schedules only future effects", async () => {
   const user = await signInFreshUser("history-multiyear");
-  const created = await gameSessionService.createSession(user.uid, "Catch up effects");
+  const created = await gameSessionService.createSession(user.uid, "Catch up effects", { totalRounds: 4 });
   await gameSessionService.startGame(created.id);
   await gameSessionService.settleRound(created.id, { allowAnyStage: true });
   const current = await gameSessionService.settleRound(created.id, { allowAnyStage: true });
@@ -115,6 +115,23 @@ test("removing a naturally played multi-year card reverses every elapsed year's 
   assert.equal(result.town.bushfire.nature, 40);
   assert.equal(result.town.effortPoints, 100);
   assert.equal((await gameSessionService.getTownCardPlayDocs(townId)).length, 0);
+});
+
+test("the owner can switch wheel modes during an active game and resume in that mode", async () => {
+  const user = await signInFreshUser("wheel-mode");
+  const { id } = await gameSessionService.createSession(user.uid, "Wheel modes");
+  const started = await gameSessionService.startGame(id);
+  const ref = doc(db, "game_sessions", id);
+  for (const enabled of [false, true]) {
+    await gameSessionService.updateDigitalWheel(id, enabled);
+    const saved = (await getDoc(ref)).data();
+    assert.equal(saved.digitalWheelEnabled, enabled);
+    assert.equal(saved.revision, started.revision);
+  }
+  await assert.rejects(() => updateDoc(ref, { digitalWheelEnabled: "off" }), { code: "permission-denied" });
+  await assert.rejects(() => updateDoc(ref, { totalRounds: 12 }), { code: "permission-denied" });
+  await signInFreshUser("wheel-other-owner");
+  await assert.rejects(() => gameSessionService.updateDigitalWheel(id, false), { code: "permission-denied" });
 });
 
 test("skips an event and applies extra hazards without moving the facilitator", async () => {

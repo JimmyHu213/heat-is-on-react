@@ -6,7 +6,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useGame } from "../../contexts/GameContext";
 import { useNavigate } from "react-router-dom";
 import {
-  AppBar,
   Avatar,
   Stack,
   Box,
@@ -35,7 +34,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
-import backgroundImage from "../../assets/images/web-banner.png";
+import WorkshopBanner from "../common/WorkshopBanner";
 
 import exportService from "../../services/exportService";
 import Menu from "@mui/material/Menu";
@@ -345,16 +344,7 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-      <AppBar
-        position="relative"
-        sx={{
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          height: "300px",
-          display: "flex",
-        }}
-      ></AppBar>
+      <WorkshopBanner />
 
       <Box component="main" sx={{ flexGrow: 1, bgcolor: "#f6f8f5", color: "#172e2c" }}>
         <Container maxWidth="lg" sx={{ py: { xs: 3, md: 5 } }}>
@@ -366,7 +356,7 @@ export default function Dashboard() {
             <Paper component="section" aria-labelledby="dashboard-games" variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
               <Stack direction="row" gap={2} flexWrap="wrap" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
                 <Box>
-                  <Typography id="dashboard-games" component="h1" variant="h4" fontWeight={700}>Your games</Typography>
+                  <Typography id="dashboard-games" component="h2" variant="h4" fontWeight={700}>Your games</Typography>
                   <Typography variant="body2" color="text.secondary">{activeSessions.length} of 3 active games</Typography>
                 </Box>
                 <Button variant="contained" startIcon={<AddIcon />} sx={{ bgcolor: "#245956" }}

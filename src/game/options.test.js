@@ -4,7 +4,7 @@ import { validateGameOptions, getTotalRounds, getPlayerCount, validateBudget } f
 
 test("validateGameOptions applies defaults", () => {
   assert.deepEqual(validateGameOptions(), {
-    totalRounds: 5,
+    totalRounds: 3,
     digitalWheelEnabled: true,
     playerCount: null,
   });
