@@ -16,9 +16,11 @@ import {
   economyColor,
   societyColor,
   healthColor,
-  primaryColorLight,
 } from "../../../constants/palette";
 import { neshAverages, overallResilience } from "../../../game/scores.js";
+
+const chartBackground = "#FAFAF8";
+const chartText = "#263443";
 
 const BarChartsView = ({ towns }) => {
   if (!towns || towns.length === 0) {
@@ -83,7 +85,7 @@ const BarChartsView = ({ towns }) => {
 
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 1, boxShadow: 2, bgcolor: primaryColorLight }}>
+        <Paper sx={{ p: 1, boxShadow: 2, bgcolor: chartBackground, color: chartText }}>
           <Typography variant="subtitle2" fontWeight="bold">
             {label}
           </Typography>
@@ -93,7 +95,7 @@ const BarChartsView = ({ towns }) => {
               <Typography
                 key={index}
                 variant="body2"
-                sx={{ color: "#fff", fontWeight: "bold" }}
+                sx={{ color: chartText, fontWeight: "bold" }}
               >
                 {entry.name}: {entry.value}%
               </Typography>
@@ -113,12 +115,11 @@ const BarChartsView = ({ towns }) => {
       <text
         x={x + width / 2}
         y={y - 10}
-        fill="#fff"
+        fill={chartText}
         textAnchor="middle"
         dominantBaseline="middle"
         fontWeight="bold"
         fontSize="12"
-        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.5)" }}
       >
         {value}%
       </text>
@@ -133,12 +134,11 @@ const BarChartsView = ({ towns }) => {
       <text
         x={x + width / 2}
         y={y - 10}
-        fill="#fff"
+        fill={chartText}
         textAnchor="middle"
         dominantBaseline="middle"
         fontWeight="bold"
         fontSize="13"
-        style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}
       >
         {total}%
       </text>
@@ -168,14 +168,14 @@ const BarChartsView = ({ towns }) => {
             boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
-            bgcolor: "#2c4260",
+            bgcolor: chartBackground,
           }}
         >
           <Typography
             variant="h6"
             align="center"
             fontWeight="bold"
-            sx={{ color: "#fff", fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
+            sx={{ color: chartText, fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
           >
             NESH Resilience Summary
           </Typography>
@@ -190,13 +190,13 @@ const BarChartsView = ({ towns }) => {
                 <XAxis
                   dataKey="name"
                   height={22}
-                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  tick={{ fontSize: 12, fill: chartText, fontWeight: "bold" }}
                 />
                 <YAxis
                   width={44}
                   domain={[0, 100]}
                   unit="%"
-                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  tick={{ fontSize: 12, fill: chartText, fontWeight: "bold" }}
                   tickCount={6}
                 />
                 <Tooltip content={renderTooltip} />
@@ -254,14 +254,14 @@ const BarChartsView = ({ towns }) => {
             boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
-            bgcolor: "#2c4260",
+            bgcolor: chartBackground,
           }}
         >
           <Typography
             variant="h6"
             align="center"
             fontWeight="bold"
-            sx={{ color: "#fff", fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
+            sx={{ color: chartText, fontSize: { xs: "1.125rem", lg: "1rem" }, lineHeight: 1.3 }}
           >
             Towns Resilience Summary
           </Typography>
@@ -279,20 +279,20 @@ const BarChartsView = ({ towns }) => {
                   angle={-25}
                   textAnchor="end"
                   height={34}
-                  tick={{ fontSize: 10, fill: "#fff", fontWeight: "bold" }}
+                  tick={{ fontSize: 10, fill: chartText, fontWeight: "bold" }}
                 />
                 <YAxis
                   width={44}
                   domain={[0, 100]}
                   unit="%"
-                  tick={{ fontSize: 12, fill: "#fff", fontWeight: "bold" }}
+                  tick={{ fontSize: 12, fill: chartText, fontWeight: "bold" }}
                   tickCount={6}
                 />
                 <Tooltip content={renderTooltip} />
                 <Legend
                   iconSize={9}
                   wrapperStyle={{ fontSize: 10, lineHeight: 1.25 }}
-                  formatter={(label) => <span style={{ color: "#fff" }}>{label}</span>}
+                  formatter={(label) => <span style={{ color: chartText }}>{label}</span>}
                 />
                 <Bar
                   dataKey="nature"
