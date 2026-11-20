@@ -68,7 +68,7 @@ export default function GameSummaryDialog({
           }}
         >
           <Typography variant="h6" fontWeight="bold">
-            Game Reflection: {summary.name}
+            Game Debrief: {summary.name}
           </Typography>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
             <Chip
