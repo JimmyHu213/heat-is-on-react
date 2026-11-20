@@ -117,6 +117,31 @@ test("removing a naturally played multi-year card reverses every elapsed year's 
   assert.equal((await gameSessionService.getTownCardPlayDocs(townId)).length, 0);
 });
 
+test("skips an event and applies extra hazards without moving the facilitator", async () => {
+  const user = await signInFreshUser("round-flow");
+  const { id } = await gameSessionService.createSession(user.uid, "Round flow", { totalRounds: 2 });
+  const started = await gameSessionService.startGame(id);
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "review");
+  const second = await gameSessionService.settleRound(id, { expectedRound: 1 });
+  assert.equal(second.currentRound, 2);
+  assert.deepEqual(second.towns[0].flood, started.towns[0].flood);
+  assert.equal((await getDoc(doc(db, "round_events", id + "_1"))).exists(), false);
+  const flood = await gameSessionService.applyHazardToSession(id, "flood", 2);
+  assert.equal(flood.session.stage, "adaptation");
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "adaptation");
+  await gameSessionService.applyCardToTown(id + "_town_1", "bushfire1", 2);
+  await gameSessionService.changeStage(id, "hazard");
+  await gameSessionService.changeStage(id, "review");
+  const fire = await gameSessionService.applyHazardToSession(id, "bushfire", 2);
+  assert.equal((await gameSessionService.getSession(id)).stage, "review");
+  assert.deepEqual(fire.roundEvent.hazardIds, ["flood", "bushfire"]);
+  const final = await gameSessionService.settleRound(id, { expectedRound: 2 });
+  assert.equal(final.stage, "complete");
+  await assert.rejects(gameSessionService.settleRound(id, { expectedRound: 2 }), { code: "game-complete" });
+});
+
 test("plays a full 2-round facilitated game with persisted undo, stage rules and revisions", async () => {
   const userA = await signInFreshUser("facilitator-a");
 
@@ -207,12 +232,6 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
     code: "nothing-to-undo",
   });
 
-  // Reject applying a hazard while still in adaptation
-  await assert.rejects(
-    () => gameSessionService.applyHazardToSession(sessionId, "bushfire", 1),
-    { name: "GameRuleError", code: "wrong-stage" }
-  );
-
   // Move adaptation -> hazard, then step back hazard -> adaptation (allowed when 0 hazards applied), then back to hazard
   const toHazard1 = await gameSessionService.changeStage(sessionId, "hazard", {
     expectedRevision: 4,
@@ -247,12 +266,6 @@ test("plays a full 2-round facilitated game with persisted undo, stage rules and
   assert.deepEqual(hazardResult.towns.find((town) => town.id === town1Id).bushfire, {
     nature: 30, economy: 40, society: 30, health: 30,
   });
-
-  // Cannot step back hazard -> adaptation once a hazard is applied
-  await assert.rejects(
-    () => gameSessionService.changeStage(sessionId, "adaptation"),
-    { name: "GameRuleError", code: "invalid-stage-transition" }
-  );
 
   // Undo the hazard -> restores pre-hazard scores and clears hazardIds to [], allowing hazard -> adaptation again
   const undoneHazard = await gameSessionService.undoLastMove(sessionId, {

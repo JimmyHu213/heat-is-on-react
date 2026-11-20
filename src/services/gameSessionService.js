@@ -442,7 +442,7 @@ class GameSessionService {
         : 0;
 
       const currentStage = getStage(session, hazardCount);
-      if (!canChangeStage(currentStage, targetStage, hazardCount)) {
+      if (!canChangeStage(currentStage, targetStage)) {
         throw new GameRuleError(
           "invalid-stage-transition",
           `Cannot move from ${currentStage} to ${targetStage}`

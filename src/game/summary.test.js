@@ -116,3 +116,14 @@ test("summary reports totalCardsPlayed, mostPopularCards (with ties), and events
     { round: 2, year: 2052, hazards: ["bushfire", "heatwave"] },
   ]);
 });
+
+test("summary includes a settled year with no hazard in the events timeline", () => {
+  const result = buildGameSummary({
+    session, towns, roundStats: [],
+    events: [{ roundNumber: 2, hazardIds: ["flood"], impactPoints: { a: 20 } }],
+  });
+  assert.deepEqual(result.eventsTimeline, [
+    { round: 1, year: 2051, hazards: [] },
+    { round: 2, year: 2052, hazards: ["flood"] },
+  ]);
+});
