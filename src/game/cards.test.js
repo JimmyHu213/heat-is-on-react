@@ -44,7 +44,7 @@ test("playCard deducts the cost, applies effects and records the play", () => {
   const town = makeTown();
   const before = structuredClone(town);
   const { town: updated, play } = playCard(town, bushfire3, 2);
-  assert.equal(updated.effortPoints, 85);
+  assert.equal(updated.effortPoints, 70);
   assert.deepEqual(updated.bushfire, { nature: 50, economy: 60, society: 60, health: 60 });
   assert.deepEqual(play, {
     cardId: "bushfire3",
@@ -62,7 +62,7 @@ test("the comparison town cannot play cards", () => {
 });
 
 test("a town without enough effort points cannot play a card", () => {
-  assert.throws(() => playCard(makeTown({ effortPoints: 10 }), bushfire1, 1), {
+  assert.throws(() => playCard(makeTown({ effortPoints: 9 }), bushfire1, 1), {
     code: "insufficient-effort-points",
   });
 });
@@ -92,14 +92,14 @@ test("historical multi-year play applies each elapsed year's boost but charges o
   const town = makeTown();
   const { town: updated, play } = playCard(town, bushfire3, 1, 3);
   assert.deepEqual(updated.bushfire, { nature: 70, economy: 100, society: 100, health: 100 });
-  assert.equal(updated.effortPoints, 85);
+  assert.equal(updated.effortPoints, 70);
   assert.deepEqual(play.effectiveRounds, [1, 2, 3]);
   assert.equal(town.bushfire.nature, 40);
 });
 
 test("removing a multi-year play subtracts all elapsed boosts but refunds once", () => {
   const town = makeTown({
-    effortPoints: 85,
+    effortPoints: 70,
     bushfire: { nature: 70, economy: 100, society: 100, health: 100 },
   });
   const updated = revertCardEffects(town, bushfire3, 3);

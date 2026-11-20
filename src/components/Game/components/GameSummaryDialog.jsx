@@ -228,7 +228,7 @@ export default function GameSummaryDialog({
                 Health
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                Hazard impact
+                Hazard impact (total segment points)
               </TableCell>
               <TableCell align="right" sx={{ fontWeight: "bold" }}>
                 Reward for effort

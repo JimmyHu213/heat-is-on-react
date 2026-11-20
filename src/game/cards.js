@@ -1,6 +1,11 @@
 import { GameRuleError } from "./errors.js";
 import { ASPECTS, HAZARD_IDS, clampScore } from "./scores.js";
 
+// Plays saved by the flat-price dashboard have no recorded cost.
+export function paidCardCost(play) {
+  return play.costPaid ?? 15;
+}
+
 // Hazard-type cards boost all four aspects of one hazard type; aspect cards
 // (type "nature", "economy", ...) boost one aspect across every hazard type.
 export function applyCardEffects(town, card, times = 1) {
@@ -20,10 +25,10 @@ export function applyCardEffects(town, card, times = 1) {
   return updated;
 }
 
-export function revertCardEffects(town, card, times = 1) {
+export function revertCardEffects(town, card, times = 1, refund = card.cost ?? 0) {
   const updated = {
     ...town,
-    effortPoints: Math.min(9999, Math.max(0, (town.effortPoints ?? 0) + (card.cost ?? 0))),
+    effortPoints: Math.min(9999, Math.max(0, (town.effortPoints ?? 0) + refund)),
   };
   if (HAZARD_IDS.includes(card.type)) {
     updated[card.type] = Object.fromEntries(

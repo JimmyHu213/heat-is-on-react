@@ -1,6 +1,7 @@
 // src/services/exportService.js
 import { allCards } from "../constants/cards.js";
 import { hazards } from "../constants/hazards.js";
+import { paidCardCost } from "../game/cards.js";
 import { getPlayerCount, getTotalRounds } from "../game/options.js";
 import { getStage } from "../game/stages.js";
 import firestoreService from "./firestoreService.js";
@@ -85,7 +86,6 @@ export function normalizeSessionForExport(
  */
 class ExportService {
   ROUND_EVENTS_COLLECTION = "round_events";
-  CARD_PLAYS_COLLECTION = "card_plays";
 
   /**
    * Get complete session data package
@@ -119,7 +119,7 @@ class ExportService {
       const townStatusByRound = [];
 
       for (const town of towns) {
-        const rawCardPlays = await this.getRawCardPlays(town.id);
+        const rawCardPlays = await this.getRawCardPlays(town.id, sessionId);
         const processedCardPlays = this.processCardPlays(rawCardPlays, town);
         cardPlays[town.id] = processedCardPlays.cardsByRound;
         cardPlaysArray.push(...processedCardPlays.cardPlaysArray);
@@ -207,11 +207,9 @@ class ExportService {
   /**
    * Get raw card plays directly from Firestore
    */
-  async getRawCardPlays(townId) {
+  async getRawCardPlays(townId, sessionId) {
     try {
-      return await firestoreService.getDocuments(this.CARD_PLAYS_COLLECTION, [
-        ["townId", "==", townId],
-      ]);
+      return await gameSessionService.getTownCardPlayDocs(townId, sessionId);
     } catch (error) {
       console.error(`Error getting raw card plays for ${townId}:`, error);
       return [];
@@ -260,7 +258,7 @@ class ExportService {
             round,
             playedAt: play.playedAt,
             duration,
-            cost: card.cost || 0,
+            cost: round === playedAtRound ? paidCardCost(play) : 0,
             nature: card.nature || 0,
             economy: card.economy || 0,
             society: card.society || 0,
