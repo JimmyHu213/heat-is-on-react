@@ -26,6 +26,27 @@ test("most resilient lists every tie and never the comparison town", () => {
   assert.equal(summary.towns.find((t) => t.id === "cmp").isComparisonTown, true);
 });
 
+test("least resilient includes Bludgeton and every town tied at zero", () => {
+  const sixTowns = [
+    makeTown("a", 65), makeTown("b", 0), makeTown("c", 30),
+    makeTown("d", 15), makeTown("e", 70), makeTown("bludgeton", 0, { isComparisonTown: true }),
+  ];
+  const summary = buildGameSummary({ session, towns: sixTowns, events: [], roundStats: [] });
+  assert.deepEqual(summary.leastResilient, ["b", "bludgeton"]);
+  assert.equal(summary.towns.length, 6);
+});
+
+test("least resilient uses the unrounded final average when displayed percentages match", () => {
+  const player = makeTown("player", 60);
+  const comparison = makeTown("bludgeton", 60, {
+    isComparisonTown: true,
+    flood: { ...uniform(60), health: 61 },
+  });
+  const summary = buildGameSummary({ session, towns: [comparison, player], events: [], roundStats: [] });
+  assert.deepEqual(summary.towns.map((row) => row.resilience.toFixed(1)), ["60.0", "60.0"]);
+  assert.deepEqual(summary.leastResilient, ["player"]);
+});
+
 test("most impacted uses stored event losses and excludes the comparison town", () => {
   const events = [
     { roundNumber: 1, hazardIds: ["flood"], impactPoints: { a: 20, b: 10, cmp: 50 } },

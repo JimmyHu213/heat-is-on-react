@@ -17,6 +17,7 @@ import {
   TableCell,
   Chip,
 } from "@mui/material";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import StyleIcon from "@mui/icons-material/Style";
@@ -51,6 +52,7 @@ export default function GameSummaryDialog({
     summary.towns.find((t) => t.id === id)?.name || id;
 
   const mostResilientNames = summary.mostResilient.map(nameById);
+  const leastResilientNames = summary.leastResilient.map(nameById);
   const mostImpactedNames = summary.mostImpacted.map(nameById);
 
   return (
@@ -66,7 +68,7 @@ export default function GameSummaryDialog({
           }}
         >
           <Typography variant="h6" fontWeight="bold">
-            Workshop Reflection: {summary.name}
+            Game Reflection: {summary.name}
           </Typography>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
             <Chip
@@ -97,7 +99,7 @@ export default function GameSummaryDialog({
         {!session.isActive && <BarChartsView towns={towns} />}
         {/* Highlights */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={summary.hasCompleteImpacts ? 4 : 6}>
+          <Grid size={{ xs: 12, sm: 6, md: summary.hasCompleteImpacts ? 3 : 4 }}>
             <Paper
               variant="outlined"
               sx={{
@@ -124,8 +126,25 @@ export default function GameSummaryDialog({
             </Paper>
           </Grid>
 
+          <Grid size={{ xs: 12, sm: 6, md: summary.hasCompleteImpacts ? 3 : 4 }}>
+            <Paper variant="outlined" sx={{ p: 2, height: "100%" }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                <TrendingDownIcon color="action" />
+                <Typography variant="subtitle1" fontWeight="bold">
+                  Least Resilient Town{leastResilientNames.length > 1 ? "s" : ""}
+                </Typography>
+              </Box>
+              <Typography variant="h6" fontWeight="bold">
+                {leastResilientNames.join(", ")}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Lowest final average resilience across all towns
+              </Typography>
+            </Paper>
+          </Grid>
+
           {summary.hasCompleteImpacts && (
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Paper
                 variant="outlined"
                 sx={{
@@ -153,7 +172,7 @@ export default function GameSummaryDialog({
             </Grid>
           )}
 
-          <Grid item xs={12} md={summary.hasCompleteImpacts ? 4 : 6}>
+          <Grid size={{ xs: 12, sm: 6, md: summary.hasCompleteImpacts ? 3 : 4 }}>
             <Paper
               variant="outlined"
               sx={{
@@ -238,6 +257,7 @@ export default function GameSummaryDialog({
           <TableBody>
             {summary.towns.map((row) => {
               const isMostResilient = summary.mostResilient.includes(row.id);
+              const isLeastResilient = summary.leastResilient.includes(row.id);
               const isMostImpacted = summary.mostImpacted.includes(row.id);
 
               return (
@@ -260,6 +280,9 @@ export default function GameSummaryDialog({
                           color="success"
                           size="small"
                         />
+                      )}
+                      {isLeastResilient && (
+                        <Chip label="Least Resilient Town" size="small" variant="outlined" />
                       )}
                       {isMostImpacted && (
                         <Chip

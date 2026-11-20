@@ -51,6 +51,8 @@ export function buildGameSummary({ session, towns, events, roundStats, cardPlays
     effortPoints: town.effortPoints,
   }));
 
+  const lowestResilience = Math.min(...rows.map((row) => row.resilience));
+
   const eventsTimeline = Array.from({ length: roundsPlayed }, (_, index) => {
     const round = index + 1;
     const event = playedEvents.find((entry) => entry.roundNumber === round);
@@ -64,6 +66,7 @@ export function buildGameSummary({ session, towns, events, roundStats, cardPlays
     endedEarly: session.endedEarly === true,
     towns: rows,
     mostResilient: leaders(rows, "resilience"),
+    leastResilient: rows.filter((row) => row.resilience === lowestResilience).map((row) => row.id),
     mostImpacted: hasCompleteImpacts ? leaders(rows, "eventLoss") : [],
     hasCompleteImpacts,
     totalCardsPlayed: Array.isArray(cardPlays) ? cardPlays.length : 0,
