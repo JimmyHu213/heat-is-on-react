@@ -49,6 +49,13 @@ export function cardEffectiveRounds(playedAtRound, duration = 1) {
   return Array.from({ length: duration }, (_, i) => playedAtRound + i);
 }
 
+export function overlapsCardPlay(plays, card, round) {
+  const requested = cardEffectiveRounds(round, card.duration);
+  return plays.some((play) => play.cardId === card.id &&
+    (play.effectiveRounds ?? cardEffectiveRounds(play.playedAtRound, card.duration))
+      .some((year) => requested.includes(year)));
+}
+
 export function playCard(town, card, round, times = 1) {
   if (town.isComparisonTown) throw new GameRuleError("comparison-town");
   if (town.effortPoints < card.cost) throw new GameRuleError("insufficient-effort-points");

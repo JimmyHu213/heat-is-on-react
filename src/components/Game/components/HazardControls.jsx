@@ -5,6 +5,7 @@ import {
   Typography,
   Button,
   Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions,
   Alert,
   FormControlLabel,
   Switch,
@@ -20,6 +21,7 @@ import {
 import { MAX_HAZARDS_PER_ROUND } from "../../../game/stages.js";
 import { WHEEL_SLICES } from "../../../game/wheel.js";
 import HazardIcon from "../../common/HazardIcon";
+import HazardMedia from "./HazardMedia";
 import HazardWheel from "./HazardWheel";
 
 const HAZARD_COLORS = {
@@ -69,11 +71,6 @@ const HazardControls = ({
         <Typography variant="subtitle1" fontWeight="bold">
           Event: Climate Hazard
         </Typography>
-        {mysterySelected && onNext && (
-          <Button variant="contained" size="small" disabled={disabled || isSpinning} onClick={onNext}>
-            Next
-          </Button>
-        )}
       </Box>
 
       <FormControlLabel
@@ -153,23 +150,24 @@ const HazardControls = ({
             </Tooltip>
           );
         })}
-        {digitalWheelEnabled === false && (
-          <Button size="small" variant={mysterySelected ? "contained" : "outlined"}
-            aria-pressed={mysterySelected} disabled={controlsDisabled}
-            onClick={() => setMysterySelected(true)}>
-            Mystery (?)
-          </Button>
-        )}
+        <Button size="small" variant="outlined" disabled={controlsDisabled || isSpinning}
+          onClick={() => setMysterySelected(true)}>
+          Mystery (?)
+        </Button>
       </Box>
 
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mt: 2, fontStyle: "italic" }}
-      >
-        Note: Applying a hazard reduces town resilience scores and triggers a
-        -10 penalty across all hazards for any aspect already at or below 20.
-      </Typography>
+      {mysterySelected && (
+        <Dialog open onClose={() => setMysterySelected(false)} maxWidth="md" fullWidth aria-labelledby="mystery-title">
+          <DialogTitle id="mystery-title">Mystery</DialogTitle>
+          <DialogContent>
+            <HazardMedia hazard={{ id: "mystery", name: "Mystery" }} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setMysterySelected(false)}>Close</Button>
+            {onNext && <Button variant="contained" disabled={disabled} onClick={onNext}>Next</Button>}
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };

@@ -50,7 +50,7 @@ export const flood1 = {
 export const flood2 = {
   id: "flood2",
   type: "flood",
-  name: "STORMWATER SPONGES",
+  name: "FLOODWATER SOAKS",
   duration: 2,
   cost: 20,
   nature: 30,

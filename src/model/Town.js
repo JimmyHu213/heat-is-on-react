@@ -116,7 +116,6 @@ export class Town {
   applyHazard(hazard) {
     const ability = this._getAbilityForHazard(hazard.id);
     ability.applyHazard(hazard);
-    this._applyPenaltyToOtherAbilities();
     return this;
   }
 
@@ -169,39 +168,6 @@ export class Town {
         return this.biohazard;
       default:
         throw new Error(`Invalid hazard ID: ${hazardId}`);
-    }
-  }
-
-  // Apply penalty to all abilities if any aspect falls below threshold
-  _applyPenaltyToOtherAbilities() {
-    const THRESHOLD = 20;
-    const PENALTY = 10;
-
-    const abilities = [
-      this.bushfire,
-      this.flood,
-      this.stormSurge,
-      this.heatwave,
-      this.biohazard,
-    ];
-
-    // Check if any aspect is below threshold
-    const shouldApplyPenalty = abilities.some(
-      (ability) =>
-        ability.nature <= THRESHOLD ||
-        ability.economy <= THRESHOLD ||
-        ability.society <= THRESHOLD ||
-        ability.health <= THRESHOLD
-    );
-
-    // Apply penalty to all aspects if needed
-    if (shouldApplyPenalty) {
-      abilities.forEach((ability) => {
-        ability.nature = ability._clamp(ability.nature - PENALTY);
-        ability.economy = ability._clamp(ability.economy - PENALTY);
-        ability.society = ability._clamp(ability.society - PENALTY);
-        ability.health = ability._clamp(ability.health - PENALTY);
-      });
     }
   }
 

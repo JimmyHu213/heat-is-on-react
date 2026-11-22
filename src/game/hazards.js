@@ -1,29 +1,19 @@
 import {
   ASPECTS,
   HAZARD_IDS,
-  PENALTY_AMOUNT,
-  PENALTY_THRESHOLD,
   clampScore,
   overallResilience,
 } from "./scores.js";
 
-// Before the hazard's own effect, any aspect already at or below the
-// threshold in some hazard type loses PENALTY_AMOUNT across all hazard types.
+// Heat Is On Scoring, rows 25–29: each event has costs in its own four columns.
 export function applyHazard(town, hazard) {
-  const vulnerable = ASPECTS.filter((aspect) =>
-    HAZARD_IDS.some((type) => town[type][aspect] <= PENALTY_THRESHOLD)
-  );
-  const updated = { ...town };
-  for (const type of HAZARD_IDS) {
-    updated[type] = { ...town[type] };
-    for (const aspect of vulnerable) {
-      updated[type][aspect] = clampScore(updated[type][aspect] - PENALTY_AMOUNT);
-    }
-  }
-  updated[hazard.id] = Object.fromEntries(
-    ASPECTS.map((aspect) => [aspect, clampScore(updated[hazard.id][aspect] - hazard[aspect])])
-  );
-  return updated;
+  const scores = town[hazard.id];
+  return {
+    ...town,
+    [hazard.id]: Object.fromEntries(ASPECTS.map((aspect) => [
+      aspect, clampScore(scores[aspect] - hazard[aspect]),
+    ])),
+  };
 }
 
 export function buildHazardImpact(beforeTowns, afterTowns) {

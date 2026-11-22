@@ -25,7 +25,7 @@ import {
   biohazardColor1,
 } from "../../../constants/palette";
 import { allCards } from "../../../constants/cards";
-import { cardEffectiveRounds } from "../../../game/cards.js";
+import { cardEffectiveRounds, overlapsCardPlay } from "../../../game/cards.js";
 import HazardIcon from "../../common/HazardIcon";
 
 const sortedCards = [...allCards].sort((a, b) => a.name.localeCompare(b.name));
@@ -374,7 +374,8 @@ const GameTable = ({
         PaperProps={{ style: { maxHeight: 320 } }}
       >
         {sortedCards.map((card) => (
-          <MenuItem key={card.id} onClick={() => handleSelectAddCard(card.id)}>
+          <MenuItem key={card.id} onClick={() => handleSelectAddCard(card.id)}
+            disabled={Boolean(addTarget && overlapsCardPlay(townCardPlayDocs[addTarget.townId] || [], card, addTarget.round))}>
             {card.name} ({card.cost} EP)
           </MenuItem>
         ))}

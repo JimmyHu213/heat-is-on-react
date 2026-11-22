@@ -97,7 +97,7 @@ const TownPieCharts = ({ towns, currentStage, chartPresentation, chartProgress }
         <Typography variant="caption" sx={{ color: "white" }}>
           {currentStage === "review"
             ? "Review Stage: Click any town card (or Flip All) to compare NESH resilience."
-            : "Click any town card to flip between its NESH wheel and NESH bars."}
+            : "Click any town to flip between its NESH circle, which shows resilience to each hazard, and NESH bars, which show overall resilience across NESH dimensions"}
         </Typography>
         <Button
           variant="contained"

@@ -3,8 +3,6 @@ export const ASPECTS = ["nature", "economy", "society", "health"];
 
 export const MIN_SCORE = 0;
 export const MAX_SCORE = 100;
-export const PENALTY_THRESHOLD = 20;
-export const PENALTY_AMOUNT = 10;
 export const DIVIDEND_PER_SEGMENT = 5;
 export const WEAK_SEGMENT_MAX = 20;
 

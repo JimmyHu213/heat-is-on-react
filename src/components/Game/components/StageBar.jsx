@@ -152,7 +152,7 @@ export default function StageBar({
                     {key === "review" ? (
                       <Button size="small" variant="contained" color="success" startIcon={<PaidIcon />}
                         onClick={onSettleRound} disabled={loading}>
-                        {currentRound >= totalRounds ? "Settle & View Summary" : "Settle & Start Next Year"}
+                        Settle Game
                       </Button>
                     ) : (
                       <>
