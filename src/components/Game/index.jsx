@@ -411,8 +411,8 @@ const Game = () => {
       sx={{
         display: "flex",
         flexDirection: "column",
-        flex: 1,
-        minHeight: isOpeningScreen || activeTab === 2 ? undefined : "100vh",
+        flex: isOpeningScreen ? 1 : undefined,
+        minHeight: isOpeningScreen ? undefined : "100vh",
       }}
     >
       {isOpeningScreen && <WorkshopBanner />}
@@ -618,7 +618,6 @@ const Game = () => {
                     ? { left: 0, right: "auto", width: 5, bgcolor: gameHeaderColor }
                     : undefined,
                   "& .MuiTab-root": {
-                    minHeight: useSidebar && activeTab === 2 ? 40 : undefined,
                     minWidth: 0,
                     px: { xs: 0.5, sm: 2 },
                     justifyContent: useSidebar ? "flex-start" : undefined,
