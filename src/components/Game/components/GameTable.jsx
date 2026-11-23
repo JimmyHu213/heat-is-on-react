@@ -14,8 +14,6 @@ import {
   Menu,
   MenuItem,
   Tooltip,
-  TextField,
-  useMediaQuery,
   useTheme,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -44,10 +42,6 @@ const GameTable = ({
   loading = false,
 }) => {
   const theme = useTheme();
-  const desktop = useMediaQuery(theme.breakpoints.up("lg"));
-  const tablet = useMediaQuery(theme.breakpoints.up("sm"));
-  const yearsPerPage = desktop ? 5 : tablet ? 3 : 1;
-  const [selectedYear, setSelectedYear] = useState(null);
   const [addAnchorEl, setAddAnchorEl] = useState(null);
   const [addTarget, setAddTarget] = useState(null);
 
@@ -76,10 +70,10 @@ const GameTable = ({
     );
   }
 
-  const years = Array.from({ length: Math.max(1, totalRounds) }, (_, i) => i + 1);
-  const year = Math.min(years.length, Math.max(1, selectedYear ?? currentRound));
-  const pageStart = Math.floor((year - 1) / yearsPerPage) * yearsPerPage;
-  const rounds = years.slice(pageStart, pageStart + yearsPerPage);
+  const rounds = Array.from(
+    { length: Math.max(1, totalRounds) },
+    (_, i) => i + 1
+  );
 
   const getHazardIcon = (hazardId) => (
     <HazardIcon hazardId={hazardId} size={18} sx={{ ml: 0.5 }} />
@@ -165,34 +159,8 @@ const GameTable = ({
   };
 
   return (
-    <Paper sx={{ borderRadius: 2, boxShadow: 1 }}>
-      {years.length > yearsPerPage && (
-        <Box sx={{ p: 1 }}>
-          <TextField select size="small" label="Years shown" value={pageStart + 1}
-            onChange={(event) => setSelectedYear(Number(event.target.value))}
-            slotProps={{ select: { native: true } }}>
-            {years.filter((round) => (round - 1) % yearsPerPage === 0).map((start) => {
-              const end = Math.min(start + yearsPerPage - 1, years.length);
-              return (
-                <option key={start} value={start}>
-                  {start === end ? 2050 + start : `${2050 + start}–${2050 + end}`}
-                </option>
-              );
-            })}
-          </TextField>
-        </Box>
-      )}
-      <Table size="small" aria-label="Game history" sx={{
-        tableLayout: "fixed",
-        "& .MuiTableCell-root": { px: { xs: 0.75, sm: 1 }, overflowWrap: "anywhere" },
-        "& .MuiChip-root": { maxWidth: "100%", height: "auto", minHeight: 24 },
-        "& .MuiChip-label": { whiteSpace: "normal", overflowWrap: "anywhere" },
-      }}>
-        <colgroup>
-          <Box component="col" sx={{ width: { xs: "24%", sm: "16%" } }} />
-          {rounds.map((round) => <col key={round} />)}
-          <Box component="col" sx={{ width: { xs: "24%", sm: "16%" } }} />
-        </colgroup>
+    <Paper sx={{ borderRadius: 2, overflow: "auto", boxShadow: 1 }}>
+      <Table size="medium" sx={{ minWidth: 650 }}>
         <TableHead>
           <TableRow sx={{ bgcolor: theme.palette.grey[200] }}>
             <TableCell sx={{ fontWeight: "bold" }}>Town</TableCell>
