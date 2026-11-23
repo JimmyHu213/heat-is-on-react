@@ -44,12 +44,12 @@ const LogoItem = ({ src, alt, artHeight = 1 }) => {
         // Compensate for whitespace embedded in the logo artwork.
         height: `calc(var(--partner-art-height) / ${artHeight})`,
         maxWidth: "100%",
-        maxHeight: "100%",
         objectFit: "contain",
         filter: "grayscale(20%)",
-        transition: "filter 0.3s",
+        transition: "filter 0.3s, transform 0.3s",
         "&:hover": {
           filter: "grayscale(0%)",
+          transform: "scale(1.05)",
         },
       }}
     />
@@ -86,7 +86,7 @@ const Footer = () => {
             </div>
           </div>
         ) : (
-          <div className="footer-partners" aria-label="Project partners" role="region">
+          <div className="footer-partners footer-partners-static" aria-label="Project partners" role="region">
             <ul className="footer-logo-group">
               {logos.map((logo) => (
                 <li key={logo.alt}><LogoItem {...logo} /></li>
