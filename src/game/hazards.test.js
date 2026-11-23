@@ -17,20 +17,25 @@ test("a hazard reduces its own type when no aspect is vulnerable", () => {
   assert.deepEqual(town, before, "input town must not be mutated");
 });
 
-test("the scoring sheet charges only the struck sector even when another sector is weak", () => {
-  const town = makeTown();
-  for (const type of ["bushfire", "flood", "stormSurge", "heatwave", "biohazard"]) {
-    town[type] = { nature: 50, economy: 50, society: 50, health: 50 };
-  }
-  town.bushfire.nature = 20;
-  const after = applyHazard(town, flood);
-  assert.deepEqual(after.flood, { nature: 30, economy: 20, society: 35, health: 35 });
-  for (const type of ["bushfire", "stormSurge", "heatwave", "biohazard"]) {
-    assert.deepEqual(after[type], town[type]);
-  }
-  const repeated = applyHazard(after, flood);
-  assert.deepEqual(repeated.flood, { nature: 10, economy: 0, society: 20, health: 20 });
-  assert.deepEqual(repeated.heatwave, town.heatwave);
+test("aspects at or below 20 are penalised in every hazard type before the hazard hits", () => {
+  const afterFirst = applyHazard(makeTown(), bushfire);
+  const snapshot = structuredClone(afterFirst);
+  const result = applyHazard(afterFirst, bushfire);
+  // nature (10), society (20) and health (20) are vulnerable; economy (30) is not.
+  assert.deepEqual(result.bushfire, { nature: 0, economy: 20, society: 0, health: 0 });
+  assert.deepEqual(result.flood, { nature: 70, economy: 80, society: 70, health: 70 });
+  assert.deepEqual(result.stormSurge, { nature: 70, economy: 80, society: 70, health: 70 });
+  assert.deepEqual(result.heatwave, { nature: 50, economy: 60, society: 50, health: 50 });
+  assert.deepEqual(result.biohazard, { nature: 70, economy: 80, society: 70, health: 70 });
+  assert.deepEqual(afterFirst, snapshot, "input town must not be mutated");
+});
+
+test("Town 1 facing bushfire then flood pays each vulnerable dimension penalty once per sector", () => {
+  const first = applyHazard(makeTown(), bushfire);
+  const second = applyHazard(first, flood);
+  assert.deepEqual(second.bushfire, { nature: 0, economy: 30, society: 10, health: 10 });
+  assert.deepEqual(second.flood, { nature: 50, economy: 50, society: 55, health: 55 });
+  assert.deepEqual(second.heatwave, { nature: 50, economy: 60, society: 50, health: 50 });
 });
 
 test("buildHazardImpact reports losses per aspect and overall resilience", () => {

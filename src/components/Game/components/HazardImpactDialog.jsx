@@ -98,7 +98,8 @@ export default function HazardImpactDialog({
         </Box>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Points lost per dimension in the affected hazard sector and overall town
+          Points lost per dimension (summed across all hazard types, including any
+          cascading penalties for segments at or below 20%) and overall town
           resilience before and after the event.
         </Typography>
 

@@ -1,3 +1,6 @@
+import { applyHazard } from "../game/hazards.js";
+import { HAZARD_IDS } from "../game/scores.js";
+
 /**
  * AbilityPoints Model
  * Represents a set of ability points for a town's resilience to a hazard
@@ -114,8 +117,8 @@ export class Town {
 
   // Apply hazard effect to a specific ability
   applyHazard(hazard) {
-    const ability = this._getAbilityForHazard(hazard.id);
-    ability.applyHazard(hazard);
+    const updated = applyHazard(this, hazard);
+    for (const id of HAZARD_IDS) Object.assign(this[id], updated[id]);
     return this;
   }
 
