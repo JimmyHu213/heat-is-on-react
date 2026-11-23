@@ -31,6 +31,7 @@
 
 .footer-partners-static {
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .footer-partners-static .footer-logo-group {
