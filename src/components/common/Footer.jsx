@@ -86,7 +86,7 @@ const Footer = () => {
             </div>
           </div>
         ) : (
-          <div className="footer-partners footer-partners-static" aria-label="Project partners" role="region">
+          <div className="footer-partners" aria-label="Project partners" role="region">
             <ul className="footer-logo-group">
               {logos.map((logo) => (
                 <li key={logo.alt}><LogoItem {...logo} /></li>
