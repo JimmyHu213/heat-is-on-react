@@ -11,6 +11,7 @@ export const GAME_RULE_MESSAGES = {
   "stale-revision": "This game changed elsewhere. Refresh to continue.",
   "nothing-to-undo": "There is no move to undo in this round.",
   "wrong-stage": "This action cannot be performed in the current stage.",
+  "card-in-play": "This town already has this card in play for the selected year(s).",
   "comparison-town":
     "Bludgeton is the comparison town and cannot play adaptation cards.",
   "insufficient-effort-points": "Not enough effort points to play this card.",

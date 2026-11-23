@@ -5,6 +5,7 @@ import {
   writeBatch,
   doc,
   getDocs,
+  getDocsFromServer,
   query,
   updateDoc,
   runTransaction,
@@ -16,7 +17,7 @@ import { hazards } from "../constants/hazards.js";
 import { defaultTowns } from "../constants/towns.js";
 import { TOWN_LABEL_COLORS } from "../constants/townLabelColors.js";
 import { db } from "../firebase/config.js";
-import { applyCardEffects, cardEffectiveRounds, paidCardCost, playCard, revertCardEffects } from "../game/cards.js";
+import { applyCardEffects, cardEffectiveRounds, overlapsCardPlay, paidCardCost, playCard, revertCardEffects } from "../game/cards.js";
 import { GameRuleError } from "../game/errors.js";
 import { applyHazard, buildHazardImpact } from "../game/hazards.js";
 import {
@@ -35,7 +36,10 @@ import { buildCardUndo, buildHazardUndo, planUndo } from "../game/undo.js";
 import firestoreService from "./firestoreService.js";
 import { onGameCompleted, onGameCreated } from "./gameLifecycle.js";
 
-function assertRevision(session, expectedRevision) {
+function assertRevision(session, expectedRevision, advancingSettledYear = false) {
+  if (!advancingSettledYear && session.currentRound > 0 && session.lastSettlementRound === session.currentRound) {
+    throw new GameRuleError("already-settled");
+  }
   const current = session.revision ?? 0;
   if (expectedRevision !== undefined && current !== expectedRevision) {
     throw new GameRuleError(
@@ -542,6 +546,17 @@ class GameSessionService {
       }
 
       const nextRev = assertRevision(session, expectedRevision);
+      // Every play and removal writes the town and session read above. A concurrent
+      // change retries this transaction and repeats the query, including legacy plays.
+      const previous = await getDocsFromServer(query(
+        collection(db, this.CARD_PLAYS_COLLECTION),
+        where("sessionId", "==", session.id),
+        where("townId", "==", townId),
+        where("cardId", "==", card.id)
+      ));
+      if (overlapsCardPlay(previous.docs.map((snap) => snap.data()), card, recordRound)) {
+        throw new GameRuleError("card-in-play");
+      }
       const appliedCount = cardEffectiveRounds(recordRound, card.duration)
         .filter((r) => r <= session.currentRound).length;
       const { town: updatedTown, play } = playCard(town, card, recordRound, appliedCount);
@@ -727,15 +742,13 @@ class GameSessionService {
    */
   async settleRound(
     sessionId,
-    { expectedRound, expectedRevision, endEarly = false, allowAnyStage = false } = {}
+    { expectedRound, expectedRevision, endEarly = false, allowAnyStage = false, step = "combined" } = {}
   ) {
     const activePlaysQuery = query(
       collection(db, this.CARD_PLAYS_COLLECTION),
       where("sessionId", "==", sessionId),
       where("isActive", "==", true)
     );
-    const activePlaySnaps = await getDocs(activePlaysQuery);
-    const activePlayRefs = activePlaySnaps.docs.map((d) => d.ref);
 
     const sessionRef = doc(db, this.SESSIONS_COLLECTION, sessionId);
 
@@ -765,15 +778,13 @@ class GameSessionService {
         `${sessionId}_${round}`
       );
 
+      const activePlayRefs = step === "award" ? [] :
+        (await getDocsFromServer(activePlaysQuery)).docs.map((snap) => snap.ref);
       const [eventSnap, statsSnap, ...playDocSnaps] = await Promise.all([
         tx.get(eventRef),
         tx.get(statsRef),
         ...activePlayRefs.map((ref) => tx.get(ref)),
       ]);
-
-      if (statsSnap.exists()) {
-        throw new GameRuleError("already-settled", "Round already settled");
-      }
 
       const hazardCount = eventSnap.exists()
         ? (eventSnap.data().hazardIds ?? []).length
@@ -794,9 +805,11 @@ class GameSessionService {
         expectedRound: expectedRound ?? round,
         stage: currentStage,
         endEarly,
+        step,
+        settledStats: statsSnap.data(),
       });
 
-      const nextRev = assertRevision(session, expectedRevision);
+      const nextRev = assertRevision(session, expectedRevision, step === "advance");
 
       const roundStatsData = {
         sessionId,
@@ -806,7 +819,7 @@ class GameSessionService {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      tx.set(statsRef, roundStatsData);
+      if (!statsSnap.exists()) tx.set(statsRef, roundStatsData);
 
       for (const updatedTown of plan.towns) {
         const ref = doc(db, this.TOWNS_COLLECTION, updatedTown.id);

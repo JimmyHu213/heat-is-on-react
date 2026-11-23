@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { allCards } from "../../../constants/cards";
 
+import { overlapsCardPlay } from "../../../game/cards.js";
+
 const sortedCards = [...allCards].sort((a, b) => a.name.localeCompare(b.name));
 
 const CardControls = ({
@@ -33,16 +35,16 @@ const CardControls = ({
 
   const handleTownChange = (event) => {
     setSelectedTown(event.target.value);
+    setSelectedCard("");
   };
 
   const handleCardChange = (event) => {
     setSelectedCard(event.target.value);
   };
 
-  const handleApplyCard = () => {
+  const handleApplyCard = async () => {
     if (selectedTown && selectedCard) {
-      onPlayCard(selectedTown, selectedCard);
-      setSelectedCard("");
+      if (await onPlayCard(selectedTown, selectedCard)) setSelectedCard("");
     }
   };
 
@@ -51,6 +53,8 @@ const CardControls = ({
   const insufficientEp =
     Boolean(selectedTownObj && selectedCardObj) &&
     selectedTownObj.effortPoints < selectedCardObj.cost;
+
+  const cardInPlay = (card) => overlapsCardPlay(townCardPlayDocs[selectedTown] || [], card, currentRound);
 
   const currentRoundPlays = selectedTown
     ? (townCardPlayDocs[selectedTown] || []).filter(
@@ -70,7 +74,7 @@ const CardControls = ({
         </Alert>
       ) : (
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Select a town and play an adaptation card. Changes apply live on the town wheels.
+          Play cards for one or more towns, then select Done to see their NESH circles change.
         </Typography>
       )}
 
@@ -107,10 +111,11 @@ const CardControls = ({
           disabled={controlsDisabled || !selectedTown}
         >
           {sortedCards.map((card) => (
-            <MenuItem key={card.id} value={card.id}>
+            <MenuItem key={card.id} value={card.id} disabled={cardInPlay(card)}>
               {card.type === "stormSurge"
                 ? `${card.name} (storm surge · ${card.cost} EP)`
                 : `${card.name} (${card.type} · ${card.cost} EP)`}
+              {cardInPlay(card) && " · In play"}
             </MenuItem>
           ))}
         </Select>
@@ -127,7 +132,7 @@ const CardControls = ({
         color="primary"
         fullWidth
         disabled={
-          controlsDisabled || !selectedTown || !selectedCard || insufficientEp
+          controlsDisabled || !selectedTown || !selectedCard || cardInPlay(selectedCardObj) || insufficientEp
         }
         onClick={handleApplyCard}
         sx={{ mt: 1.5 }}

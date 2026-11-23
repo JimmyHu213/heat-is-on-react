@@ -323,7 +323,7 @@ export function GameProvider({ children }) {
     }
   };
 
-  const settleRound = async ({ endEarly = false, allowAnyStage = false } = {}) => {
+  const settleRound = async ({ endEarly = false, allowAnyStage = false, step = "combined" } = {}) => {
     if (!currentSession) return null;
 
     setLoading(true);
@@ -335,6 +335,7 @@ export function GameProvider({ children }) {
           expectedRevision: currentSession.revision,
           endEarly,
           allowAnyStage,
+          step,
         }
       );
 

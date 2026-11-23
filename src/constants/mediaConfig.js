@@ -38,6 +38,7 @@ export const MEDIA_CONFIG = Object.freeze({
     biohazard: "/media/v1/events/biohazard.webp",
   }),
   eventGifs: Object.freeze({
+    mystery: "/media/events/mystery.gif",
     bushfire: "/media/events/bushfire.gif",
     flood: "/media/events/flood.gif",
     stormSurge: "/media/events/stormSurge.gif",

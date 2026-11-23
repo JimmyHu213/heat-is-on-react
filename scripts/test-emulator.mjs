@@ -697,3 +697,51 @@ test("Firestore enforces the 24-hour CCS deadline even with a future subscriptio
     }
   }
 });
+
+test("multi-year purchases are exclusive per town until expiry, including concurrent and historical plays", async () => {
+  const { uid } = await signInFreshUser("card-expiry");
+  const { id } = await gameSessionService.createSession(uid, "Card expiry");
+  await gameSessionService.startGame(id);
+  const town = id + "_town_1";
+  const buy = (round) => gameSessionService.applyCardToTown(town, "flood2", round);
+  const concurrent = await Promise.allSettled([buy(1), buy(1)]);
+  assert.equal(concurrent.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(concurrent.find((result) => result.status === "rejected").reason.code, "card-in-play");
+  assert.equal((await getDoc(doc(db, "towns", town))).data().effortPoints, 80);
+  await gameSessionService.applyCardToTown(id + "_town_2", "flood2", 1);
+  await gameSessionService.settleRound(id, { allowAnyStage: true });
+  await assert.rejects(buy(2), { code: "card-in-play" });
+  await gameSessionService.settleRound(id, { allowAnyStage: true });
+  await buy(3);
+  await assert.rejects(gameSessionService.applyCardToTown(town, "flood2", 3, {
+    targetRound: 2, allowAnyStage: true,
+  }), { code: "card-in-play" });
+});
+
+test("reward survives reloading before Next, pays once and precedes the final summary", async () => {
+  const { uid } = await signInFreshUser("award-next");
+  const { id } = await gameSessionService.createSession(uid, "Reward display", { totalRounds: 2 });
+  await gameSessionService.startGame(id);
+  const townId = id + "_town_1";
+  await gameSessionService.applyCardToTown(townId, "flood2", 1);
+  for (const round of [1, 2]) {
+    await gameSessionService.changeStage(id, "hazard");
+    await gameSessionService.changeStage(id, "review");
+    const award = () => gameSessionService.settleRound(id, { expectedRound: round, step: "award" });
+    const settled = await award();
+    assert.equal(settled.currentRound, round);
+    const persisted = (await getDoc(doc(db, "game_sessions", id))).data();
+    assert.equal(persisted.lastSettlementRound, round);
+    assert.ok(persisted.lastDividends[townId] > 0);
+    assert.equal(settled.isActive, true);
+    await assert.rejects(award(), { code: "already-settled" });
+    await assert.rejects(gameSessionService.changeStage(id, "hazard"), { code: "already-settled" });
+    const next = await gameSessionService.settleRound(id, { expectedRound: round, step: "advance" });
+    const beforeTown = settled.towns.find((town) => town.id === townId);
+    const afterTown = next.towns.find((town) => town.id === townId);
+    assert.equal(beforeTown.effortPoints, afterTown.effortPoints);
+    assert.equal(next.currentRound, round + 1);
+    assert.equal(next.isActive, round === 1);
+    if (round === 1) assert.ok(afterTown.flood.economy > beforeTown.flood.economy);
+  }
+});

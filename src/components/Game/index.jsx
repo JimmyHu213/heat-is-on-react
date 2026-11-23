@@ -55,7 +55,6 @@ import HazardMedia from "./components/HazardMedia";
 import { hazards } from "../../constants/hazards";
 import { MEDIA_CONFIG } from "../../constants/mediaConfig";
 import { primaryColor } from "../../constants/palette";
-import { allCards } from "../../constants/cards";
 import { getTotalRounds } from "../../game/options.js";
 import { WHEEL_SLICES } from "../../game/wheel.js";
 
@@ -261,16 +260,15 @@ const Game = () => {
     }
   };
 
-  const handleSettleRound = async () => {
-    const settlingRound = currentRound;
-    const updated = await settleRound({ endEarly: false });
+  const handleNextYear = async () => {
+    const updated = await settleRound({ step: "advance" });
     if (updated) {
       if (!updated.isActive) {
         showNotification("Game completed! Viewing summary.", "success");
         setSummaryDialogOpen(true);
       } else {
         showNotification(
-          `Round ${settlingRound} settled. Reward for effort awarded. Welcome to Round ${updated.currentRound}.`,
+          `Year ${2050 + updated.currentRound} begins.`,
           "success"
         );
       }
@@ -350,43 +348,19 @@ const Game = () => {
       : null);
   };
 
-  const handlePlayCard = async (townId, cardId) => {
-    if (presentation) return;
-    let pending;
-    try {
-      const town = towns.find((t) => t.id === townId);
-      const card = allCards.find((c) => c.id === cardId);
-      if (!town || !card) return;
+  const openCards = () => {
+    setActiveTab(0);
+    setChartProgress(0);
+    setChartPresentation({ sessionId, round: currentRound, stage: currentStage, before: towns, phase: "picking" });
+    setOpenTool("cards");
+  };
 
-      if (town.effortPoints < card.cost) {
-        showNotification(
-          `Not enough effort points! ${town.name} has ${town.effortPoints} points, but needs ${card.cost}.`,
-          "error"
-        );
-        return;
-      }
-
-      pending = { sessionId, round: currentRound, stage: currentStage, before: [town], phase: "saving" };
-      setChartProgress(0);
-      setChartPresentation(pending);
-
-      const result = await playCard(townId, cardId);
-      setChartPresentation((current) => current !== pending ? current : result
-        ? { ...pending, after: [result.town], phase: "animating" }
-        : null);
-      if (result) {
-        setOpenTool(null);
-        setActiveTab(0);
-        showNotification(
-          `Applied ${card.name} to ${town.name} (-${card.cost} EP)`,
-          "info"
-        );
-      }
-    } catch (err) {
-      setChartPresentation((current) => current === pending ? null : current);
-      console.error("Error playing card:", err);
-      showNotification(err.message || "Failed to play card", "error");
-    }
+  const closeCards = () => {
+    if (loading) return;
+    setOpenTool(null);
+    setChartPresentation((current) => current?.phase === "picking" && current.before !== towns
+      ? { ...current, after: towns, phase: "animating" }
+      : null);
   };
 
   if (loading && !currentSession) {
@@ -662,9 +636,9 @@ const Game = () => {
               loading={busy}
               onStartGame={handleStartGame}
               onChangeStage={handleChangeStage}
-              onOpenCards={() => setOpenTool("cards")}
+              onOpenCards={openCards}
               onOpenEvent={() => setOpenTool("event")}
-              onSettleRound={handleSettleRound}
+              onSettleRound={() => settleRound({ step: "award" })}
               onOpenSummary={() => setSummaryDialogOpen(true)}
               onUpdatePlayerCount={updatePlayerCount}
             />
@@ -797,35 +771,52 @@ const Game = () => {
 
       <Dialog
         open={!isOpeningScreen && currentStage === "adaptation" && openTool === "cards"}
-        onClose={() => setOpenTool(null)}
-        aria-label="Play adaptation cards"
+        onClose={closeCards}
+        slotProps={{ paper: { "aria-label": "Play adaptation cards" } }}
         maxWidth="xs"
         fullWidth
       >
         <DialogContent>
-          <IconButton aria-label="Close cards" size="small" onClick={() => setOpenTool(null)}
+          <IconButton aria-label="Close cards" size="small" disabled={loading} onClick={closeCards}
             sx={{ float: "right" }}>
             <CloseIcon />
           </IconButton>
+          {error && <Alert severity="error" onClose={clearError}>{error}</Alert>}
           <CardControls
             towns={towns}
-            onPlayCard={handlePlayCard}
-            disabled={busy}
+            onPlayCard={playCard}
+            disabled={loading}
             currentRound={currentRound}
             currentStage={currentStage}
             townCardPlayDocs={townCardPlayDocs}
             onRemoveCardPlay={removeCardPlay}
           />
         </DialogContent>
+        <DialogActions><Button variant="contained" onClick={closeCards} disabled={loading}>Done</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(currentSession?.isActive && currentRound > 0 &&
+          currentSession.lastSettlementRound === currentRound)} maxWidth="xs" fullWidth
+        aria-labelledby="round-rewards-title">
+        <DialogTitle id="round-rewards-title">Reward for effort · Year {2050 + currentRound}</DialogTitle>
+        <DialogContent>
+          {towns.map((town) => (
+            <Box key={town.id} sx={{ display: "flex", justifyContent: "space-between", gap: 2, py: 0.5 }}>
+              <Typography>{town.name}</Typography>
+              <Typography fontWeight="bold">+{currentSession?.lastDividends?.[town.id] ?? 0} EP</Typography>
+            </Box>
+          ))}
+          {error && <Alert severity="error" onClose={clearError}>{error}</Alert>}
+        </DialogContent>
+        <DialogActions><Button variant="contained" disabled={loading} onClick={handleNextYear}>Next</Button></DialogActions>
       </Dialog>
 
       <Dialog
         open={!isOpeningScreen && Boolean(currentSession?.isActive) && openTool === "event"}
         onClose={() => setOpenTool(null)}
-        aria-label="Climate event"
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { width: "min(760px, 94vw)", maxHeight: "94vh", borderRadius: 3 } }}
+        slotProps={{ paper: { "aria-label": "Climate event", sx: { width: "min(860px, 94vw)", maxHeight: "94vh", borderRadius: 3 } } }}
       >
         <DialogContent sx={{ p: 2.5, position: "relative" }}>
           <IconButton size="small" onClick={() => setOpenTool(null)}

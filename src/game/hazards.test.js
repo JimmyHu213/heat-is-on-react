@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { town1 } from "../constants/towns.js";
-import { bushfire } from "../constants/hazards.js";
+import { bushfire, flood } from "../constants/hazards.js";
 import { applyHazard, buildHazardImpact } from "./hazards.js";
 
 const makeTown = () => ({ id: "t1", ...structuredClone(town1.baseStats) });
@@ -28,6 +28,14 @@ test("aspects at or below 20 are penalised in every hazard type before the hazar
   assert.deepEqual(result.heatwave, { nature: 50, economy: 60, society: 50, health: 50 });
   assert.deepEqual(result.biohazard, { nature: 70, economy: 80, society: 70, health: 70 });
   assert.deepEqual(afterFirst, snapshot, "input town must not be mutated");
+});
+
+test("Town 1 facing bushfire then flood pays each vulnerable dimension penalty once per sector", () => {
+  const first = applyHazard(makeTown(), bushfire);
+  const second = applyHazard(first, flood);
+  assert.deepEqual(second.bushfire, { nature: 0, economy: 30, society: 10, health: 10 });
+  assert.deepEqual(second.flood, { nature: 50, economy: 50, society: 55, health: 55 });
+  assert.deepEqual(second.heatwave, { nature: 50, economy: 60, society: 50, health: 50 });
 });
 
 test("buildHazardImpact reports losses per aspect and overall resilience", () => {
