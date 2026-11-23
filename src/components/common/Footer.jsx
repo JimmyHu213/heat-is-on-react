@@ -44,12 +44,12 @@ const LogoItem = ({ src, alt, artHeight = 1 }) => {
         // Compensate for whitespace embedded in the logo artwork.
         height: `calc(var(--partner-art-height) / ${artHeight})`,
         maxWidth: "100%",
+        maxHeight: "100%",
         objectFit: "contain",
         filter: "grayscale(20%)",
-        transition: "filter 0.3s, transform 0.3s",
+        transition: "filter 0.3s",
         "&:hover": {
           filter: "grayscale(0%)",
-          transform: "scale(1.05)",
         },
       }}
     />
