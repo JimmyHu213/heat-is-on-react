@@ -5,7 +5,7 @@
 }
 
 .footer-logo-viewport {
-  overflow: hidden;
+  overflow: clip;
   mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
 
@@ -60,5 +60,4 @@
   .footer-logo-track { animation: none; width: 100%; }
   .footer-logo-group[aria-hidden] { display: none; }
   .footer-logo-group img { transition: none; }
-  .footer-logo-group img:hover { transform: none; }
 }
